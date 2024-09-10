@@ -1,3 +1,0 @@
-"D:\programs\CLion 2024.2.1\bin\cmake\win\x64\bin\cmake.exe" -E rm -f CMakeFiles\Time.dir/objects.a
-"D:\programs\CLion 2024.2.1\bin\mingw\bin\ar.exe" qc CMakeFiles\Time.dir/objects.a @CMakeFiles\Time.dir\objects1.rsp
-"D:\programs\CLion 2024.2.1\bin\mingw\bin\gcc.exe" -g -Wl,--whole-archive CMakeFiles\Time.dir/objects.a -Wl,--no-whole-archive -o Time.exe -Wl,--out-implib,libTime.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\Time.dir\linkLibs.rsp
