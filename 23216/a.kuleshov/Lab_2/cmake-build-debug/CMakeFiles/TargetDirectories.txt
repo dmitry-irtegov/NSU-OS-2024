@@ -1,0 +1,3 @@
+D:/Github/MCBivis/Time/cmake-build-debug/CMakeFiles/Time.dir
+D:/Github/MCBivis/Time/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/Github/MCBivis/Time/cmake-build-debug/CMakeFiles/rebuild_cache.dir
