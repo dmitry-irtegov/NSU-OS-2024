@@ -7,22 +7,28 @@ extern char* tzname[];
 int main()
 {
     //setenv("TZ", "PST8", 1);
-    setenv("TZ", "America/Los_Angeles", 1);
-    tzset();
-    time_t now;
-    struct tm* sp;
+    int succ = setenv("TZ", "America/Los_Angeles", 1);
+    if (succ != 0)
+        exit(1);
 
-    (void)time(&now);
+    else
+    {
+        tzset();
+        time_t now;
+        struct tm* sp;
 
-    printf("%s", ctime(&now));
+        (void)time(&now);
 
-    sp = localtime(&now);
-    printf("%d/%d/%02d %d:%02d %s\n",
-        sp->tm_mon + 1, sp->tm_mday,
-        sp->tm_year, sp->tm_hour,
-        sp->tm_min, tzname[sp->tm_isdst]);
+        printf("%s", ctime(&now));
 
-    exit(0);
+        sp = localtime(&now);
+        printf("%d/%d/%02d %d:%02d %s\n",
+            sp->tm_mon + 1, sp->tm_mday,
+            sp->tm_year, sp->tm_hour,
+            sp->tm_min, tzname[sp->tm_isdst]);
+
+        exit(0);
+    }
 
     return 0;
 }
