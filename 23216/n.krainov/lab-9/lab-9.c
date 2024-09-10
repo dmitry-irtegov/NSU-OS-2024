@@ -4,7 +4,13 @@
 #include <unistd.h>
 #include <stdlib.h> 
 
-int main(){
+int main(int argc, char *argv[]){
+
+    if (argc < 2){
+        puts("missing filename");
+        exit(1);
+    }
+
     puts("start");
     pid_t child = fork();
     siginfo_t info;
@@ -15,7 +21,7 @@ int main(){
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("cat", "cat", "file.txt", NULL);
+            execlp("cat", "cat", argv[1], NULL);
             perror("failed to execlp");
             exit(EXIT_FAILURE);
             break;
