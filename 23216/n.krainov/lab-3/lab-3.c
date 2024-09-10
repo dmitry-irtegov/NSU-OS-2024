@@ -3,28 +3,19 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-void messageAboutOpenAndClose(FILE* file, char* message) {
-    puts(message);
-    fclose(file);
-}
-
-void printErrorAndExit(char* message){
-    perror(message);
-    exit(2);
-}
-
-void tryToOpen(FILE* file, char* filename, char* message){
+int tryToOpen(FILE* file, char* filename, char* message){
     printf("uid = %d and euid = %d\n", getuid(), geteuid());
     file = fopen(filename, "r");
 
     if (file == NULL) {
         perror(filename);
-        exit(2);
+        return 1;
     }
-    else {
-        puts(message);
-        fclose(file);
-    }
+
+    puts(message);
+    fclose(file);
+    return 0;
+
 }
 
 int main(int argc, char *argv[])
@@ -36,12 +27,16 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    tryToOpen(file, argv[1], "first open!");
+    if (tryToOpen(file, argv[1], "first open!")){
+        exit(2);
+    }
 
     if (setuid(getuid())){
         perror("failed to use setuid");
     }
     
-    tryToOpen(file, argv[1], "second open!");
+    if (tryToOpen(file, argv[1], "second open!")){
+        exit(2);
+    }
     exit(0);
 }
