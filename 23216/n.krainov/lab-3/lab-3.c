@@ -13,6 +13,20 @@ void printErrorAndExit(char* message){
     exit(2);
 }
 
+void tryToOpen(FILE* file, char* filename, char* message){
+    printf("uid = %d and euid = %d\n", getuid(), geteuid());
+    file = fopen(filename, "r");
+
+    if (file == NULL) {
+        perror(filename);
+        exit(2);
+    }
+    else {
+        puts(message);
+        fclose(file);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     FILE *file;
@@ -22,27 +36,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("uid = %d and euid = %d\n", getuid(), geteuid());
-    file = fopen(argv[1], "r");
-
-    if (file == NULL) {
-        printErrorAndExit(argv[0]);
-    }
-    else {
-        messageAboutOpenAndClose(file, "first open!\n");
-    }
+    tryToOpen(file, argv[1], "first open!");
 
     if (setuid(getuid())){
         perror("failed to use setuid");
     }
     
-    printf("after setuid: uid = %d, euid = %d\n", getuid(), geteuid() );
-    
-    file = fopen(argv[1], "r");
-    if (file == NULL) {
-        printErrorAndExit(argv[0]);
-    }
-    else {
-        messageAboutOpenAndClose(file, "second open\n");
-    }
+    tryToOpen(file, argv[1], "second open!");
+    exit(0);
 }
