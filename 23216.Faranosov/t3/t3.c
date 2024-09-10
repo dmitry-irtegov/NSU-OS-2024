@@ -15,6 +15,9 @@ int main(){
     FILE* fp = NULL;
     if (fopen("text3.txt", "r") == NULL) {
         perror("File open error");    
+    }
+    else {
+        printf("First open succeseful\n");
     };
 
     if (fp != NULL) fclose(fp);
@@ -30,7 +33,10 @@ int main(){
     fp = NULL;
     if (fopen("text3.txt", "r") == NULL) {
         perror("File open error");    
-    };
+    }
+    else {
+        printf("First open succeseful\n");
+    }
 
     if (fp != NULL) fclose(fp);
 
