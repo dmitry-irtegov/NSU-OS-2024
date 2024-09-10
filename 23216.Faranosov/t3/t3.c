@@ -35,8 +35,8 @@ int main(){
         perror("File open error");    
     }
     else {
-        printf("First open succeseful\n");
-    }
+        printf("Second open succeseful\n");
+    };
 
     if (fp != NULL) fclose(fp);
 
