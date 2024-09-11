@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
            uflg = 0, Uflg = 0, cflg = 0,
            Cflg = 0, vflg = 0, Vflg = 0;
     char *f_ptr, *g_ptr, *U_ptr, *C_ptr, *V_ptr;
-    char dir_info[100];
+    char dir_info[200];
     printf("argc equals %d\n", argc);
     while ((c = getopt(argc, argv, options)) != EOF)
     {
@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
         case 'V':
             Vflg++;
             V_ptr = optarg;
+            static char * V_ptr;
             break;
         case '?':
             printf("invalid option is %c\n", optopt);
@@ -108,16 +109,16 @@ int main(int argc, char *argv[])
     }
     if (dflg)
         printf("Directory %s\n", getcwd(dir_info, 100));
+    if (Vflg)
+    {
+        putenv(V_ptr);
+    }
     if (vflg)
     {
         for (char **env = environ; *env; env++)
         {
             printf("%s\n", *env);
         }
-    }
-    if (Vflg)
-    {
-        putenv(V_ptr);
     }
     if (invalid)
         printf("invalid equals %d\n", invalid);
