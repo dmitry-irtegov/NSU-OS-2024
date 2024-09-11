@@ -4,12 +4,12 @@
 #include <stdlib.h>
 extern char *tzname[];
 
-main()
+void main()
 {
     time_t now;
     struct tm *sp;
 
-    putenv("TZ = Etc/GMT+8");
+    putenv("TZ=America/Vancouver");
     (void) time( &now );
 
     printf("%s", ctime( &now ) );
