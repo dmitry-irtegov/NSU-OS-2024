@@ -12,8 +12,7 @@ int main(int argc, char* argv[]){
     }
     
     pid_t child = fork();
-    
-    siginfo_t info;
+    int status;
     switch (child){
         case -1:
             perror("fork failed");
@@ -24,12 +23,18 @@ int main(int argc, char* argv[]){
             exit(EXIT_FAILURE);
             break;
         default:
-            if (waitid(P_PID, child, &info, WEXITED) == -1){
+            if (waitpid(child, &status, 0) == -1){
                 perror("failed to waitid");
                 exit(EXIT_FAILURE);
             }
 
-            printf("process ended with code = %d\n", info.si_code);
+            if (WIFEXITED(status)){
+                printf("process ended with code = %d\n", WEXITSTATUS(status));
+            }
+            else{
+                printf("process was killed by signal with code = %d", WTERMSIG(status));
+            }
+            
             break;
     }
 
