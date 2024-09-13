@@ -143,6 +143,7 @@ int main(int argc, char* argv[]){
     }
 
     freeVector(&vector);
+    close(file);
 
     exit(EXIT_SUCCESS);
 
