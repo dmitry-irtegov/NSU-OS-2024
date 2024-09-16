@@ -12,7 +12,6 @@ int main()
     tzset();
     (void) time( &now );
 
-
     fprintf(stderr, "ctime: %s\n", ctime( &now ) );
     return 0;
 }
