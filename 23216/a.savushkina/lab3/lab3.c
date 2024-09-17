@@ -23,7 +23,7 @@ int main (){
 
     open_and_close("test_file.txt", "r");
 
-    int ret = setuid(geteuid());
+    setuid(getuid());
     printf("After setuid\npid : %d\n", getuid());
     printf("euid: %d\n", geteuid());
 
