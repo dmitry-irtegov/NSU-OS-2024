@@ -7,9 +7,10 @@ extern char* tzname[];
 int main()
 {
     int succ = setenv("TZ", "America/Los_Angeles", 1);
-    if (succ != 0)
+    if (succ != 0) {
         exit(1);
-
+    }
+    
     else
     {
         tzset();
