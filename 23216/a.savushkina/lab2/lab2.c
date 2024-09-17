@@ -11,18 +11,18 @@ int main() {
     time_t now;
     struct tm *sp;
 
-    if (time(&now) == (time_t)(-1))
-    {
-        perror("time error");
+    if (time(&now) == (time_t)(-1)){
+        perror("Current calendar time has not been encoded as time_t object");
     }
 
     sp = localtime(&now);
 
-    if(ctime(&now) == NULL){
+    char* t = ctime(&now);
+    if(t == NULL){
         perror("ctime error");
     }
 
-    printf("%s", ctime(&now));
+    printf("%s", t);
 
     exit(0);
 }
