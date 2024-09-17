@@ -16,7 +16,7 @@ int main()
         tzset();
         time_t now;
         struct tm* sp;
-
+    
         (void)time(&now);
 
         printf("%s", ctime(&now));
