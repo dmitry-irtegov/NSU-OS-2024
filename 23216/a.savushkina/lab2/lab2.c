@@ -19,7 +19,6 @@ int main() {
     sp = localtime(&now);
 
     char* t = ctime(&now);
-    t = NULL;
     if(t == NULL){
         perror("ctime error");
         return 2;
