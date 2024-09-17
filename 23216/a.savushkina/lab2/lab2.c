@@ -5,7 +5,7 @@
 extern char *tzname[];
 
 int main() {
-    setenv("TZ", "PST8PDT", 1);
+    setenv("TZ", "America/Los_Angeles", 1);
     tzset();
 
     time_t now;
@@ -13,7 +13,7 @@ int main() {
     
     if (time(&now) == (time_t)(-1)){
         perror("Current calendar time has not been encoded as time_t object");
-        return 1;
+        exit(1);
     }
 
     sp = localtime(&now);
@@ -21,7 +21,7 @@ int main() {
     char* t = ctime(&now);
     if(t == NULL){
         perror("ctime error");
-        return 2;
+        exit(2);
     }
 
     printf("%s", t);
