@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #ifndef LEN_BUFFER
 #define LEN_BUFFER 10
@@ -81,10 +82,32 @@ void freeVector(vector_off_t* vector){
 }
 
 void handler(){
-
     
-    close(file);
-    _exit(EXIT_SUCCESS);    
+    char buf[100];
+    if (lseek(file, 0, SEEK_SET) == -1){
+        write(2, "lseek failed", 13);
+        _exit(EXIT_FAILURE);
+    }
+    ssize_t count_bytes;
+    while (1){
+        count_bytes = read(file, buf, 100);
+        switch (count_bytes)
+        {
+        case -1:
+            write(2, "read failed", 12);
+            _exit(EXIT_FAILURE);
+            break;
+        case 0:
+            _exit(EXIT_SUCCESS);
+            break;
+        default:
+            if (write(1, buf, count_bytes) == -1){
+                write(2, "write failed", 13);
+                _exit(EXIT_FAILURE);
+            }
+            break;
+        }
+    }    
 }
 
 int main(int argc, char* argv[]){
@@ -148,15 +171,16 @@ int main(int argc, char* argv[]){
 
     int num_of_line;
     while (1){
+        alarm(5);
         puts("Enter number of string (for end programm enter 0)");
         if(!scanf("%d", &num_of_line) || num_of_line == 0){
             break;
         }
+        alarm(0);
         searchString(&vector, num_of_line, file);
     }
 
     freeVector(&vector);
-    close(file);
 
     exit(EXIT_SUCCESS);
 
