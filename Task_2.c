@@ -4,7 +4,7 @@
 
 int main(){
     if(putenv("TZ=America/Los_Angeles") != 0){
-        perror("error changing environment variable");
+        perror("error changing environment variable.");
         return 1;
     }
     tzset();
