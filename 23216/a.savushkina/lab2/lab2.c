@@ -4,21 +4,25 @@
 
 extern char *tzname[];
 
-int main()
-{
+int main() {
     setenv("TZ", "PST8PDT", 1);
     tzset();
 
     time_t now;
     struct tm *sp;
-    (void)time(&now);
+
+    if (time(&now) == (time_t)(-1))
+    {
+        perror("time error");
+    }
+
     sp = localtime(&now);
 
+    if(ctime(&now) == NULL){
+        perror("ctime error");
+    }
+
     printf("%s", ctime(&now));
-    printf("%d/%d/%02d %d:%02d %s\n",
-           sp->tm_mday, sp->tm_mon + 1,
-           sp->tm_year + 1900, sp->tm_hour,
-           sp->tm_min, tzname[sp->tm_isdst]);
 
     exit(0);
 }
