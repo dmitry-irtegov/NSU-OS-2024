@@ -10,16 +10,19 @@ int main() {
 
     time_t now;
     struct tm *sp;
-
+    
     if (time(&now) == (time_t)(-1)){
         perror("Current calendar time has not been encoded as time_t object");
+        return 1;
     }
 
     sp = localtime(&now);
 
     char* t = ctime(&now);
+    t = NULL;
     if(t == NULL){
         perror("ctime error");
+        return 2;
     }
 
     printf("%s", t);
