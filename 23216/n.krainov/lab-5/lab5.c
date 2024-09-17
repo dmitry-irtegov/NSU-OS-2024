@@ -143,7 +143,10 @@ int main(int argc, char* argv[]){
     }
 
     freeVector(&vector);
-    close(file);
+    if (close(file) == -1){
+        perror("close failed");
+        exit(EXIT_FAILURE);
+    }
 
     exit(EXIT_SUCCESS);
 
