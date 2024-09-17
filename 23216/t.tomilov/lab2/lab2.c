@@ -10,7 +10,10 @@ int main() {
     }
     time_t now;
     struct tm *sp;
-    (void) time( &now );
+    if (time( &now ) == NULL){
+        printf("Error: Failed to get the system time!\n");
+        exit(-1);
+    }
     printf("%s", ctime( &now ) );
     exit(0);
 }
