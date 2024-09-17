@@ -14,13 +14,13 @@ main() {
         perror("Function time error");
         exit(1);
     }
-
-    if (ctime(&now) == NULL) {
+    char *timestr = ctime(&now);
+    if (timestr == NULL) {
         perror("Function ctime error");
         exit(1);
     }
 
-    printf("%s", ctime(&now));
+    printf("%s", timestr);
 
     exit(0);
 }
