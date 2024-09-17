@@ -3,29 +3,33 @@
 #include <time.h>
 #include <stdlib.h>
 extern char *tzname[];
-extern time_t timezone;
 
 int main()
 {
-    /*
-    I can try to do it using gmtime and asctime, now - 8*60*60 
-    but then there is the problem of how to display the correct time zone
-
-    So i decided to change environment variable using setenv
-    */
-    setenv("TZ", "America/Los_Angeles", 1);//to change env var
+    if (setenv("TZ", "America/Los_Angeles", 1) != 0) {
+        printf("setenv didn't change");
+        exit(1);
+    }
     tzset();
 
 
-    time_t now;
+    time_t now;  
     struct tm *sp;
 
     (void) time( &now );
 
-
-    printf("%s", ctime( &now ) );
+    char* ctime_result = ctime(&now);
+    if (ctime_result == NULL) {
+        printf("ctime return null");
+        exit(1);
+    }
+    printf("%s", ctime_result);
 
     sp = localtime(&now);
+    if(sp == NULL){
+        printf("localtime return null");
+        exit(1);
+    }
 
     printf("%d/%d/%02d %d:%02d %s\n",
         sp->tm_mon + 1, sp->tm_mday,

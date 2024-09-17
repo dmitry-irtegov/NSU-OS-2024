@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "time.h": "c",
+        "types.h": "c",
+        "stdio.h": "c",
+        "struct_timespec.h": "c"
+    }
+}
