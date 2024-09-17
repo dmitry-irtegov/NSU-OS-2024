@@ -13,7 +13,7 @@ void open_and_close(char *fileName, char *mode){
         fclose(file);
     }   
     else{
-        perror("error opening\n");
+        perror("error opening");
     }
 }
 
