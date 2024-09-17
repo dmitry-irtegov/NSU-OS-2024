@@ -4,10 +4,10 @@
 #include <errno.h>
 
 
-void check_file() {
+int check_file() {
 
-    real = getuid();
-    eff = geteuid();
+    uid_t real = getuid();
+    uit_t eff = geteuid();
 
     if (real == -1) {
         perror("getuid error:");
@@ -28,15 +28,26 @@ void check_file() {
     }
 
     if (fp != NULL) fclose(fp);
+    
+    return 0
 }
 
 int main(){
     
-    check_file();
+    if (check_file()) {
+        return 1;
+    }
 
+    uid_t real = getuid();
+    if (real == -1) {
+        perror("getuid error:");
+        return 1;
+    }
     setuid(real); 
 
-    check_file();
+    if (check_file()) {
+        return 1;
+    }
 
 
     return 0;
