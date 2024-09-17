@@ -7,7 +7,6 @@
 #include <errno.h> 
 
 void open_and_close(char *fileName, char *mode){
-    extern errno;  
     FILE * file = fopen(fileName, mode);
     if(file){
         printf("lol\n");
@@ -15,7 +14,6 @@ void open_and_close(char *fileName, char *mode){
     }   
     else{
         perror("error opening\n");
-        fflush(errno);
     }
 }
 
