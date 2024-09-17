@@ -15,14 +15,22 @@ void main() {
     */
 
     if (putenv("TZ=America/Los_Angeles") != 0) {
+        perror("putenv");
         exit(1);
     }
 
     if (time(&now) == NULL) {
+        perror("time");
         exit(2);
     }
 
-    printf("%s", ctime(&now));
+    char *date = ctime(&now);
+    if (date == NULL) {
+        perror("ctime");
+        exit(3);
+    }
+
+    printf("%s", date);
 
     exit(0);
 }
