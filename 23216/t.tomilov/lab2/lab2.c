@@ -4,8 +4,8 @@
 #include <stdlib.h>
 
 int main() {
-    if (putenv("TZ=PST8PDT") == -1){
-        printf("Error: Couldn't get to the environment variable!\n");
+    if (putenv("TZ=America/Los_Angeles") == -1){
+        printf("Error: Couldn't get the environment variable!\n");
         exit(-1);
     }
     time_t now;
