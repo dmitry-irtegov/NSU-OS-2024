@@ -6,13 +6,13 @@
 
 int main() {
     if (putenv("TZ=America/Los_Angeles") == -1) {
-        printf("Error: Couldn't get the environment variable!\n%d\n", errno);
+        perror("Error: Couldn't get the environment variable!\n");
         exit(-1);
     }
     time_t now;
     struct tm *sp;
-    if (time(&now) == NULL) {
-        printf("Error: Failed to get the system time!\n%d\n", errno);
+    if (time(&now) == 0) {
+        perror("Error: Failed to get the system time!\n");
         exit(-1);
     }
     printf("%s", ctime(&now));
