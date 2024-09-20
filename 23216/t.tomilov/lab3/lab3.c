@@ -21,9 +21,10 @@ int main(int argc, char **argv) {
     }
     printf("Real UID: %d\nEffective UID: %d\n", getuid(), geteuid());
     open(argv[1]);
-    if (setuid(geteuid())){
-        perror("ERROR: can`t use setuid!");
+    if (setuid(getuid())){
+        perror("ERROR: can`t use setuid!\n");
     }
+    printf("Real UID: %d\nEffective UID: %d\n", getuid(), geteuid());
     open(argv[1]);
     return 0;
 }
