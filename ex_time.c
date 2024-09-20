@@ -11,10 +11,17 @@ int main()
 
     // Установка временной зоны на PST (Pacific Standard Time)
     // set environment
-    setenv("TZ", "PST8PDT", 1);
+    if(setenv("TZ", "PST8PDT", 1) != 0){
+         perror("Error: Couldn't set the environment");
+         exit(-1);
+    }
+    
     tzset(); // Обновляем информацию о временной зоне
 
-    (void) time(&now);
+    if(time(&now) == 0){
+        perror("Error: Failed to get the system time");
+         exit(-1);
+    }
     
     printf("%s", ctime(&now));
     sp = localtime(&now);
