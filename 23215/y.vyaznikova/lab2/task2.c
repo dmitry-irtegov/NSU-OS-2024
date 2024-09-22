@@ -17,8 +17,11 @@ int main()
         exit(1);
     }
 
-    setenv("TZ", "America/Los_Angeles", 1);
-    tzset();
+    if ((setenv("TZ", "America/Los_Angeles", 1) == -1))
+    {
+        perror("setenv");
+        exit(2);
+    }
 
     sp = localtime(&now);
 
