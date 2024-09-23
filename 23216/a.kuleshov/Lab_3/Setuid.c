@@ -1,43 +1,38 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main() {
-    FILE *file;
-    uid_t real_uid, effective_uid;
+// Функция для печати реальных и эффективных UID, а также попытки открытия файла
+void check_and_open_file(const char *filename) {
+    uid_t real_uid = getuid();
+    uid_t effective_uid = geteuid();
 
     // Печатаем реальные и эффективные идентификаторы пользователя
-    real_uid = getuid();
-    effective_uid = geteuid();
     printf("Real UID: %d, Effective UID: %d\n", real_uid, effective_uid);
 
     // Пытаемся открыть файл
-    file = fopen("data.txt", "r");
+    FILE *file = fopen(filename, "r");
     if (file == NULL) {
         perror("Error opening file");
     } else {
         printf("File opened successfully.\n");
         fclose(file);
     }
+}
+
+int main() {
+    const char *filename = "data.txt";
+
+    // Первый вызов функции проверки UID и открытия файла
+    check_and_open_file(filename);
 
     // Меняем эффективный идентификатор на реальный
-    if (setuid(real_uid) != 0) {
+    if (setuid(getuid()) != 0) {
         perror("Error setting UID");
         return 1;
     }
 
-    // Повторяем шаги после изменения идентификатора
-    real_uid = getuid();
-    effective_uid = geteuid();
-    printf("After setuid - Real UID: %d, Effective UID: %d\n", real_uid, effective_uid);
-
-    // Повторяем попытку открытия файла
-    file = fopen("data.txt", "r");
-    if (file == NULL) {
-        perror("Error opening file");
-    } else {
-        printf("File opened successfully.\n");
-        fclose(file);
-    }
+    // Второй вызов функции после изменения UID
+    check_and_open_file(filename);
 
     return 0;
 }
