@@ -8,7 +8,7 @@ int main()
 {
     time_t now;
     struct tm *sp;
-    setenv("TZ","UTC+7",1);
+    setenv("TZ","USA/Los_Angeles",1);
     (void)time(&now);
 
     printf("%s", ctime(&now));
