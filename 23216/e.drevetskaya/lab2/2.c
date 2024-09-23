@@ -15,5 +15,5 @@ int main() {
     struct tm *sp;
     sp = localtime(&now);
     printf("%s",asctime(sp));
-    return 6;
+    return 0;
 }
