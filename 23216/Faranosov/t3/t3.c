@@ -4,19 +4,19 @@
 #include <errno.h>
 
 
-int check_file() {
+uid_t check_file() {
 
     uid_t real = getuid();
     uit_t eff = geteuid();
 
     if (real == -1) {
         perror("getuid error:");
-        return 1;
+        return -1;
     }
 
     if (eff) == -1) {
         perror("geteuid error:");
-        return 1;
+        return -1;
     }
 
     printf("Real ID = %d\n", real);
@@ -29,23 +29,20 @@ int check_file() {
 
     if (fp != NULL) fclose(fp);
     
-    return 0
+    return real
 }
 
 int main(){
     
-    if (check_file()) {
+    uid_t real;
+    if ((real = check_file()) == -1) {
         return 1;
     }
 
-    uid_t real = getuid();
-    if (real == -1) {
-        perror("getuid error:");
-        return 1;
-    }
+
     setuid(real); 
 
-    if (check_file()) {
+    if ((real = check_file()) == -1) {
         return 1;
     }
 
