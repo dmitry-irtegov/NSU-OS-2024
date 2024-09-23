@@ -16,6 +16,10 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     case 0:
         printf("Child process is existing\n");
+        if(argv[1] == ""){
+            printf("no file for cat");
+            exit(EXIT_FAILURE);
+        }
         int cat_do = execlp("cat", "cat", argv[1], NULL);
         if (cat_do == -1)
         {
@@ -32,7 +36,7 @@ int main(int argc, char *argv[]){
         }
         if (WIFEXITED(wstatus))
         {
-            printf("s\n");
+            printf("String after kill child process lol\n");
         }
         break;
     }
