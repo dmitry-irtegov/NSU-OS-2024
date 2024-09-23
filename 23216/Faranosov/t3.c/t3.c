@@ -36,16 +36,16 @@ int main(){
     
     uid_t real;
     if ((real = check_file()) == -1) {
-        return 1;
+        exit(1);
     }
 
 
     setuid(real); 
 
     if ((real = check_file()) == -1) {
-        return 1;
+        exit(1);
     }
 
 
-    return 0;
+    exit(0);
 }
