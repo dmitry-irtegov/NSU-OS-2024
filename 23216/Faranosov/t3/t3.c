@@ -7,14 +7,14 @@
 uid_t check_file() {
 
     uid_t real = getuid();
-    uit_t eff = geteuid();
+    uid_t eff = geteuid();
 
     if (real == -1) {
         perror("getuid error:");
         return -1;
     }
 
-    if (eff) == -1) {
+    if (eff == -1) {
         perror("geteuid error:");
         return -1;
     }
@@ -29,7 +29,7 @@ uid_t check_file() {
 
     if (fp != NULL) fclose(fp);
     
-    return real
+    return real;
 }
 
 int main(){
