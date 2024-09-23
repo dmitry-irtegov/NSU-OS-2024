@@ -8,12 +8,12 @@ int main() {
         exit(1);
     }
     time_t now;
-    if (time(&now)!=0){
+    if (time(&now)<=127){
         perror("Getting time failed");
         exit(1);
     }
     struct tm *sp;
     sp = localtime(&now);
     printf("%s",asctime(sp));
-    return 6;
+    return 0;
 }
