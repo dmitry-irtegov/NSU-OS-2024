@@ -13,7 +13,7 @@ int main(){
         perror("Error getting time");
         exit(EXIT_FAILURE);
     }
-    char * outputTime = ctime_r(&now);  
+    char * outputTime = ctime(&now);  
      if (outputTime == NULL) {
         perror("Error converting time");
         exit(EXIT_FAILURE);
