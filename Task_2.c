@@ -8,13 +8,12 @@ int main(){
         return 1;
     }
 
-    tzset();
     time_t now = time(NULL);
     if (now == -1) {
         perror("Error getting time");
         return 1;
     }
-    char * outputTime = ctime(&now);  
+    char * outputTime = ctime_r(&now);  
      if (outputTime == NULL) {
         perror("Error converting time");
         return 1;
