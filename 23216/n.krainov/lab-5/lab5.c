@@ -157,7 +157,13 @@ int main(int argc, char *argv[]) {
         
         res = scanf("%d", &num_of_line);
         if (res == EOF){
-            exitProgram(EXIT_FAILURE, "scanf failed");
+            if (feof(stdin)) {
+                fprintf(stderr, "EOF\n");
+                exitProgram(EXIT_FAILURE, NULL);
+            }
+            else{
+                exitProgram(EXIT_FAILURE, "scanf failed");
+            }
         }
         else if (res == 0) {
             while(getc(stdin) != '\n');
