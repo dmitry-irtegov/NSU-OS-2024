@@ -2,7 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-main() {
+int main() {
     time_t now;
 
     if (putenv("TZ=America/Los_Angeles") == -1) {
