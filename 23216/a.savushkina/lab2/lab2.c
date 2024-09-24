@@ -3,7 +3,11 @@
 #include <stdlib.h>
 
 int main() {
-    setenv("TZ", "America/Los_Angeles", 1);
+    int err = setenv("TZ", "America/Los_Angeles", 1);
+    if (err == -1){
+        perror("error in setenv");
+        exit(1);
+    }
 
     time_t now;
     
