@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
-extern char *tzname[];
 
 int main() {
     time_t now;
@@ -20,7 +19,13 @@ int main() {
     }
 
     // Печать текущего времени в человекочитаемом формате
-    printf("%s", ctime(&now));
+    char *time_string = ctime(&now);
+    if (time_string == NULL) {  // Проверка на NULL
+        perror("ctime error");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("%s", time_string);
     exit(EXIT_SUCCESS);
 }
 
