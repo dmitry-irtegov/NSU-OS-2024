@@ -133,19 +133,15 @@ int main(int argc, char *argv[]) {
 
         for (ssize_t i = 0; i < sym_read; i++)
         {
+            cur_len++;
             if (buffer[i] == '\n')
             {
-                cur_len++;
                 if (addElem(cur_off, cur_len))
                 {
                     exitProgram(EXIT_FAILURE, "addElem failed");
                 }
                 cur_off += cur_len;
                 cur_len = 0;
-            }
-            else
-            {
-                cur_len++;
             }
         }
     }
@@ -166,7 +162,15 @@ int main(int argc, char *argv[]) {
             }
         }
         else if (res == 0) {
-            while(getc(stdin) != '\n');
+            while(getc(stdin) != '\n'){
+                if (feof(stdin)) {
+                    fprintf(stderr, "EOF\n");
+                    exitProgram(EXIT_FAILURE, NULL);
+                }
+                else{
+                    exitProgram(EXIT_FAILURE, "getc failed");
+                }
+            }
             continue;
         }
         else if (num_of_line == 0){
