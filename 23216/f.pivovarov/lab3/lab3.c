@@ -4,7 +4,7 @@
 
 int fileOpenClose(char *filename);
 
-void main(int argc, char **argv) {
+int main(int argc, char **argv) {
     // 1: prints RUID and EUID
     printf("RUID: %d, EUID: %d\n", getuid(), geteuid());
 
@@ -42,12 +42,11 @@ int fileOpenClose(char *filename) {
     if (file == NULL) {
         perror("Cannot open file");
         return 1;
-    } else {
-        // try to close
-        if (fclose(file) != 0) {
-            perror("Cannot close file");
-            return 1;
-        }
+    }
+    // try to close
+    if (fclose(file) != 0) {
+        perror("Cannot close file");
+        return 1;
     }
 
     return 0;
