@@ -9,7 +9,6 @@ int main() {
         exit(EXIT_FAILURE);
     }
     time_t now;
-    struct tm *sp;
     if (time(&now) == 0) {
         perror("Error: Failed to get the system time!");
         exit(EXIT_FAILURE);
