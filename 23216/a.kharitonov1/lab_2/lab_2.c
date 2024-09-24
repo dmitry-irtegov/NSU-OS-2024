@@ -4,6 +4,7 @@
 
 int main() {
     time_t now;
+    char * cTime=NULL;
 
     if (putenv("TZ=America/Los_Angeles") == -1) {
         perror("failed putenv");
@@ -15,7 +16,13 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("%s", ctime(&now));
+    cTime = ctime(&now);
+    if (cTime == NULL){
+        perror("failed ctime");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("%s", cTime);
 
     exit(EXIT_SUCCESS);
 }
