@@ -6,7 +6,6 @@ extern char *tzname[];
 
 int main() {
     setenv("TZ", "America/Los_Angeles", 1);
-    tzset();
 
     time_t now;
     struct tm *sp;
@@ -23,7 +22,7 @@ int main() {
         perror("ctime error");
         exit(2);
     }
-
+    
     printf("%s", t);
 
     exit(0);
