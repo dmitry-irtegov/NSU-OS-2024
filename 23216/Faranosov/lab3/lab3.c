@@ -9,15 +9,6 @@ uid_t check_file() {
     uid_t real = getuid();
     uid_t eff = geteuid();
 
-    if (real == -1) {
-        perror("getuid error");
-        return -1;
-    }
-
-    if (eff == -1) {
-        perror("geteuid error");
-        return -1;
-    }
 
     printf("Real ID = %d\n", real);
     printf("Effective ID = %d\n\n", eff);
@@ -35,16 +26,12 @@ uid_t check_file() {
 int main(){
     
     uid_t real;
-    if ((real = check_file()) == -1) {
-        exit(1);
-    }
+    real = check_file();
 
 
     setuid(real); 
 
-    if ((real = check_file()) == -1) {
-        exit(1);
-    }
+    check_file();
 
 
     exit(0);
