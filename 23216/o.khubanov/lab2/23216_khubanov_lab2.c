@@ -1,22 +1,26 @@
- #include <sys/types.h>
- #include <stdio.h>
- #include <time.h>
- #include <stdlib.h>
- extern char *tzname[];
- 
-int main(){
-   time_t now;
-   struct tm *sp;
-   putenv("TZ=America/Los_Angeles");
+#include <sys/types.h>
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+extern char *tzname[];
 
-   (void) time( &now );
+int main() {
+    time_t now;
 
-     printf("%s", ctime( &now ) );
+    // Проверка на ошибку при установке переменной среды
+    if (putenv("TZ=America/Los_Angeles") != 0) {
+        perror("putenv error");  // Должны быть двойные кавычки для строки
+        exit(EXIT_FAILURE);
+    }
 
-     sp = localtime(&now);
-     printf("%d/%d/%02d %d:%02d %s\n",
-         sp->tm_mon + 1, sp->tm_mday,
-         sp->tm_year + 1900, sp->tm_hour,
-         sp->tm_min, tzname[sp->tm_isdst]);
-     exit(0);
- }
+    // Получение текущего времени и проверка на ошибку
+    if (time(&now) == (time_t)(-1)) {  // Проверяем на -1, а не на 0
+        perror("time error");
+        exit(EXIT_FAILURE);
+    }
+
+    // Печать текущего времени в человекочитаемом формате
+    printf("%s", ctime(&now));
+    exit(EXIT_SUCCESS);
+}
+
