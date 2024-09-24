@@ -11,7 +11,11 @@ extern char **environ;
 int execvpe(char *const file, char *const argv[], char * envp)
 {
     char **previous_env = environ;
-    putenv(envp);
+    int add_env = putenv(envp);
+    if (add_env){
+        perror("error while adding new enviroment.");
+        exit(EXIT_FAILURE);
+    }
     int new_process = execvp(file, argv);
     if (new_process == -1)
     {
@@ -37,5 +41,4 @@ int main(int argc, char *argv[])
         printf("Error in creating a new process\n");
         exit(EXIT_FAILURE);
     }
-    return 0;
 }
