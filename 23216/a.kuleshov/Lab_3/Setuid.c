@@ -13,10 +13,10 @@ void check_and_open_file(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         perror("Error opening file");
-    } else {
-        printf("File opened successfully.\n");
-        fclose(file);
+        return;
     }
+    printf("File opened successfully.\n");
+    fclose(file);
 }
 
 int main() {
