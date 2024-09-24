@@ -10,7 +10,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (time(&now) == 0) {
+    if (time(&now) == -1) {
         perror("failed time");
         exit(EXIT_FAILURE);
     }
