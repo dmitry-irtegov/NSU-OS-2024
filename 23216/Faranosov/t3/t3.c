@@ -10,12 +10,12 @@ uid_t check_file() {
     uid_t eff = geteuid();
 
     if (real == -1) {
-        perror("getuid error:");
+        perror("getuid error");
         return -1;
     }
 
     if (eff == -1) {
-        perror("geteuid error:");
+        perror("geteuid error");
         return -1;
     }
 
