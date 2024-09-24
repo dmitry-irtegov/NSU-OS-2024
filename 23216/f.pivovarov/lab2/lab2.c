@@ -16,21 +16,21 @@ void main() {
 
     if (putenv("TZ=America/Los_Angeles") != 0) {
         perror("putenv");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (time(&now) == NULL) {
         perror("time");
-        exit(2);
+        exit(EXIT_FAILURE);
     }
 
     char *date = ctime(&now);
     if (date == NULL) {
         perror("ctime");
-        exit(3);
+        exit(EXIT_FAILURE);
     }
 
     printf("%s", date);
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
