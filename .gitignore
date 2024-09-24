@@ -55,4 +55,4 @@ dkms.conf
 core
 core.*
 .nfs*
-.DS_Store§
+.DS_Store
