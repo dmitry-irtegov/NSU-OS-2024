@@ -3,7 +3,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-void main() {
+int main() {
     time_t now;
 
     /* As follows from man, timezone getting from
@@ -19,7 +19,7 @@ void main() {
         exit(EXIT_FAILURE);
     }
 
-    if (time(&now) == NULL) {
+    if (!time(&now)) {
         perror("time");
         exit(EXIT_FAILURE);
     }
