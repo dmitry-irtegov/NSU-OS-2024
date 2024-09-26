@@ -56,20 +56,20 @@ int searchString(int num_of_line, int file){
         puts("Num of line is too big");
         return 0;
     }
-    write(1, (fileContent + vector.elems[num_of_line-1].off), vector.elems[num_of_line-1].len);
+    if (write(STDOUT_FILENO, (fileContent + vector.elems[num_of_line-1].off), vector.elems[num_of_line-1].len) == -1){
+        return 1;
+    }
     
     return 0;
 
 }
 
-void freeVector(){
-    free(vector.elems);
-}
-
 void handler(){
 
-    write(1, fileContent, buf.st_size);
-    write(1, "\n", 1);
+    if (write(STDOUT_FILENO, fileContent, buf.st_size) == -1 || write(STDOUT_FILENO, "\n", 1) == -1){
+        write(STDERR_FILENO, "write failed", 12);
+        _exit(EXIT_FAILURE);
+    }
     _exit(EXIT_SUCCESS);
 }
 
@@ -77,12 +77,10 @@ void exitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
-    freeVector();
     exit(Code);
 }
 
 int main(int argc, char* argv[]){
-    vector.elems = NULL;
     if (argc < 2){
         fprintf(stderr, "missing argument");
         exitProgram(EXIT_FAILURE, NULL);
@@ -105,6 +103,9 @@ int main(int argc, char* argv[]){
         exitProgram(EXIT_FAILURE, "stat failed");
     }
     fileContent = mmap(NULL, buf.st_size, PROT_READ, MAP_PRIVATE, file, 0);
+    if (fileContent == MAP_FAILED){
+        exitProgram(EXIT_FAILURE, "mmap failed");
+    }
     for (off_t i = 0; i < buf.st_size; i++){
         if (fileContent[i] == '\n'){
             cur_len++;
