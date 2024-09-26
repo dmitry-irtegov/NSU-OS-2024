@@ -114,8 +114,8 @@ void exitProgram(int Code, char* message){
 int main(int argc, char* argv[]){
     vector.elems = NULL;
     if (argc < 2){
-        perror("missing filename");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "missing argument");
+        exitProgram(EXIT_FAILURE, NULL);
     }
 
     signal(SIGALRM, handler);
@@ -123,8 +123,7 @@ int main(int argc, char* argv[]){
     filename = argv[1];
     file = open(filename, O_RDONLY);
     if (file == -1){
-        perror("open failed");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "open failed");
     }
 
     if (initVector(&vector)){
