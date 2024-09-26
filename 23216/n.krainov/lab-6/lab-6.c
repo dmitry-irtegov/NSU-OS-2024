@@ -70,10 +70,6 @@ int searchString(int num_of_line, int file){
 
 }
 
-void freeVector(){
-    free(vector.elems);
-}
-
 void handler(){
 
     char buf[LEN_BUFFER];
@@ -107,7 +103,6 @@ void exitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
-    freeVector();
     exit(Code);
 }
 
