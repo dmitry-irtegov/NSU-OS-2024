@@ -24,50 +24,43 @@ int file;
 char* filename;
 vector_off_t vector;
 
-int initVector(vector_off_t* ans){
-    ans->cur = 0;
-    ans->elems = malloc(sizeof(elem_of_vector_off_t)*20);
-    if (ans->elems == NULL){
-        perror("malloc failed");
-    }
-    ans->cap = ans->elems == NULL? -1: 20;
-    return ans->elems == NULL? 1: 0;
+int initVector(){
+    vector.cur = 0;
+    vector.elems = malloc(sizeof(elem_of_vector_off_t)*20);
+    vector.cap = vector.elems == NULL? -1: 20;
+    return vector.elems == NULL? 1: 0;
 }
 
-int addElem(vector_off_t* vector, off_t off, off_t len){
-    if (vector->cap == vector->cur){
-        vector->cap *= 2;
-        vector->elems = realloc(vector->elems, sizeof(elem_of_vector_off_t) * vector->cap);
-        if (vector->elems == NULL){
-            perror("realloc failed");
+int addElem(off_t off, off_t len){
+    if (vector.cap == vector.cur){
+        vector.cap *= 2;
+        vector.elems = realloc(vector.elems, sizeof(elem_of_vector_off_t) * vector.cap);
+        if (vector.elems == NULL){
             return 1;
         }
     }
-    vector->elems[vector->cur].len = len;
-    vector->elems[vector->cur].off = off;
-    vector->cur++;
+    vector.elems[vector.cur].len = len;
+    vector.elems[vector.cur].off = off;
+    vector.cur++;
 
     return 0;
 }
 
-int searchString(vector_off_t* vector, int num_of_line, int file){
-    if (num_of_line >= vector->cur){
+int searchString(int num_of_line, int file){
+    if (num_of_line >= vector.cur){
         puts("Num of line is too big");
         return 0;
     }
-    char* string = calloc(vector->elems[num_of_line-1].len + 1, sizeof(char));
+    char* string = calloc(vector.elems[num_of_line-1].len + 1, sizeof(char));
     if (string == NULL){
-        perror("calloc failed");
         return 1;
     }
 
-    if (lseek(file, vector->elems[num_of_line-1].off, SEEK_SET) == -1){
-        perror("lseek failed");
+    if (lseek(file, vector.elems[num_of_line-1].off, SEEK_SET) == -1){
         return 1;
     }
 
-    if (read(file, string, vector->elems[num_of_line-1].len) == -1){
-        perror("read failed");
+    if (read(file, string, vector.elems[num_of_line-1].len) == -1){
         return 1;
     }
     puts(string);
@@ -77,13 +70,13 @@ int searchString(vector_off_t* vector, int num_of_line, int file){
 
 }
 
-void freeVector(vector_off_t* vector){
-    free(vector->elems);
+void freeVector(){
+    free(vector.elems);
 }
 
 void handler(){
 
-    char buf[100];
+    char buf[LEN_BUFFER];
     if (lseek(file, 0, SEEK_SET) == -1){
         write(2, "lseek failed", 13);
         _exit(EXIT_FAILURE);
@@ -110,7 +103,16 @@ void handler(){
     }    
 }
 
+void exitProgram(int Code, char* message){
+    if (message != NULL){
+        perror(message);
+    }
+    freeVector();
+    exit(Code);
+}
+
 int main(int argc, char* argv[]){
+    vector.elems = NULL;
     if (argc < 2){
         perror("missing filename");
         exit(EXIT_FAILURE);
@@ -126,7 +128,7 @@ int main(int argc, char* argv[]){
     }
 
     if (initVector(&vector)){
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "initVector failed");
     }
 
     char buffer[LEN_BUFFER];
@@ -137,9 +139,7 @@ int main(int argc, char* argv[]){
     while (1){
         sym_read = read(file, buffer, LEN_BUFFER);
         if (sym_read == -1){
-            freeVector(&vector);
-            perror("read failed");
-            exit(EXIT_FAILURE);
+            exitProgram(EXIT_FAILURE, "read failed");
         }
         if (sym_read == 0){
             break;
@@ -148,9 +148,8 @@ int main(int argc, char* argv[]){
         for (ssize_t i = 0; i<sym_read; i++){
             if (buffer[i] == '\n'){
                 cur_len++;
-                if (addElem(&vector, cur_off, cur_len)){
-                    freeVector(&vector);
-                    exit(EXIT_FAILURE);
+                if (addElem(cur_off, cur_len)){
+                    exitProgram(EXIT_FAILURE, "addElem failed");
                 }
                 cur_off+=cur_len;
                 cur_len = 0;
@@ -163,25 +162,42 @@ int main(int argc, char* argv[]){
     }
 
     if (!flag){
-        if (addElem(&vector, cur_off, cur_len)){
-            freeVector(&vector);
-            exit(EXIT_FAILURE);
+        if (addElem(cur_off, cur_len)){
+            exitProgram(EXIT_FAILURE, "addElem failed");
         }
     }
 
-    int num_of_line;
+    int num_of_line, res;
     while (1){
-        alarm(5);
         puts("Enter number of string (for end programm enter 0)");
-        if(!scanf("%d", &num_of_line) || num_of_line == 0){
+        alarm(5);
+        res = scanf("%d", &num_of_line);
+        alarm(0);
+        if (res == EOF){
+            if (feof(stdin)) {
+                fprintf(stderr, "EOF\n");
+                exitProgram(EXIT_FAILURE, NULL);
+            }
+            else{
+                exitProgram(EXIT_FAILURE, "scanf failed");
+            }
+        }
+        else if (res == 0) {
+            while(getc(stdin) != '\n'){
+                if (feof(stdin)) {
+                    fprintf(stderr, "EOF\n");
+                    exitProgram(EXIT_FAILURE, NULL);
+                }
+                else{
+                    exitProgram(EXIT_FAILURE, "getc failed");
+                }
+            }
+            continue;
+        }
+        else if (num_of_line == 0){
             break;
         }
-        alarm(0);
-        searchString(&vector, num_of_line, file);
+        searchString(num_of_line, file);
     }
-
-    freeVector(&vector);
-
-    exit(EXIT_SUCCESS);
-
+    exitProgram(EXIT_SUCCESS, NULL);
 }
