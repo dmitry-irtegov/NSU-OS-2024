@@ -77,26 +77,17 @@ int searchString(int num_of_line, int file)
     return 0;
 }
 
-void freeVector()
-{
-    free(vector.elems);
-    vector.cap = 0;
-    vector.cur = 0;
-}
 
 
 void exitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
-    freeVector();
     exit(Code);
 }
 
 int main(int argc, char *argv[]) {
-    vector.elems = NULL;
-    if (argc < 2)
-    {
+    if (argc < 2) {
         exitProgram(EXIT_FAILURE, "missing filename");
     }
 
