@@ -8,14 +8,12 @@
 #define LEN_BUFFER 10
 #endif
 
-typedef struct elem_of_vector_off_t
-{
+typedef struct elem_of_vector_off_t {
     off_t off;
     off_t len;
 } elem_of_vector_off_t;
 
-typedef struct vector_off_t
-{
+typedef struct vector_off_t {
     elem_of_vector_off_t *elems;
     int cur;
     int cap;
@@ -24,22 +22,18 @@ typedef struct vector_off_t
 vector_off_t vector;
 int file = -1;
 
-int initVector()
-{
+int initVector() {
     vector.cur = 0;
     vector.cap = 20;
     vector.elems = malloc(sizeof(elem_of_vector_off_t) * 20);
     return vector.elems == NULL ? 1 : 0;
 }
 
-int addElem(off_t off, off_t len)
-{
-    if (vector.cap == vector.cur)
-    {
+int addElem(off_t off, off_t len) {
+    if (vector.cap == vector.cur) {
         vector.cap *= 2;
         vector.elems = realloc(vector.elems, sizeof(elem_of_vector_off_t) * vector.cap);
-        if (vector.elems == NULL)
-        {
+        if (vector.elems == NULL) {
             return 1;
         }
     }
@@ -50,27 +44,22 @@ int addElem(off_t off, off_t len)
     return 0;
 }
 
-int searchString(int num_of_line)
-{
-    if (num_of_line > vector.cur)
-    {
+int searchString(int num_of_line) {
+    if (num_of_line > vector.cur) {
         puts("Num of line is too big");
         return 0;
     }
     char *string = calloc(vector.elems[num_of_line - 1].len + 1, sizeof(char));
-    if (string == NULL)
-    {
+    if (string == NULL) {
         return 1;
     }
 
-    if (lseek(file, vector.elems[num_of_line - 1].off, SEEK_SET) == -1)
-    {
+    if (lseek(file, vector.elems[num_of_line - 1].off, SEEK_SET) == -1) {
         free(string);
         return 1;
     }
 
-    if (read(file, string, vector.elems[num_of_line - 1].len) == -1)
-    {
+    if (read(file, string, vector.elems[num_of_line - 1].len) == -1) {
         free(string);
         return 1;
     }
@@ -97,8 +86,7 @@ void closeFileAndExitProgram(int Code, char* message){
 }
 
 int readFileAndCreateTable(){
-    if (initVector(&vector))
-    {
+    if (initVector(&vector)) {
         return 1;
     }
 
@@ -106,29 +94,22 @@ int readFileAndCreateTable(){
     char buffer[LEN_BUFFER];
     ssize_t sym_read;
     off_t cur_len = 0, cur_off = 0;
-    while (1)
-    {
+    while (1) {
         sym_read = read(file, buffer, LEN_BUFFER);
-        if (sym_read == -1)
-        {
+        if (sym_read == -1) {
             return 1;
         }
-        if (sym_read == 0)
-        {
-            if (addElem(cur_off, cur_len))
-            {
+        if (sym_read == 0) {
+            if (addElem(cur_off, cur_len)) {
                 return 1;
             }
             break;
         }
 
-        for (ssize_t i = 0; i < sym_read; i++)
-        {
+        for (ssize_t i = 0; i < sym_read; i++) {
             cur_len++;
-            if (buffer[i] == '\n')
-            {
-                if (addElem(cur_off, cur_len))
-                {
+            if (buffer[i] == '\n') {
+                if (addElem(cur_off, cur_len)) {
                     return 1;
                 }
                 cur_off += cur_len;
@@ -168,33 +149,32 @@ int checkEOForError(int res){
 
 int workWithUser(){
     int num_of_line, res;
-    while (1)
-    {
+    while (1) {
         puts("Enter number of string (for end programm enter 0)");
         res = scanf("%d", &num_of_line);
         int check = checkEOForError(res);
-        if (check == 1){
+        switch (check) {
+        case 1:
             return 1;
-        }
-        else if (check == 2){
+        case 2:
             return 2;
-        }
-        else if (check == 3){
+        case 3:
             continue;
         }
+       
 
 
         if (num_of_line < 0){
             puts("wrong number");
             continue;
         }
-        else if (num_of_line == 0){
+        
+        if (num_of_line == 0){
             break;
         }
 
 
-        if (searchString(num_of_line))
-        {
+        if (searchString(num_of_line)){
             closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
         }
     }
@@ -210,8 +190,7 @@ int main(int argc, char *argv[]) {
     }
 
     file = open(argv[1], O_RDONLY);
-    if (file == -1)
-    {
+    if (file == -1) {
         closeFileAndExitProgram(EXIT_FAILURE, "open failed");
     }
 
@@ -221,13 +200,13 @@ int main(int argc, char *argv[]) {
 
 
     int res = workWithUser();
-    if (res == 2){
-        closeFileAndExitProgram(EXIT_FAILURE, NULL);    
-    }
-    else if (res == 1){
-        closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
-    }
-    
 
-    closeFileAndExitProgram(EXIT_SUCCESS, NULL);
+    switch (res) {
+    case 2:
+        closeFileAndExitProgram(EXIT_FAILURE, NULL);
+    case 1:
+        closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
+    case 0:
+        closeFileAndExitProgram(EXIT_SUCCESS, NULL);
+    }
 }
