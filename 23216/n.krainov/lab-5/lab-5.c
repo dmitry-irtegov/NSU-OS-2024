@@ -50,7 +50,7 @@ int addElem(off_t off, off_t len)
     return 0;
 }
 
-int searchString(int num_of_line, int file)
+int searchString(int num_of_line)
 {
     if (num_of_line > vector.cur)
     {
@@ -100,10 +100,11 @@ void closeFileAndExitProgram(int Code, char* message){
 int main(int argc, char *argv[]) {
     vector.elems = NULL;
     if (argc < 2) {
-        closeFileAndExitProgram(EXIT_FAILURE, "missing filename");
+        fprintf(stderr, "missing filename\n");
+        closeFileAndExitProgram(EXIT_FAILURE, NULL);
     }
 
-    int file = open(argv[1], O_RDONLY);
+    file = open(argv[1], O_RDONLY);
     if (file == -1)
     {
         closeFileAndExitProgram(EXIT_FAILURE, "open failed");
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "EOF\n");
                 closeFileAndExitProgram(EXIT_FAILURE, NULL);
             }
-            else{
+            else if (ferror(stdin)){
                 closeFileAndExitProgram(EXIT_FAILURE, "scanf failed");
             }
         }
@@ -170,7 +171,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "EOF\n");
                     closeFileAndExitProgram(EXIT_FAILURE, NULL);
                 }
-                else{
+                else if (ferror(stdin)){
                     closeFileAndExitProgram(EXIT_FAILURE, "getc failed");
                 }
             }
@@ -179,7 +180,7 @@ int main(int argc, char *argv[]) {
         else if (num_of_line == 0){
             break;
         }
-        if (searchString(num_of_line, file))
+        if (searchString(num_of_line))
         {
             closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
         }
