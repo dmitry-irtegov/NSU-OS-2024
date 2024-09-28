@@ -20,8 +20,7 @@ typedef struct vector_off_t{
     int cap;
 }vector_off_t;
 
-int file;
-char* filename;
+int file = -1;
 vector_off_t vector;
 
 int initVector(){
@@ -53,14 +52,17 @@ int searchString(int num_of_line, int file){
     }
     char* string = calloc(vector.elems[num_of_line-1].len + 1, sizeof(char));
     if (string == NULL){
+        free(string);
         return 1;
     }
 
-    if (lseek(file, vector.elems[num_of_line-1].off, SEEK_SET) == -1){
+    if (lseek(file, vector.elems[num_of_line-1].off, SEEK_SET) == -1){        
+        free(string);
         return 1;
     }
 
     if (read(file, string, vector.elems[num_of_line-1].len) == -1){
+        free(string);
         return 1;
     }
     puts(string);
@@ -103,6 +105,12 @@ void exitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
+    if (file != -1){
+        if (close(file)){
+            perror("close failed");
+        }
+    }
+    free(vector.elems);
     exit(Code);
 }
 
@@ -115,8 +123,7 @@ int main(int argc, char* argv[]){
 
     signal(SIGALRM, handler);
 
-    filename = argv[1];
-    file = open(filename, O_RDONLY);
+    file = open(argv[1], O_RDONLY);
     if (file == -1){
         exitProgram(EXIT_FAILURE, "open failed");
     }
@@ -129,13 +136,16 @@ int main(int argc, char* argv[]){
 
     ssize_t sym_read;
     off_t cur_len = 0, cur_off = 0;
-    char flag = 0;
     while (1){
         sym_read = read(file, buffer, LEN_BUFFER);
         if (sym_read == -1){
             exitProgram(EXIT_FAILURE, "read failed");
         }
         if (sym_read == 0){
+            if (addElem(cur_off, cur_len))
+            {
+                closeFileAndExitProgram(EXIT_FAILURE, "addElem failed");
+            }
             break;
         }
 
@@ -155,11 +165,6 @@ int main(int argc, char* argv[]){
 
     }
 
-    if (!flag){
-        if (addElem(cur_off, cur_len)){
-            exitProgram(EXIT_FAILURE, "addElem failed");
-        }
-    }
 
     int num_of_line, res;
     while (1){
@@ -172,7 +177,7 @@ int main(int argc, char* argv[]){
                 fprintf(stderr, "EOF\n");
                 exitProgram(EXIT_FAILURE, NULL);
             }
-            else{
+            else if (ferror(stdin)){
                 exitProgram(EXIT_FAILURE, "scanf failed");
             }
         }
@@ -182,7 +187,7 @@ int main(int argc, char* argv[]){
                     fprintf(stderr, "EOF\n");
                     exitProgram(EXIT_FAILURE, NULL);
                 }
-                else{
+                else if (ferror(stdin)){
                     exitProgram(EXIT_FAILURE, "getc failed");
                 }
             }
