@@ -25,9 +25,10 @@ typedef struct vector_off_t{
     int cap;
 }vector_off_t;
 
-int file;
+int file = -1;
 char* filename;
 vector_off_t vector;
+
 
 int initVector(){
     vector.cur = 0;
@@ -77,10 +78,17 @@ void exitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
+    if (file != -1){
+        if (close(file)){
+            perror("failed close");
+        }
+    }
+    free(vector.elems);
     exit(Code);
 }
 
 int main(int argc, char* argv[]){
+    vector.elems = NULL;
     if (argc < 2){
         fprintf(stderr, "missing argument");
         exitProgram(EXIT_FAILURE, NULL);
