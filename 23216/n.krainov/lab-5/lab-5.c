@@ -22,6 +22,7 @@ typedef struct vector_off_t
 } vector_off_t;
 
 vector_off_t vector;
+int file = -1;
 
 int initVector()
 {
@@ -59,16 +60,19 @@ int searchString(int num_of_line, int file)
     char *string = calloc(vector.elems[num_of_line - 1].len + 1, sizeof(char));
     if (string == NULL)
     {
+        free(string);
         return 1;
     }
 
     if (lseek(file, vector.elems[num_of_line - 1].off, SEEK_SET) == -1)
     {
+        free(string);
         return 1;
     }
 
     if (read(file, string, vector.elems[num_of_line - 1].len) == -1)
     {
+        free(string);
         return 1;
     }
     puts(string);
@@ -79,27 +83,35 @@ int searchString(int num_of_line, int file)
 
 
 
-void exitProgram(int Code, char* message){
+void closeFileAndExitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
+
+    if (file != -1){
+        if (close(file)){
+            perror("close failed");
+        }
+    }
+    free(vector.elems);
     exit(Code);
 }
 
 int main(int argc, char *argv[]) {
+    vector.elems = NULL;
     if (argc < 2) {
-        exitProgram(EXIT_FAILURE, "missing filename");
+        closeFileAndExitProgram(EXIT_FAILURE, "missing filename");
     }
 
     int file = open(argv[1], O_RDONLY);
     if (file == -1)
     {
-        exitProgram(EXIT_FAILURE, "open failed");
+        closeFileAndExitProgram(EXIT_FAILURE, "open failed");
     }
 
     if (initVector(&vector))
     {
-        exitProgram(EXIT_FAILURE, "initVector failed");
+        closeFileAndExitProgram(EXIT_FAILURE, "initVector failed");
     }
 
 
@@ -111,13 +123,13 @@ int main(int argc, char *argv[]) {
         sym_read = read(file, buffer, LEN_BUFFER);
         if (sym_read == -1)
         {
-            exitProgram(EXIT_FAILURE, "read failed");
+            closeFileAndExitProgram(EXIT_FAILURE, "read failed");
         }
         if (sym_read == 0)
         {
             if (addElem(cur_off, cur_len))
             {
-                exitProgram(EXIT_FAILURE, "addElem failed");
+                closeFileAndExitProgram(EXIT_FAILURE, "addElem failed");
             }
             break;
         }
@@ -129,7 +141,7 @@ int main(int argc, char *argv[]) {
             {
                 if (addElem(cur_off, cur_len))
                 {
-                    exitProgram(EXIT_FAILURE, "addElem failed");
+                    closeFileAndExitProgram(EXIT_FAILURE, "addElem failed");
                 }
                 cur_off += cur_len;
                 cur_len = 0;
@@ -146,20 +158,20 @@ int main(int argc, char *argv[]) {
         if (res == EOF){
             if (feof(stdin)) {
                 fprintf(stderr, "EOF\n");
-                exitProgram(EXIT_FAILURE, NULL);
+                closeFileAndExitProgram(EXIT_FAILURE, NULL);
             }
             else{
-                exitProgram(EXIT_FAILURE, "scanf failed");
+                closeFileAndExitProgram(EXIT_FAILURE, "scanf failed");
             }
         }
         else if (res == 0) {
             while(getc(stdin) != '\n'){
                 if (feof(stdin)) {
                     fprintf(stderr, "EOF\n");
-                    exitProgram(EXIT_FAILURE, NULL);
+                    closeFileAndExitProgram(EXIT_FAILURE, NULL);
                 }
                 else{
-                    exitProgram(EXIT_FAILURE, "getc failed");
+                    closeFileAndExitProgram(EXIT_FAILURE, "getc failed");
                 }
             }
             continue;
@@ -169,12 +181,9 @@ int main(int argc, char *argv[]) {
         }
         if (searchString(num_of_line, file))
         {
-            exitProgram(EXIT_FAILURE, "searchString failed");
+            closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
         }
     }
 
-    if (close(file)){
-        perror("close failed");
-    }
-    exitProgram(EXIT_SUCCESS, NULL);
+    closeFileAndExitProgram(EXIT_SUCCESS, NULL);
 }
