@@ -60,7 +60,6 @@ int searchString(int num_of_line)
     char *string = calloc(vector.elems[num_of_line - 1].len + 1, sizeof(char));
     if (string == NULL)
     {
-        free(string);
         return 1;
     }
 
