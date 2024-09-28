@@ -11,8 +11,7 @@ void open_and_close(char *fileName, char *mode){
     if(file){
         printf("lol\n");
         fclose(file);
-    }   
-    else{
+    }   else{
         perror("error opening");
         exit(EXIT_FAILURE);
     }
@@ -41,5 +40,5 @@ int main (int argc, char * argv[]){
 
     open_and_close(argv[1], "r");
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
