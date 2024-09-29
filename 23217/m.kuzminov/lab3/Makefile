@@ -1,7 +1,7 @@
 all: create_execute_file create_file set_permissions
 
 create_execute_file: prog.c
-	gcc prog.c -o prog.out
+	cc prog.c -o prog.out
 
 create_file: 
 	touch file
