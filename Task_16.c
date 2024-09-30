@@ -9,7 +9,7 @@ int main(){
         exit(EXIT_FAILURE);
     }
     newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO); 
+    newt.c_lflag &= ~(ICANON); 
     newt.c_cc[VMIN] = 1;
     if(tcsetattr(STDIN_FILENO, TCSANOW, &newt) != 0){
         perror("error of changing terminal settings");
