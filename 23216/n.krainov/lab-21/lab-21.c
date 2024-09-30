@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 int counter = 0;
 
 void sigintHandler(){
+    sleep(6);
     write(1, "\a", 1);
     counter++;
 }
@@ -36,13 +38,35 @@ void sigquitHandler(){
     _exit(EXIT_SUCCESS);
 }
 
+
 int main(){
-    if (sigset(SIGQUIT, sigquitHandler) == SIG_ERR){
-        perror("sigset failed");
+    struct sigaction sih;
+    struct sigaction siq;
+
+    memset(&sih, 0, sizeof(sih));
+    memset(&siq, 0, sizeof(siq));
+
+    sigset_t masksih;
+    sigset_t masksiq;
+
+    sigemptyset(&masksih);
+    sigemptyset(&masksiq);
+
+    sigaddset(&masksih, SIGQUIT);
+    sigaddset(&masksih, SIGINT);
+
+    sih.sa_handler = sigintHandler;
+    siq.sa_handler = sigquitHandler;
+    sih.sa_mask = masksih;
+    siq.sa_mask = masksiq;
+
+    if (sigaction(SIGINT, &sih, NULL)){
+        perror("sigaction failed");
         exit(EXIT_FAILURE);
     }
-    if (sigset(SIGINT, sigintHandler) == SIG_ERR){
-        perror("sigset failed");
+
+    if (sigaction(SIGQUIT, &siq, NULL)){
+        perror("sigaction failed");
         exit(EXIT_FAILURE);
     }
 
