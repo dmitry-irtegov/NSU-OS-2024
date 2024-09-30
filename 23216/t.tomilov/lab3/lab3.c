@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 void openFile(char* fileName){
-    FILE* file = fopen(fileName, "r");
+    FILE* file = fopen(fileName, O_RDONLY);
     if (file == NULL){
         perror("   ERROR: file didn`t opened!");
         exit(EXIT_FAILURE);
@@ -16,6 +16,8 @@ void openFile(char* fileName){
 }
 
 int main(int argc, char** argv){;
+    argc = 2;
+    argv[1] = "file";
     if (!(argc == 2)){
         perror("ERROR: wrong format of start. Try ./lab3 <file>");
         exit(EXIT_FAILURE);
