@@ -16,8 +16,6 @@ void openFile(char* fileName){
 }
 
 int main(int argc, char** argv){;
-    argc = 2;
-    argv[1] = "file";
     if (!(argc == 2)){
         perror("ERROR: wrong format of start. Try ./lab3 <file>");
         exit(EXIT_FAILURE);
