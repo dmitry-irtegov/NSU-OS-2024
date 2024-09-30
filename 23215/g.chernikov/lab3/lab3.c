@@ -19,7 +19,7 @@ int main() {
 
     step();
 
-    if (setuid(geteuid()) == -1){
+    if (setuid(getuid()) == -1){
         perror("Error failed setuid");
     };
 
