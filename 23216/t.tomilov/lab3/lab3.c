@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 void openFile(char* fileName){
-    FILE* file = fopen(fileName, O_RDONLY);
+    FILE* file = fopen(fileName, "r");
     if (file == NULL){
         perror("   ERROR: file didn`t opened!");
         exit(EXIT_FAILURE);
