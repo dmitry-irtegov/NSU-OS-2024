@@ -9,7 +9,7 @@ int main()
     time_t now;
     struct tm *sp;
 
-    putenv("TZ=UTC+7");
+    putenv("TZ=America/Los_Angeles");
     (void)time(&now);
 
     printf("%s", ctime(&now));
