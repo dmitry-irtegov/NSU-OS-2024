@@ -5,7 +5,7 @@
 #include <string.h>
 
 #ifndef LEN_BUFFER
-#define LEN_BUFFER 10
+#define LEN_BUFFER 100
 #endif
 
 typedef struct elem_of_vector_off_t {
@@ -96,13 +96,11 @@ int readFileAndCreateTable(){
     off_t cur_len = 0, cur_off = 0;
     while (1) {
         sym_read = read(file, buffer, LEN_BUFFER);
+        
         if (sym_read == -1) {
             return 1;
         }
         if (sym_read == 0) {
-            if (addElem(cur_off, cur_len)) {
-                return 1;
-            }
             break;
         }
 
