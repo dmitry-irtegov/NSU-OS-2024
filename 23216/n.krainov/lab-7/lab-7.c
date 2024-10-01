@@ -52,7 +52,7 @@ int addElem(off_t off, off_t len){
 }
 
 int searchString(int num_of_line){
-    if (num_of_line >= vector.cur){
+    if (num_of_line > vector.cur){
         puts("Num of line is too big");
         return 0;
     }
@@ -104,6 +104,7 @@ int readFileAndCreateTable(char* filename) {
     if (fileContent == MAP_FAILED){
         return 1;
     }
+
     for (off_t i = 0; i < buf.st_size; i++){
         if (fileContent[i] == '\n'){
             cur_len++;
@@ -117,6 +118,13 @@ int readFileAndCreateTable(char* filename) {
             cur_len++;
         }
     }
+
+    if (cur_len != 0) {
+        if (addElem(cur_off, cur_len)){
+            return 1;
+        }
+    }
+
 
     return 0;
 }
