@@ -204,9 +204,12 @@ int main(int argc, char *argv[]) {
     switch (res) {
     case 2:
         closeFileAndExitProgram(EXIT_FAILURE, NULL);
+        break;
     case 1:
         closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
+        break;
     case 0:
         closeFileAndExitProgram(EXIT_SUCCESS, NULL);
+        break;
     }
 }
