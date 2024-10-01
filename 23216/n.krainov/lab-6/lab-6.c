@@ -80,7 +80,7 @@ void handler(){
     }
     ssize_t count_bytes;
     while (1){
-        count_bytes = read(file, buf, 100);
+        count_bytes = read(file, buf, LEN_BUFFER);
         switch (count_bytes) {
         case -1:
             write(2, "read failed", 12);
@@ -99,7 +99,7 @@ void handler(){
     }    
 }
 
-void exitProgram(int Code, char* message){
+void closeFileAndExitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
@@ -204,7 +204,7 @@ int workWithUser(){
 
 
         if (searchString(num_of_line)){
-            closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
+            return 1;
         }
     }
 
@@ -215,14 +215,14 @@ int main(int argc, char* argv[]){
     vector.elems = NULL;
     if (argc < 2){
         fprintf(stderr, "missing argument");
-        exitProgram(EXIT_FAILURE, NULL);
+        closeFileAndExitProgram(EXIT_FAILURE, NULL);
     }
 
     signal(SIGALRM, handler);
 
     file = open(argv[1], O_RDONLY);
     if (file == -1){
-        exitProgram(EXIT_FAILURE, "open failed");
+        closeFileAndExitProgram(EXIT_FAILURE, "open failed");
     }
 
     if (readFileAndCreateTable()){
@@ -240,5 +240,5 @@ int main(int argc, char* argv[]){
             break;
     }
 
-    exitProgram(EXIT_SUCCESS, NULL);
+    closeFileAndExitProgram(EXIT_SUCCESS, NULL);
 }
