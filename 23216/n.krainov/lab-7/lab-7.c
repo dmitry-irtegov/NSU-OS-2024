@@ -11,7 +11,7 @@
 #define LEN_BUFFER 10
 #endif
 
-char* fileContent;
+char* fileContent = NULL;
 struct stat buf;
 
 typedef struct elem_of_vector_off_t{
@@ -80,6 +80,11 @@ void closeFileAndExitProgram(int Code, char* message){
     if (file != -1){
         if (close(file)){
             perror("failed close");
+        }
+    }
+    if (fileContent != NULL) {
+        if (munmap(fileContent, buf.st_size)) {
+            perror("failed munmap");
         }
     }
     free(vector.elems);
