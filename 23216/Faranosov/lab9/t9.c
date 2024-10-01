@@ -22,26 +22,28 @@ int main(int argv, char* argc[]){
 
         perror("execl error");
         exit(1);
-        break;
+       
 
     case -1:
         perror("fork error");
         exit(1);
-        break;
+        
 
     default:
         finished_process = wait(&status);
 
-        if (finished_process == child_id) {
-            printf("Child terminated: child_id = %d\n", child_id);
-        }
-        else if (finished_process >= 0) {
-            printf("fp != pid");
-        }
-        else if (finished_process == -1) {
+        if (finished_process == -1) {
             perror("Wait error");
             exit(1);
         }
+
+        if (finished_process == child_id) {
+            printf("Child terminated: child_id = %d\n", child_id);
+        }
+        else {
+            printf("fp != pid");
+        }
+        
     }
 
     exit(0);
