@@ -7,7 +7,7 @@ int main() {
     time_t now;
     struct tm* sp;
     (void)time(&now);
-    //setenv("TZ","PST8",1);
+    setenv("TZ","PST8",1);
     printf("%s", ctime(&now));
     sp = localtime(&now);
     printf("%d/%d/%02d %d:%02d %s\n",
