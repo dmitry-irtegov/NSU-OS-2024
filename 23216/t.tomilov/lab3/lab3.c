@@ -3,16 +3,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-void openFile(char* fileName){
+char openFile(char* fileName){
     FILE* file = fopen(fileName, "r");
     if (file == NULL){
         perror("   ERROR: file didn`t opened!");
-        exit(EXIT_FAILURE);
+        return '0';
     }
-    else{
-        printf("   File %s opened!\n", fileName);
-        fclose(file);
-    }
+    printf("   File %s opened!\n", fileName);
+    fclose(file);
+    return '1';
 }
 
 int main(int argc, char** argv){;
@@ -21,12 +20,12 @@ int main(int argc, char** argv){;
         exit(EXIT_FAILURE);
     }
     printf("1. Real UID: %d\n   Effective UID: %d\n", getuid(), geteuid());
-    openFile(argv[1]);
+    if (openFile(argv[1]) == '0') exit(EXIT_FAILURE);
     if (setuid(getuid())){
         perror("ERROR: failed to setuid!");
         exit(EXIT_FAILURE);
     }
     printf("2. Real UID: %d\n   Effective UID: %d\n", getuid(), geteuid());
-    openFile(argv[1]);
+    if (openFile(argv[1]) == '0') exit(EXIT_FAILURE);
     exit(EXIT_SUCCESS);
 }
