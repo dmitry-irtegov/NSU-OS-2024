@@ -7,7 +7,6 @@
 int counter = 0;
 
 void sigintHandler(){
-    sleep(6);
     write(1, "\a", 1);
     counter++;
 }
@@ -53,7 +52,9 @@ int main(){
     sigemptyset(&masksiq);
 
     sigaddset(&masksih, SIGQUIT);
+    sigaddset(&masksiq, SIGQUIT);
     sigaddset(&masksih, SIGINT);
+    sigaddset(&masksiq, SIGINT);
 
     sih.sa_handler = sigintHandler;
     siq.sa_handler = sigquitHandler;
