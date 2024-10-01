@@ -127,9 +127,6 @@ int readFileAndCreateTable(){
             return 1;
         }
         if (sym_read == 0) {
-            if (addElem(cur_off, cur_len)) {
-                return 1;
-            }
             break;
         }
 
