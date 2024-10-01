@@ -26,7 +26,6 @@ typedef struct vector_off_t{
 }vector_off_t;
 
 int file = -1;
-char* filename;
 vector_off_t vector;
 
 
@@ -52,7 +51,7 @@ int addElem(off_t off, off_t len){
     return 0;
 }
 
-int searchString(int num_of_line, int file){
+int searchString(int num_of_line){
     if (num_of_line >= vector.cur){
         puts("Num of line is too big");
         return 0;
@@ -74,7 +73,7 @@ void handler(){
     _exit(EXIT_SUCCESS);
 }
 
-void exitProgram(int Code, char* message){
+void closeFileAndExitProgram(int Code, char* message){
     if (message != NULL){
         perror(message);
     }
@@ -87,38 +86,24 @@ void exitProgram(int Code, char* message){
     exit(Code);
 }
 
-int main(int argc, char* argv[]){
-    vector.elems = NULL;
-    if (argc < 2){
-        fprintf(stderr, "missing argument");
-        exitProgram(EXIT_FAILURE, NULL);
-    }
-
-    signal(SIGALRM, handler);
-
-    filename = argv[1];
-    file = open(filename, O_RDONLY);
-    if (file == -1){
-        exitProgram(EXIT_FAILURE, "open failed");
-    }
-
+int readFileAndCreateTable(char* filename) {
     if (initVector(&vector)){
-        exitProgram(EXIT_FAILURE, "initVector failed");
+        return 1;
     }
 
     off_t cur_len = 0, cur_off = 0;
-    if (stat(argv[1], &buf) == -1){
-        exitProgram(EXIT_FAILURE, "stat failed");
+    if (stat(filename, &buf) == -1){
+        return 1;
     }
     fileContent = mmap(NULL, buf.st_size, PROT_READ, MAP_PRIVATE, file, 0);
     if (fileContent == MAP_FAILED){
-        exitProgram(EXIT_FAILURE, "mmap failed");
+        return 1;
     }
     for (off_t i = 0; i < buf.st_size; i++){
         if (fileContent[i] == '\n'){
             cur_len++;
             if (addElem(cur_off, cur_len)){
-                exitProgram(EXIT_FAILURE, "addElem failed");
+                return 1;
             }
             cur_off+=cur_len;
             cur_len = 0;
@@ -128,37 +113,104 @@ int main(int argc, char* argv[]){
         }
     }
 
+    return 0;
+}
+
+int checkEOForError(int res){
+    if (res == EOF){
+        if (feof(stdin)) {
+            fprintf(stderr, "EOF\n");
+            return 2;
+        }
+        else if (ferror(stdin)){
+            return 1;
+        }
+    }
+    else if (res == 0) {
+        while(getc(stdin) != '\n'){
+            if (feof(stdin)) {
+                fprintf(stderr, "EOF\n");
+                return 2;
+            }
+            else if (ferror(stdin)){
+                return 1;
+            }
+        }
+        return 3;
+    }
+
+    return 0;
+}
+
+int workWithUser(){
     int num_of_line, res;
-    while (1){
+    while (1) {
         puts("Enter number of string (for end programm enter 0)");
         alarm(5);
         res = scanf("%d", &num_of_line);
         alarm(0);
-        if (res == EOF){
-            if (feof(stdin)) {
-                fprintf(stderr, "EOF\n");
-                exitProgram(EXIT_FAILURE, NULL);
-            }
-            else{
-                exitProgram(EXIT_FAILURE, "scanf failed");
-            }
-        }
-        else if (res == 0) {
-            while(getc(stdin) != '\n'){
-                if (feof(stdin)) {
-                    fprintf(stderr, "EOF\n");
-                    exitProgram(EXIT_FAILURE, NULL);
-                }
-                else{
-                    exitProgram(EXIT_FAILURE, "getc failed");
-                }
-            }
+        int check = checkEOForError(res);
+        switch (check) {
+        case 1:
+            return 1;
+        case 2:
+            return 2;
+        case 3:
             continue;
         }
-        else if (num_of_line == 0){
+
+
+
+        if (num_of_line < 0){
+            puts("wrong number");
+            continue;
+        }
+
+        if (num_of_line == 0){
             break;
         }
-        searchString(num_of_line, file);
+
+
+        if (searchString(num_of_line)){
+            closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
+        }
     }
-    exitProgram(EXIT_SUCCESS, NULL);
+
+    return 0;
+}
+
+
+int main(int argc, char* argv[]){
+    vector.elems = NULL;
+    if (argc < 2){
+        fprintf(stderr, "missing argument");
+        closeFileAndExitProgram(EXIT_FAILURE, NULL);
+    }
+
+    signal(SIGALRM, handler);
+
+    file = open(argv[1], O_RDONLY);
+    if (file == -1){
+        closeFileAndExitProgram(EXIT_FAILURE, "open failed");
+    }
+
+    if (readFileAndCreateTable(argv[1])) {
+        closeFileAndExitProgram(EXIT_FAILURE, "readFileAndCreateTable failed");
+    }
+
+    int res = workWithUser();
+
+    switch (res) {
+    case 2:
+        closeFileAndExitProgram(EXIT_FAILURE, NULL);
+        break;
+    case 1:
+        closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
+        break;
+    case 0:
+        closeFileAndExitProgram(EXIT_SUCCESS, NULL);
+        break;
+    }
+
+    closeFileAndExitProgram(EXIT_SUCCESS, NULL);
 }
