@@ -45,7 +45,7 @@ int addElem(off_t off, off_t len){
     return 0;
 }
 
-int searchString(int num_of_line, int file){
+int searchString(int num_of_line){
     if (num_of_line >= vector.cur){
         puts("Num of line is too big");
         return 0;
@@ -81,8 +81,7 @@ void handler(){
     ssize_t count_bytes;
     while (1){
         count_bytes = read(file, buf, 100);
-        switch (count_bytes)
-        {
+        switch (count_bytes) {
         case -1:
             write(2, "read failed", 12);
             _exit(EXIT_FAILURE);
@@ -114,8 +113,7 @@ void exitProgram(int Code, char* message){
 }
 
 int readFileAndCreateTable(){
-    if (initVector(&vector))
-    {
+    if (initVector(&vector)) {
         return 1;
     }
 
@@ -123,27 +121,21 @@ int readFileAndCreateTable(){
     char buffer[LEN_BUFFER];
     ssize_t sym_read;
     off_t cur_len = 0, cur_off = 0;
-    while (1)
-    {
+    while (1) {
         sym_read = read(file, buffer, LEN_BUFFER);
-        if (sym_read == -1)
-        {
+        if (sym_read == -1) {
             return 1;
         }
-        if (sym_read == 0)
-        {
-            if (addElem(cur_off, cur_len))
-            {
+        if (sym_read == 0) {
+            if (addElem(cur_off, cur_len)) {
                 return 1;
             }
             break;
         }
 
-        for (ssize_t i = 0; i < sym_read; i++)
-        {
+        for (ssize_t i = 0; i < sym_read; i++) {
             cur_len++;
-            if (buffer[i] == '\n')
-            {
+            if (buffer[i] == '\n') {
                 if (addElem(cur_off, cur_len))
                 {
                     return 1;
@@ -185,8 +177,7 @@ int checkEOForError(int res){
 
 int workWithUser(){
     int num_of_line, res;
-    while (1)
-    {
+    while (1) {
         puts("Enter number of string (for end programm enter 0)");
         alarm(5);
         res = scanf("%d", &num_of_line);
@@ -212,8 +203,7 @@ int workWithUser(){
         }
 
 
-        if (searchString(num_of_line))
-        {
+        if (searchString(num_of_line)){
             closeFileAndExitProgram(EXIT_FAILURE, "searchString failed");
         }
     }
@@ -241,11 +231,13 @@ int main(int argc, char* argv[]){
 
 
     int res = workWithUser();
-    if (res == 2){
-        closeFileAndExitProgram(EXIT_FAILURE, NULL);    
-    }
-    else if (res == 1){
-        closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
+    switch (res){
+        case 2:
+            closeFileAndExitProgram(EXIT_FAILURE, NULL);
+            break;
+        case 1: 
+            closeFileAndExitProgram(EXIT_FAILURE, "workWithUser failed");
+            break;
     }
 
     exitProgram(EXIT_SUCCESS, NULL);
