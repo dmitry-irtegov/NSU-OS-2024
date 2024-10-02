@@ -3,26 +3,12 @@
 #include <termios.h>
 #include <unistd.h>
 
-int terminalMode(int fl) {
-    struct termios newt;
-    if (tcgetattr(STDIN_FILENO, &newt) == -1){
-        perror("ERROR: can`t get terminal`s settings!");
-        return -1;
-    }
-    if (fl == 1) {
-        newt.c_lflag &= ~(ICANON);
-    }
-    else {
-        newt.c_lflag |= (ICANON);
-    }
-    if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) == -1){
-        perror("ERROR: can`t set terminal`s settings");
-        return -1;
-    }
-    return 0;
-}
-
 int main(){
+    if (!isatty(STDIN_FILENO)){
+        perror("ERROR: chang inout/output to standart(terminal)!");
+        exit(EXIT_FAILURE);
+    }
+    
     struct termios oldt, newt;
 
     if (tcgetattr(STDIN_FILENO, &oldt) == -1){
@@ -41,6 +27,9 @@ int main(){
     printf("Write number 0 - 9: ");
     if (scanf("%c", &num) == 0){
         perror("ERROR: input error!");
+        if (tcsetattr(STDIN_FILENO, TCSANOW, &oldt) == -1){
+            perror("ERROR: can`t set terminal`s settings");
+        }
         exit(EXIT_FAILURE);
     }
     printf("\nOKAY!\n");
