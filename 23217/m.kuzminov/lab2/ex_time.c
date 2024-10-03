@@ -4,8 +4,7 @@
 #include <stdlib.h>
 extern char *tzname[];
 
-int main()
-{
+int main(){
     if (setenv("TZ", "America/Los_Angeles", 1) != 0) {
         printf("setenv didn't change");
         exit(1);
