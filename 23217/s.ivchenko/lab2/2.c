@@ -19,7 +19,7 @@ int main()
 
     (void) time( &now );
 
-    printf("%s", ctime( &now ) );
+    printf("%s", ctime(&now));
 
     sp = localtime(&now);
     printf("%d/%d/%02d %d:%02d %s\n",
