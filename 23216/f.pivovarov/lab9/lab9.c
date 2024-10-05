@@ -21,7 +21,7 @@ int main() {
 
             perror("Can't exec cat");
             exit(EXIT_FAILURE);
-        default:
+        default: ;
             // Parent process code
             int child_status;
             pid_t wait_status = waitpid(process_id, &child_status, 0);
