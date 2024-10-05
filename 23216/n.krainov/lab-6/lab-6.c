@@ -142,6 +142,9 @@ int readFileAndCreateTable(){
             }
         }
     }
+    if (cur_len != 0) {
+        addElem(cur_off, cur_len);
+    }
 
     return 0;
 }
