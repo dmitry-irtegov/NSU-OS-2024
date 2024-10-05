@@ -75,7 +75,7 @@ void handler(){
 
     char buf[LEN_BUFFER];
     if (lseek(file, 0, SEEK_SET) == -1){
-        write(2, "lseek failed", 13);
+        write(2, "lseek failed", strlen("lseek failed"));
         _exit(EXIT_FAILURE);
     }
     ssize_t count_bytes;
@@ -83,7 +83,7 @@ void handler(){
         count_bytes = read(file, buf, LEN_BUFFER);
         switch (count_bytes) {
         case -1:
-            write(2, "read failed", 12);
+            write(2, "read failed", strlen("read failed"));
             _exit(EXIT_FAILURE);
             break;
         case 0:
@@ -91,7 +91,7 @@ void handler(){
             break;
         default:
             if (write(1, buf, count_bytes) == -1){
-                write(2, "write failed", 13);
+                write(2, "write failed", strlen("write failed"));
                 _exit(EXIT_FAILURE);
             }
             break;
@@ -180,14 +180,13 @@ int workWithUser(){
         res = scanf("%d", &num_of_line);
         alarm(0);
         int check = checkEOForError(res);
-        if (check == 1){
-            return 1;
-        }
-        else if (check == 2){
-            return 2;
-        }
-        else if (check == 3){
-            continue;
+        switch (check) {
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+            case 3:
+                continue;;
         }
 
 
@@ -195,7 +194,8 @@ int workWithUser(){
             puts("wrong number");
             continue;
         }
-        else if (num_of_line == 0){
+        
+        if (num_of_line == 0){
             break;
         }
 
