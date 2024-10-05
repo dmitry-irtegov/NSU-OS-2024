@@ -46,7 +46,7 @@ int addElem(off_t off, off_t len){
 }
 
 int searchString(int num_of_line){
-    if (num_of_line >= vector.cur){
+    if (num_of_line > vector.cur){
         puts("Num of line is too big");
         return 0;
     }
