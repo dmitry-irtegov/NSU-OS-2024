@@ -15,7 +15,7 @@ int main() {
 
     savtty = tty;
 
-    tty.c_lflag &= ~(ECHO);
+    tty.c_lflag &= ~(ICANON);
     tty.c_cc[VMIN] = 1;
 
     if (tcsetattr(fileno(stdin), TCSANOW, &tty) == -1) {
@@ -25,7 +25,7 @@ int main() {
     char char_tty = fgetc(stdin);
 
     if (char_tty) {
-        printf("Your symbol is %c\n", char_tty);
+        printf("\n");
     } else {
         perror("fgets error.");
         exit(EXIT_FAILURE);
