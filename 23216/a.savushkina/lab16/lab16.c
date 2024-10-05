@@ -15,7 +15,7 @@ int main() {
 
     savtty = tty;
 
-    tty.c_lflag &= ~(ISIG | ICANON | ECHO);
+    tty.c_lflag &= ~(ECHO);
     tty.c_cc[VMIN] = 1;
 
     if (tcsetattr(fileno(stdin), TCSANOW, &tty) == -1) {
