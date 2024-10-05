@@ -39,33 +39,33 @@ void sigquitHandler(){
 
 
 int main(){
-    struct sigaction sih;
-    struct sigaction siq;
+    struct sigaction signalint;
+    struct sigaction signalquit;
 
-    memset(&sih, 0, sizeof(sih));
-    memset(&siq, 0, sizeof(siq));
+    memset(&signalint, 0, sizeof(signalint));
+    memset(&signalquit, 0, sizeof(signalquit));
 
-    sigset_t masksih;
-    sigset_t masksiq;
+    sigset_t masksignalint;
+    sigset_t masksignalquit;
 
-    sigemptyset(&masksih);
-    sigemptyset(&masksiq);
+    sigemptyset(&masksignalint);
+    sigemptyset(&masksignalquit);
 
-    sigaddset(&masksih, SIGQUIT);
-    sigaddset(&masksiq, SIGQUIT);
-    sigaddset(&masksiq, SIGINT);
+    sigaddset(&masksignalint, SIGQUIT);
+    sigaddset(&masksignalquit, SIGQUIT);
+    sigaddset(&masksignalquit, SIGINT);
 
-    sih.sa_handler = sigintHandler;
-    siq.sa_handler = sigquitHandler;
-    sih.sa_mask = masksih;
-    siq.sa_mask = masksiq;
+    signalint.sa_handler = sigintHandler;
+    signalquit.sa_handler = sigquitHandler;
+    signalint.sa_mask = masksignalint;
+    signalquit.sa_mask = masksignalquit;
 
-    if (sigaction(SIGINT, &sih, NULL)){
+    if (sigaction(SIGINT, &signalint, NULL)){
         perror("sigaction failed");
         exit(EXIT_FAILURE);
     }
 
-    if (sigaction(SIGQUIT, &siq, NULL)){
+    if (sigaction(SIGQUIT, &signalquit, NULL)){
         perror("sigaction failed");
         exit(EXIT_FAILURE);
     }
