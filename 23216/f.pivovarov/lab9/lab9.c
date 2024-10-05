@@ -10,33 +10,29 @@ int main() {
     // Forks the current process
     pid_t process_id = fork();
 
-    if (process_id == -1) {
-        perror("Can not fork()");
-        exit(-1);
-    }
-    else if (process_id == 0) {
-        // Forked process code
-        printf("Inside forked\n");
-        int exec_res = execlp("cat", "cat", "too_large_file", (char *)NULL);
-        
-        if (exec_res == -1) {
-            perror("An error in `exec(cat, too_large_file)`");
-            exit(-1);
+    switch (process_id) {
+        case -1:
+            perror("Can't fork()");
+            exit(EXIT_FAILURE);
+        case 0:
+            // Forked process code
+            printf("Inside forked\n");
+            execlp("cat", "cat", "too_large_file", (char *)NULL);
+
+            perror("Can't exec cat");
+            exit(EXIT_FAILURE);
+        default:
+            // Parent process code
+            int child_status;
+            pid_t wait_status = waitpid(process_id, &child_status, 0);
+
+            if (wait_status == EXIT_FAILURE) {
+                perror("Occured an error");
+                exit(EXIT_FAILURE);
+            }
+
+            printf("Return to parent.\nChild has finished with success!!\n");
+
+            exit(EXIT_SUCCESS);
         }
-
-        exit(0);
-    }
-
-    // Parent process code
-    int child_status;
-    pid_t wait_status = waitpid(process_id, &child_status, 0);
-
-    if (wait_status == -1) {
-        perror("Occured an error");
-        exit(-1);
-    }
-
-    printf("Return to parent.\nChild has finished with success!!\n");
-
-    exit(0);
 }
