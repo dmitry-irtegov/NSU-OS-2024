@@ -53,7 +53,6 @@ int main(){
 
     sigaddset(&masksih, SIGQUIT);
     sigaddset(&masksiq, SIGQUIT);
-    sigaddset(&masksih, SIGINT);
     sigaddset(&masksiq, SIGINT);
 
     sih.sa_handler = sigintHandler;
