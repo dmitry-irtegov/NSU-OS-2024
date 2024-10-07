@@ -3,7 +3,7 @@
 #include <time.h>
 
 int main() {
-    if(setenv("TZ", "America/Los_Angeles", 1) != 0){
+    if(setenv("", "America/Los_Angeles", 1) != 0){
         perror("Set enviroment failed");
         exit(1);
     }
