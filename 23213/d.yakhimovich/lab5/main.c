@@ -13,8 +13,8 @@ typedef struct {
 } Line;
 
 int main(int argc, char *argv[]) {
-    if (argc < 2 || argc > 3 || (argc == 3 && argv[1][0] != '-')) {
-        fprintf(stderr, "usage: %s [-d] [file]\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "usage: %s [file]\n", argv[0]);
         return 1;
     }
 
@@ -64,20 +64,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (argc == 3 && (strcmp(argv[1], "-d") == 0 || strcmp(argv[2], "-d") == 0)) {
-        for (size_t i = 0; i < line_count; i++) {
-            printf("Line %lu: offset = %ld, len = %zu\n", i + 1, lines[i].offset, lines[i].length);
-        }
-    }
-
-    size_t line_number;
+    off_t line_number;
     size_t remain;
+    size_t to_write;
     int scan_res;
     char line_end;
 
     while (1) {
         printf("Enter line number (0 for exit): ");
-        scan_res = scanf("%ld", &line_number);
+        scan_res = scanf("%u", &line_number);
         scanf("%c", &line_end);
         if (scan_res != 1 || line_end != '\n') {
             printf("Invalid input!\n");
@@ -94,19 +89,24 @@ int main(int argc, char *argv[]) {
 
             lseek(fd, lines[line_number - 1].offset, SEEK_SET);
             while (bytes_read > 0 && remain > 0) {
-                if (remain >= sizeof(buffer)) {
-                    bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
-                } else {
-                    bytes_read = read(fd, buffer, remain);
-                }
+                bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
                 if (bytes_read == -1) {
                     perror("read");
                     return 1;
                 }
-                remain -= bytes_read;
+                if (bytes_read == 0) {
+                    break;
+                }
                 buffer[bytes_read] = '\0';
-                printf("%s", buffer);
+                if(remain < bytes_read) {
+                    to_write = remain;
+                } else {
+                    to_write = bytes_read;
+                }
+                fwrite(buffer, sizeof(char), to_write, stdout);
+                remain -= to_write;
             }
+
         } else {
             printf("Line number out of range!\n");
         }
