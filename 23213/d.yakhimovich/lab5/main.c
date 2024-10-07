@@ -13,7 +13,7 @@ typedef struct {
 } Line;
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
+    if (argc != 2) {
         fprintf(stderr, "usage: %s [file]\n", argv[0]);
         return 1;
     }
