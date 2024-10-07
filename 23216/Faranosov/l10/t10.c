@@ -7,7 +7,7 @@
 int main(int argc, char* argv[]) {
 
     if (argc == 1) {
-        printf("No program to exec");
+        printf("No program to exec\n");
         exit(1);
     }
 
