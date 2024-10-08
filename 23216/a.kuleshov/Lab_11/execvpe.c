@@ -34,13 +34,13 @@ int main() {
 
     switch (pid) {
         case -1:
-                // Ошибка создания процесса
-                perror("Failed to fork");
-                return 1;
+            // Ошибка создания процесса
+            perror("Failed to fork");
+            return 1;
 
         case 0:
             // Дочерний процесс: проверяем работоспособность функции
-                execvpe("env", args, new_envp); // Команда "env" выводит все переменные окружения
+            execvpe("env", args, new_envp); // Команда "env" выводит все переменные окружения
 
             // Если execvpe не выполнится, выводим ошибку
             perror("Failed to execute execvpe");
