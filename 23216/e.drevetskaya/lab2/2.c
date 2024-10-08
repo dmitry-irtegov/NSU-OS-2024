@@ -14,11 +14,11 @@ int main() {
     }
     struct tm *sp;
     sp = localtime(&now);
-    if (sp == NULL) {
+    if (sp == NULL){
         perror("localtime failed");
         exit(1);
     }
     
-    printf("%s",asctime(sp));
+    printf("%s",ctime(&sp));
     return 0;   
 }
