@@ -35,7 +35,6 @@ int initSocket(char* socketname) {
 }
 
 int workWithConnection(int soc){
-    char sym;
     char buf[LEN_BUF];
     int len;
 
