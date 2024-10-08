@@ -13,6 +13,7 @@
 int initSocket(char* socketname) {
     struct sockaddr_un addr;
 
+    unlink(socketname);
     int soc = socket(AF_UNIX, SOCK_STREAM, 0);
     if (soc == -1){
         return -1;
@@ -46,11 +47,11 @@ int workWithConnection(int soc){
     puts("Getting started");
     while ((len = read(new, buf, LEN_BUF)) != 0) {
         for (int i = 0; i < len; i++) {
-            sym = toupper(buf[i]);
-            if (write(1, &sym, 1) == -1){
-                close(new);
-                return -1;
-            }
+            buf[i] = toupper(buf[i]);
+        }
+        if (write(1, buf, LEN_BUF) == -1){
+            close(new);
+            return -1;
         }
     }
 
