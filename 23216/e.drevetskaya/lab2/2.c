@@ -11,14 +11,7 @@ int main() {
     if (time(&now) == -1){
         perror("Getting time failed");
         exit(1);
-    }
-    struct tm *sp;
-    sp = localtime(&now);
-    if (sp == NULL){
-        perror("localtime failed");
-        exit(1);
-    }
-    
-    printf("%s",ctime(sp));
+    }   
+    printf("%s",ctime(&now));
     return 0;   
 }
