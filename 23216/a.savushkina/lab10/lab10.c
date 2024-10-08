@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     case 0:
         printf("Child process is existing\n");
-        int new_process = execvp(programm_name, &argv[1]);
+        execvp(programm_name, &argv[1]);
         perror("error in execvp");
         exit(EXIT_FAILURE);
     default:
@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
         } else {
             printf("Child process did not terminate normally\n");
         }
-        break;
     }
     return 0;
 }
