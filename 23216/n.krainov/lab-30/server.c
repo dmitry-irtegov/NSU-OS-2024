@@ -72,8 +72,7 @@ int main(int argc, char** argv) {
     switch (soc) {
         case -1:
             perror("initSocket failed");
-            exit(EXIT_FAILURE);    
-            break;
+            exit(EXIT_FAILURE);
         case -2:
             perror("initSocket failed");
             closeAndUnlink(soc);
