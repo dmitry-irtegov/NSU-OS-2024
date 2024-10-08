@@ -75,13 +75,13 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         case -2:
             perror("initSocket failed");
-            closeAndUnlink(soc);
+            closeAndUnlink(soc, argv[1]);
             exit(EXIT_FAILURE);
     }
 
     if (workWithConnection(soc)){
         perror("initSocket failed");
-        closeAndUnlik(nsoc, argv[1]);
+        closeAndUnlik(soc, argv[1]);
         exit(EXIT_FAILURE);
     }
     
