@@ -19,6 +19,6 @@ int main() {
         exit(1);
     }
     
-    printf("%s",ctime(&sp));
+    printf("%s",ctime(sp));
     return 0;   
 }
