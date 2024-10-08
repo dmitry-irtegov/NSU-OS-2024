@@ -27,7 +27,7 @@ int initSocket(char* socketname) {
     }
 
     if (listen(soc, 1) == -1) {
-        return -1;
+        return -2;
     }
 
     return soc;
@@ -57,7 +57,7 @@ int workWithConnection(int soc){
     return 0;
 }
 
-void closeAndUnlick(int soc, char* nameSocket){
+void closeAndUnlink(int soc, char* nameSocket){
     close(soc);
     unlink(nameSocket);
 }
@@ -69,18 +69,24 @@ int main(int argc, char** argv) {
     }
 
     int soc = initSocket(argv[1]);
-    if (soc == -1) {
-        perror("initSocket failed");
-        exit(EXIT_FAILURE);
+    switch (soc) {
+        case -1:
+            perror("initSocket failed");
+            exit(EXIT_FAILURE);    
+            break;
+        case -2:
+            perror("initSocket failed");
+            closeAndUnlink(soc);
+            exit(EXIT_FAILURE);
     }
 
     if (workWithConnection(soc)){
         perror("initSocket failed");
-        closeAndUnlick(soc, argv[1]);
+        closeAndUnlik(nsoc, argv[1]);
         exit(EXIT_FAILURE);
     }
     
 
-    closeAndUnlick(soc, argv[1]);
+    closeAndUnlink(soc, argv[1]);
     exit(EXIT_SUCCESS);
 }

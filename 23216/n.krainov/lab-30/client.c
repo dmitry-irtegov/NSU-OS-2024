@@ -30,7 +30,7 @@ int connectToSocket(char* socketname) {
 }
 
 void sigpipeHandler(){
-    write(STDOUT_FILENO, "Lost connection with server\n", strlen("Lost connection with server\n"));
+    write(STDERR_FILENO, "Lost connection with server\n", strlen("Lost connection with server\n") + 1);
     _exit(EXIT_FAILURE);
 }
 
