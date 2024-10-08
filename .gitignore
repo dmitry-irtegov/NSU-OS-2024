@@ -51,7 +51,8 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-*.idea
-*.idea/
-.idea/
-.idea
+# some musom
+core
+core.*
+.nfs*
+.DS_Store
