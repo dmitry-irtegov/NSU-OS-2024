@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 
     if (workWithConnection(soc)){
         perror("initSocket failed");
-        closeAndUnlik(soc, argv[1]);
+        closeAndUnlink(soc, argv[1]);
         exit(EXIT_FAILURE);
     }
     
