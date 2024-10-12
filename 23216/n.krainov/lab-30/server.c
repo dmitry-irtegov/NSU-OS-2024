@@ -13,7 +13,6 @@
 int initSocket(char* socketname) {
     struct sockaddr_un addr;
 
-    unlink(socketname);
     int soc = socket(AF_UNIX, SOCK_STREAM, 0);
     if (soc == -1){
         return -1;
@@ -23,6 +22,7 @@ int initSocket(char* socketname) {
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, socketname, sizeof(addr.sun_path)-1);
 
+    unlink(socketname);
     if (bind(soc, (struct sockaddr*)&addr, sizeof(addr))) {
         return -1;
     }
