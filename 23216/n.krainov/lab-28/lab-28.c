@@ -22,10 +22,10 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int count = 1;
+    int count = 0;
     int num;
     for (int i = 0; i < 100; i++) {
-        fscanf(fd[1], "%d", &num);
+        fscanf(fd[1], "%d\n", &num);
         printf("%d ", num);
         count++;
         if(count % 10 == 0) {
