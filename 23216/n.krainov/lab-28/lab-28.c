@@ -22,13 +22,9 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int num;
-    for (int i = 0; i < 100; i++) {
-        if (fscanf(fd[1], "%d", &num)){
-            perror("fscanf failed");
-            exit(EXIT_FAILURE);
-        }
-        printf("%d\n", num);
+    char buf[100];
+    while (fgets(buf, 100, fd[1])) {
+        printf(buf);
     }
 
     if (fclose(fd[1]) == EOF){
