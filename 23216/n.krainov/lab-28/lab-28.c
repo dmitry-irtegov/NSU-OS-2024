@@ -22,9 +22,15 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    char buf[100];
-    while (fgets(buf, 100, fd[1])) {
-        printf(buf);
+    int count = 1;
+    int num;
+    for (int i = 0; i < 100; i++) {
+        fscanf(fd[1], "%d", &num);
+        printf("%d ", num);
+        count++;
+        if(count % 10 == 0) {
+            putc('\n', stdout);
+        }
     }
 
     if (fclose(fd[1]) == EOF){
