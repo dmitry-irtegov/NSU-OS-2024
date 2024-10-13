@@ -9,10 +9,16 @@ volatile sig_atomic_t signal_count = 0;
 // Обработчик сигнала для SIGINT (Ctrl+C)
 void handle_sigint(int sig) {
     // Увеличиваем счетчик при каждом получении SIGINT
-    signal_count;
+    signal_count++;
     // Издаем звуковой сигнал
     printf("\a"); // \a — это символ для звукового сигнала (bell)
     fflush(stdout); // Очищаем буфер вывода, чтобы сигнал сразу был воспроизведен
+
+    // Переустанавливаем обработчик сигнала для SIGINT
+    if (signal(sig, handle_sigint) == SIG_ERR) {
+        perror("Ошибка установки обработчика для SIGINT");
+        exit(1);
+    }
 }
 
 // Обработчик сигнала для SIGQUIT (Ctrl+\)
