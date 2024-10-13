@@ -1,16 +1,14 @@
 #include <stdio.h>
 #include <signal.h>
 int count;
-FILE *fptr;
 
-main()
+void main()
 {
     count = 0;
     void sigcatch(int);
-    fptr = fopen(OUTPUT, "w");
     signal(SIGINT, sigcatch);
     signal(SIGQUIT, sigcatch);
-    while(true){
+    while(1){
         wait();
     }
 }
