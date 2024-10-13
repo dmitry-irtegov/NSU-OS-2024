@@ -20,7 +20,7 @@ void sigcatch(int sig)
     signal(sig, SIG_IGN);
     if(sig == SIGINT){
         count++;
-        write(1,"/a",1);
+        write(1,"\a",1);
     }
     else if (sig == SIGQUIT) {
         sprintf(buf,"%d signals count\n", count);
