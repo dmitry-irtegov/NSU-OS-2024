@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 int count;
 
 void sigcatch(int sig)
@@ -11,7 +13,7 @@ void sigcatch(int sig)
             if (sprintf(buf,"\n%d signals count\n", count) == -1){
                 _exit(EXIT_FAILURE);
             }
-            if (write(1, buf, strlen(buf)) ==1){
+            if (write(1, buf, strlen(buf)) == -1){
                 _exit(EXIT_FAILURE);
             }
             _exit(EXIT_SUCCESS);
