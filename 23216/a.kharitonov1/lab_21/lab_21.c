@@ -2,30 +2,32 @@
 #include <signal.h>
 int count;
 
-void main()
-{
-    count = 0;
-    void sigcatch(int);
-    signal(SIGINT, sigcatch);
-    signal(SIGQUIT, sigcatch);
-    while(1){
-        wait();
-    }
-}
-
-
 void sigcatch(int sig)
 {
     char buf[40];
     signal(sig, SIG_IGN);
-    if(sig == SIGINT){
-        count++;
-        write(1,"\a",1);
-    }
-    else if (sig == SIGQUIT) {
-        sprintf(buf,"%d signals count\n", count);
-        write(1, buf, strlen(buf));
-        exit(1);
+    switch(sig){
+        case SIGQUIT:
+            if (sprintf(buf,"\n%d signals count\n", count) == -1){
+                _exit(EXIT_FAILURE);
+            }
+            if (write(1, buf, strlen(buf)) ==1){
+                _exit(EXIT_FAILURE);
+            }
+            _exit(EXIT_SUCCESS);
+        case SIGINT:
+            count++;
+            write(1,"\a",1);
     }
     signal(sig, sigcatch);
+}
+
+void main()
+{
+    count = 0;
+    signal(SIGINT, sigcatch);
+    signal(SIGQUIT, sigcatch);
+    while(1){
+        pause();
+    }
 }
