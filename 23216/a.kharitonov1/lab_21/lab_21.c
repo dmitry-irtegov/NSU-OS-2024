@@ -25,7 +25,6 @@ void sigcatch(int sig)
     else if (sig == SIGQUIT) {
         sprintf(buf,"%d signals count\n", count);
         write(1, buf, strlen(buf));
-        fclose(fptr);
         exit(1);
     }
     signal(sig, sigcatch);
