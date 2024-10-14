@@ -10,6 +10,7 @@ int main() {
 	if (file == NULL) {
 		perror("Can't open file smth.txt");
 	} else {
+		printf("file was opened successfully\n");
 		fclose(file);
 	}
 
@@ -24,6 +25,7 @@ int main() {
 	if (file == NULL) {
 		perror("Can't open file smth.txt");
 	} else {
+		printf("file was opened successfully\n");
 		fclose(file);
 	}
 
