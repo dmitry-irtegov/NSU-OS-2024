@@ -11,7 +11,7 @@ void step(){
     if (file == NULL){
         perror("Error cant open file");
     } else {
-        printf("file opened successfully");
+        printf("file opened successfully\n");
         fclose(file);
     }
 
