@@ -7,9 +7,9 @@ int count;
 
 void sigcatch(int sig)
 {
+    char buf[40];
     switch(sig){
         case SIGQUIT:
-            char buf[40];
             if (sprintf(buf,"\n%d signals count\n", count) == -1){
                 _exit(EXIT_FAILURE);
             }
