@@ -11,10 +11,6 @@ void opentry()
         exit(1);
     } else {
 	printf("file opened successfully\n");
-    	if(fclose(fd) == EOF) {
-	    perror("can't close file");
-	    exit(2);
-	}
     }
 }
 
@@ -24,8 +20,11 @@ int main()
     uid_t euid = geteuid();
     printf("uid: %d\neuid: %d\n", uid, euid);
     opentry();
-    setuid(uid);
-    printf("setuid(uid) executed\n");
+    if(setuid(uid) == -1) {
+    	perror("setuid failed");
+    } else {
+        printf("setuid(uid) executed\n");
+    }
     uid = getuid();
     euid = geteuid();
     printf("uid: %d\neuid: %d\n", uid, euid);
