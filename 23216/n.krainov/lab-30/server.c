@@ -24,10 +24,12 @@ int initSocket(char* socketname) {
 
     unlink(socketname);
     if (bind(soc, (struct sockaddr*)&addr, sizeof(addr))) {
+        close(soc);
         return -1;
     }
 
     if (listen(soc, 1) == -1) {
+        close(soc);
         return -2;
     }
 
@@ -75,7 +77,7 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         case -2:
             perror("initSocket failed");
-            closeAndUnlink(soc, argv[1]);
+            unlink(argv[1]);
             exit(EXIT_FAILURE);
     }
 
