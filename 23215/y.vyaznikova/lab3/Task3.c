@@ -29,15 +29,11 @@ int main()
     {
         printf("File opened\n");
     }
-    if (open1 == 1)
-    {
-        exit(1);
-    }
 
     if (setuid(uid) == -1)
     {
         perror("The effective user ID has not been set");
-        exit(2);
+        exit(1);
     }
 
     uid_t updated_euid = geteuid();
@@ -47,10 +43,6 @@ int main()
     if (open2 == 0)
     {
         printf("File opened\n");
-    }
-    if (open2 == 1)
-    {
-        exit(2);
     }
 
     exit(0);
