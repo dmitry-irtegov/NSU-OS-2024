@@ -14,15 +14,7 @@ int open_file()
     }
     else
     {
-        if (fclose(file) != 0)
-        {
-            perror("The file was not closed");
-            return 2;
-        }
-        else
-        {
-            return 0;
-        }
+        return 0;
     }
 }
 
@@ -35,15 +27,11 @@ int main()
     int open1 = open_file();
     if (open1 == 0)
     {
-        printf("File opened");
+        printf("File opened\n");
     }
     if (open1 == 1)
     {
         exit(1);
-    }
-    if (open1 == 2)
-    {
-        exit(2);
     }
 
     if (setuid(uid) == -1)
@@ -58,15 +46,11 @@ int main()
     int open2 = open_file();
     if (open2 == 0)
     {
-        printf("File opened");
+        printf("File opened\n");
     }
     if (open2 == 1)
     {
-        exit(3);
-    }
-    if (open2 == 2)
-    {
-        exit(4);
+        exit(2);
     }
 
     exit(0);
