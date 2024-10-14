@@ -33,6 +33,10 @@ int main()
     printf("uid = %d\neuid = %d\n", uid, euid);
 
     int open1 = open_file();
+    if (open1 == 0)
+    {
+        printf("File opened");
+    }
     if (open1 == 1)
     {
         exit(1);
@@ -52,6 +56,10 @@ int main()
     printf("uid = %d\neuid = %d\n", uid, updated_euid);
 
     int open2 = open_file();
+    if (open2 == 0)
+    {
+        printf("File opened");
+    }
     if (open2 == 1)
     {
         exit(3);
