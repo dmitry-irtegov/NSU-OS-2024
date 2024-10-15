@@ -50,7 +50,7 @@ int workWithConnection(int soc){
         for (int i = 0; i < len; i++) {
             buf[i] = toupper(buf[i]);
         }
-        if (write(1, buf, LEN_BUF) == -1){
+        if (write(1, buf, len) == -1){
             close(new);
             return -1;
         }
