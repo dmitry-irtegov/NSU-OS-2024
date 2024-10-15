@@ -7,7 +7,7 @@
 
 int main() {
     int pipefd[2];
-    char buf;
+    char buf[20];
 
     int pipe_status = pipe(pipefd);
 
@@ -43,19 +43,22 @@ int main() {
             perror("error in close");
             exit(EXIT_FAILURE);
         }
-
-        if (wait(NULL) == -1) {
-            perror("error in wait");
+        ssize_t lol;
+        lol = read(pipefd[0], &buf, 20);
+        if (lol == -1) {
+            perror("error in read");
             exit(EXIT_FAILURE);
         }
-        ssize_t lol;
-        while ((lol = read(pipefd[0], &buf, 1)) > 0) {
-            buf = toupper(buf);
-            if (write(fileno(stdin), &buf, 1) == -1) {
-                perror("error in write");
-                exit(EXIT_FAILURE);
-            }
+
+        for (int i = 0; i < 20; i++) {
+            buf[i] = toupper(buf[i]);
         }
+
+        if (write(fileno(stdin), &buf, 20) == -1) {
+            perror("error in write");
+            exit(EXIT_FAILURE);
+        }
+
         if (lol == -1) {
             perror("error in read");
             exit(EXIT_FAILURE);
