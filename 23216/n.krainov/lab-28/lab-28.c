@@ -25,7 +25,10 @@ int main() {
     int count = 0;
     int num;
     for (int i = 0; i < 100; i++) {
-        fscanf(fd[1], "%d\n", &num);
+        if (fscanf(fd[1], "%d\n", &num) == EOF) {
+            perror("scanf failed");
+            exit(EXIT_FAILURE);
+        }
         printf("%d ", num);
         count++;
         if(count % 10 == 0) {
