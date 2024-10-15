@@ -66,7 +66,7 @@ int workWithConnection(char* socketname){
 
 int main(int argc, char** argv){
     if (argc < 2) {
-        fputs("missed socket name", stderr);
+        fputs("missed socket name\n", stderr);
         exit(EXIT_FAILURE);
     }
 

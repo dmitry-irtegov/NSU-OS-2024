@@ -40,6 +40,7 @@ int workWithConnection(int soc){
     char buf[LEN_BUF];
     int len;
 
+    puts("Wait connection");
     int new = accept(soc, NULL, NULL);
     if (new == -1) {
         return -1;
@@ -66,7 +67,7 @@ void closeAndUnlink(int soc, char* nameSocket){
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        fputs("missed socket name", stderr);
+        fputs("missed socket name\n", stderr);
         exit(EXIT_FAILURE);
     }
 
