@@ -12,18 +12,9 @@ int set_alike_ID(uid_t ID);
 void open_file(char* filename);
 
 int main() {
-    char filename[MAX_SIZE];
-    
+    char filename[MAX_SIZE] = "file.txt";
     //first time
     print_ID();
-    enter_filename(filename); 
-    if (strlen(filename) == MAX_SIZE - 1 && filename[MAX_SIZE - 2] != '\n') {
-        perror("You can't find file with such long file_name!");
-        exit(EXIT_FAILURE);
-    } else {
-        printf("File with such long can exist.\n");
-        open_file(filename);
-    }
     
     if (setuid(getuid()) == 0) {
         printf("Everything is fine! ID changed correctly!\n");
@@ -31,10 +22,8 @@ int main() {
         perror("You can't change ID.\n");
         exit(EXIT_SUCCESS);
     }
-    
     //second time
     print_ID();
-    enter_filename(filename);
     open_file(filename);
 }
 
@@ -54,6 +43,7 @@ void open_file(char* filename) {
         fclose(in);
     }
 }
+
 void enter_filename(char* filename) { 
     printf("Enter filename: ");
     fgets(filename, MAX_SIZE, stdin);
@@ -61,6 +51,13 @@ void enter_filename(char* filename) {
     printf("filename[len - 1] %c", filename[len - 1]);
     if (len > 0 && filename[len - 1] == '\n') {
             filename[len - 1] = '\0';
+    }
+    if (strlen(filename) == MAX_SIZE - 1 && filename[MAX_SIZE - 2] != '\n') {
+        perror("You can't find file with such long file_name!");
+        exit(EXIT_FAILURE);
+    } else {
+        printf("name is correct\n");
+        open_file(filename);
     }
 
 }
