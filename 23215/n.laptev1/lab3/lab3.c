@@ -21,7 +21,7 @@ int main() {
         perror("You can't find file with such long file_name!");
         exit(EXIT_FAILURE);
     } else {
-        printf("File with such name can exist.\n");
+        printf("File with such long can exist.\n");
         open_file(filename);
     }
     
@@ -57,4 +57,10 @@ void open_file(char* filename) {
 void enter_filename(char* filename) { 
     printf("Enter filename: ");
     fgets(filename, MAX_SIZE, stdin);
+    size_t len = strlen(filename);
+    printf("filename[len - 1] %c", filename[len - 1]);
+    if (len > 0 && filename[len - 1] == '\n') {
+            filename[len - 1] = '\0';
+    }
+
 }
