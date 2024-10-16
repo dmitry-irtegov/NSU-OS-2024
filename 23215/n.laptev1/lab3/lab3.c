@@ -6,16 +6,15 @@
 
 #define MAX_SIZE 257
 void enter_filename(char* filename);
-void print_ID(uid_t efctv_ID);
+void print_ID();
 int set_alike_ID(uid_t ID);
 void open_file(char* filename);
 
 int main() {
     char filename[MAX_SIZE];
-    uid_t efctv_ID = geteuid();
     
     //first time
-    print_ID(efctv_ID);
+    print_ID();
     enter_filename(filename);
     open_file(filename);
 
@@ -27,20 +26,17 @@ int main() {
     }
     
     //second time
-    print_ID(efctv_ID);
+    print_ID();
     enter_filename(filename);
     open_file(filename);
 }
 
-void print_ID(uid_t efctv_ID) {
+void print_ID() {
     uid_t real_ID = getuid();
     printf("Your real ID is: %d\n", real_ID);
-    printf("Your effective ID is: %d\n", efctv_ID);
+    printf("Your effective ID is: %d\n", geteuid());
 }
 
-int set_alike_ID(uid_t ID) {
-    return setuid(ID);
-}
 
 void open_file(char* filename) {
     FILE* in = fopen(filename, "r");
