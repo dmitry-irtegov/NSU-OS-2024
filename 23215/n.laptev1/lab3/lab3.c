@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define MAX_SIZE 257
+#define MAX_SIZE 256
 void enter_filename(char* filename);
 void print_ID();
 int set_alike_ID(uid_t ID);
@@ -15,14 +15,20 @@ int main() {
     
     //first time
     print_ID();
-    enter_filename(filename);
-    open_file(filename);
-
+    enter_filename(filename); 
+    if (strlen(filename) == MAX_SIZE - 1 && filename[MAX_SIZE - 2] != '\n') {
+        perror("You can't find file with such long file_name!");
+        exit(EXIT_FAILURE);
+    } else {
+        printf("File with such name can exist.\n");
+        open_file(filename);
+    }
+    
     if (setuid(getuid()) == 0) {
         printf("Everything is fine! ID changed correctly!\n");
     } else {
-        perror("You can't change ID.");
-        exit(0);
+        perror("You can't change ID.\n");
+        exit(EXIT_SUCCESS);
     }
     
     //second time
@@ -37,17 +43,17 @@ void print_ID() {
     printf("Your effective ID is: %d\n", geteuid());
 }
 
-
 void open_file(char* filename) {
     FILE* in = fopen(filename, "r");
     if (in == NULL) {
         perror("Error: ");
+        exit(0);
     } else {
-        printf("FIle is opened correctly!");
+        printf("File is opened correctly!");
         fclose(in);
     }
 }
 void enter_filename(char* filename) { 
     printf("Enter filename: ");
-    scanf("%s", filename);
+    fgets(filename, MAX_SIZE, stdin);
 }
