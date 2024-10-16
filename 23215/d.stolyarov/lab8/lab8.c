@@ -2,15 +2,15 @@
 #include <stdlib.h>
 #include <fcntl.h>      
 #include <string.h>
-#include <unistd.h>                   
+#include <unistd.h>
 int main(int argc, char *argv[]){
 
-    if(argc == 1){
-        perror("Missing arguement");
+    if(argc < 3){
+        perror("Missing arguements");
         exit(1);
     }
     int file;                   
-    if((file = open(argv[1], O_RDWR)) == -1){
+    if((file = open(argv[2], O_RDWR)) == -1){
         perror("File opening error");
         exit(2);        
     }
@@ -19,7 +19,17 @@ int main(int argc, char *argv[]){
     }
 
     struct flock lock;
-    lock.l_type = F_WRLCK;
+
+    if(strcmp(argv[1], "0") == 0){
+        lock.l_type = F_RDLCK;
+    }
+    else if(strcmp(argv[1], "1") == 0){
+        lock.l_type = F_WRLCK;
+    }
+    else{
+        perror("Lock type error");
+        exit(7);
+    }
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
@@ -32,13 +42,13 @@ int main(int argc, char *argv[]){
         printf("Locked successfully\n");
     }
 
-    char cmd[100] = "nano " ;
-    int offset = strlen(cmd);
-    int fileNameSize = strlen(argv[1]);
-    for(int i = 0; i < fileNameSize; i++){
-        cmd[offset + i] = argv[1][i];   
+
+    if(strlen(argv[2]) >= 95){
+        perror("File length error");
+        exit(6);
     }
-    cmd[offset + fileNameSize] = 0;
+    char cmd[100] = "nano " ;
+    strcat(cmd, argv[2]);
     
     if(system(cmd) == -1){
         perror("Editing error");
