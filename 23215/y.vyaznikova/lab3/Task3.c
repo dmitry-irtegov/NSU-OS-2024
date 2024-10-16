@@ -14,6 +14,7 @@ int open_file()
     }
     else
     {
+        fclose(file);
         return 0;
     }
 }
