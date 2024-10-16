@@ -7,7 +7,6 @@
 #define MAX_SIZE 257
 void enter_filename(char* filename);
 void print_ID(uid_t efctv_ID);
-int set_alike_ID(uid_t ID);
 void open_file(char* filename);
 
 int main() {
@@ -19,8 +18,7 @@ int main() {
     enter_filename(filename);
     open_file(filename);
 
-    int flag = set_alike_ID(efctv_ID);
-    if (flag == 0) {
+    if (seteuid(getuid()) == 0) {
         printf("Everything is fine! ID changed correctly!\n");
     } else {
         perror("You can't change ID.");
@@ -39,15 +37,12 @@ void print_ID(uid_t efctv_ID) {
     printf("Your effective ID is: %d\n", efctv_ID);
 }
 
-int set_alike_ID(uid_t ID) {
-    return setuid(ID);
-}
-
 void open_file(char* filename) {
     FILE* in = fopen(filename, "r");
     if (in == NULL) {
         perror("Error: ");
     } else {
+        printf("FIle is opened correctly!");
         fclose(in);
     }
 }
