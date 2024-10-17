@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
-#include <stdlib.h>
 
 // Переменная для хранения количества сигналов SIGINT
 volatile sig_atomic_t signal_count = 0;
@@ -24,31 +23,34 @@ void int_to_string(int num, char* str) {
     }
 }
 
-// Обработчик сигнала для SIGINT (Ctrl+C)
-void handle_sigint(int sig) {
-    signal_count++;
-    write(STDOUT_FILENO,"\a",1);// \a — это символ для звукового сигнала
-}
+// Общий обработчик сигналов для SIGINT (Ctrl+C) и SIGQUIT (Ctrl+\)
+void handle_signal(int sig) {
+    switch (sig) {
+        case SIGINT:
+            signal_count++;
+            write(STDOUT_FILENO, "\a", 1); // Звуковой сигнал
+            break;
+        default:
+            // Завершаем программу и выводим количество SIGINT при получении SIGQUIT
+            char buffer[100] = "\nПрограмма завершена. Количество SIGINT - ";
+            char count_str[10] = {0}; // Для конвертации числа в строку
+            int_to_string(signal_count, count_str); // Преобразуем счётчик в строку
+            write(STDOUT_FILENO, buffer, 100);
+            write(STDOUT_FILENO, count_str, 10);
+            write(STDOUT_FILENO, "\n", 1);
 
-// Обработчик сигнала для SIGQUIT (Ctrl+\)
-void handle_sigquit(int sig) {
-    char buffer[100] = "\nПрограмма завершена. Количество SIGINT - ";
-    char count_str[10]={0}; // Для конвертации числа в строку
-    int_to_string(signal_count, count_str); // Преобразуем счётчик в строку
-    write(STDOUT_FILENO, buffer, 100);
-    write(STDOUT_FILENO, count_str, 10);
-
-    _exit(0); // Завершаем программу безопасным методом
+            _exit(0); // Завершаем программу
+    }
 }
 
 int main() {
     // Устанавливаем обработчик сигнала для SIGINT
-    if (sigset(SIGINT, handle_sigint) == SIG_ERR) {
+    if (sigset(SIGINT, handle_signal) == SIG_ERR) {
         perror("Ошибка установки обработчика для SIGINT");
         return 1;
     }
     // Устанавливаем обработчик сигнала для SIGQUIT
-    if (sigset(SIGQUIT, handle_sigquit) == SIG_ERR) {
+    if (sigset(SIGQUIT, handle_signal) == SIG_ERR) {
         perror("Ошибка установки обработчика для SIGQUIT");
         return 1;
     }
