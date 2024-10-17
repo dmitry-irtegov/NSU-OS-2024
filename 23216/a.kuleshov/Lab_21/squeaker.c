@@ -28,18 +28,17 @@ void handle_signal(int sig) {
     switch (sig) {
         case SIGINT:
             signal_count++;
-            write(STDOUT_FILENO, "\a", 1); // Звуковой сигнал
-            break;
-        default:
-            // Завершаем программу и выводим количество SIGINT при получении SIGQUIT
+        write(STDOUT_FILENO, "\a", 1); // Звуковой сигнал
+        break;
+        default: {
             char buffer[100] = "\nПрограмма завершена. Количество SIGINT - ";
             char count_str[10] = {0}; // Для конвертации числа в строку
             int_to_string(signal_count, count_str); // Преобразуем счётчик в строку
             write(STDOUT_FILENO, buffer, 100);
             write(STDOUT_FILENO, count_str, 10);
             write(STDOUT_FILENO, "\n", 1);
-
-            _exit(0); // Завершаем программу
+        }
+        _exit(0); // Завершаем программу
     }
 }
 
@@ -49,6 +48,7 @@ int main() {
         perror("Ошибка установки обработчика для SIGINT");
         return 1;
     }
+
     // Устанавливаем обработчик сигнала для SIGQUIT
     if (sigset(SIGQUIT, handle_signal) == SIG_ERR) {
         perror("Ошибка установки обработчика для SIGQUIT");
