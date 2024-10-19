@@ -1,15 +1,16 @@
-#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fnmatch.h>
+#include <errno.h>
 
 int main() {
     DIR* directory;
     struct dirent* inp;
     char pattern[BUFSIZ];
     int flag = 0;
+    int fnmatch_res = 0;
     fgets(pattern, BUFSIZ, stdin);
 
     if (pattern[strlen(pattern) - 1] == '\n') {
@@ -22,10 +23,22 @@ int main() {
         return -1;
     }
 
-    while (inp = readdir(directory)) {
-        if (fnmatch(pattern, inp->d_name, 0) == 0) {
+    while (1) {
+	inp = readdir(directory);
+	if (inp == NULL && errno != 0) {
+	    perror("An error occured while readdir function");
+	    return -1;
+	}
+	else if (inp == NULL) {
+	    break;
+	}
+        fnmatch_res = fnmatch(pattern, inp->d_name, 0);
+        if (fnmatch_res == 0) {
             printf("%s\n", inp->d_name);
             flag = 1;
+        }
+        else if (fnmatch_res != FNM_NOMATCH) {
+            fprintf(stderr, "An error occured while fnmatch");
         }
     }
 
