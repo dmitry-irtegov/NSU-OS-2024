@@ -15,7 +15,8 @@ int main() {
     char filename[MAX_SIZE] = "file.txt";
     //first time
     print_ID();
-    
+    open_file(filename);
+
     if (setuid(getuid()) == 0) {
         printf("Everything is fine! ID changed correctly!\n");
     } else {
