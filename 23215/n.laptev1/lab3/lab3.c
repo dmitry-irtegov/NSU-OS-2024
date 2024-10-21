@@ -6,7 +6,6 @@
 #include <errno.h>
 
 #define MAX_SIZE 256
-void enter_filename(char* filename);
 void print_ID();
 int set_alike_ID(uid_t ID);
 void open_file(char* filename);
@@ -21,7 +20,7 @@ int main() {
         printf("Everything is fine! ID changed correctly!\n");
     } else {
         perror("You can't change ID.\n");
-        exit(EXIT_SUCCESS);
+        exit(EXIT_FAILURE);
     }
     //second time
     print_ID();
@@ -38,27 +37,10 @@ void open_file(char* filename) {
     FILE* in = fopen(filename, "r");
     if (in == NULL) {
         perror("Error: ");
-        exit(0);
+        exit(EXIT_FAILURE);
     } else {
-        printf("File is opened correctly!");
+        printf("File is opened correctly!\n\n");
         fclose(in);
     }
 }
 
-void enter_filename(char* filename) { 
-    printf("Enter filename: ");
-    fgets(filename, MAX_SIZE, stdin);
-    size_t len = strlen(filename);
-    printf("filename[len - 1] %c", filename[len - 1]);
-    if (len > 0 && filename[len - 1] == '\n') {
-            filename[len - 1] = '\0';
-    }
-    if (strlen(filename) == MAX_SIZE - 1 && filename[MAX_SIZE - 2] != '\n') {
-        perror("You can't find file with such long file_name!");
-        exit(EXIT_FAILURE);
-    } else {
-        printf("name is correct\n");
-        open_file(filename);
-    }
-
-}
