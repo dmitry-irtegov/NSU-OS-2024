@@ -5,13 +5,11 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define MAX_SIZE 256
 void print_ID();
-int set_alike_ID(uid_t ID);
 void open_file(char* filename);
 
 int main() {
-    char filename[MAX_SIZE] = "file.txt";
+    char *filename = "file.txt";
     //first time
     print_ID();
     open_file(filename);
