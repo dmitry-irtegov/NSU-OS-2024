@@ -26,13 +26,19 @@ Node* addNode(Node* prev, char* string){
     return ans;
 }
 
-void printListAndFree(Node* cur){
+void printList(Node* cur){
     if (cur != NULL){
         printf(cur->string);
-        printListAndFree(cur->next);
-        free(cur);
+        printList(cur->next);
     }
 }
+
+void freeList(Node* cur) {
+    if (cur != NULL){
+        freeList(cur->next);
+        free(cur);
+    }
+} 
 
 void exitProgram(int code, char* message){
     if (message != NULL){
@@ -41,43 +47,49 @@ void exitProgram(int code, char* message){
     exit(code);
 }
 
-int main(int argc, char* argv[]){
-    char buffer[LEN_BUFFER], flag_fullstop = 0;
+int getListFromUser(Node** startList) {
+    char buffer[LEN_BUFFER], flag_fullstop = 0, flag_start = 1;
     char* string = NULL;
-    Node *start = NULL, *prev = NULL;
+    Node *prev = NULL, *start = NULL;
+
     while (fgets(buffer, LEN_BUFFER, stdin)){
-        if (buffer[0] == '.'){
-            if (strlen(buffer) == 2) {
+        if (buffer[0] == '.') {
+            if (strlen(buffer) <= 2) {
                 break;
             }
             string = strdup(&buffer[1]);
             flag_fullstop = 1;
         }
-        else{
+        else {
             string = strdup(buffer);
         }
-        if (string == NULL){
-            exitProgram(EXIT_FAILURE, "strdup failed");
+
+        if (string == NULL) {
+            return 1;
         }
+
         while (buffer[strlen(buffer)-1] != '\n'){
             fgets(buffer, LEN_BUFFER, stdin);
-            if (ferror(stdin)){
-                exitProgram(EXIT_FAILURE, "fgets failed");
+            if (ferror(stdin)) {
+                return 1;
             }
+
             string = realloc(string, strlen(buffer) + strlen(string) + 1);
-            if (string == NULL){
-                exitProgram(EXIT_FAILURE, "realloc failed");
+            if (string == NULL) {
+                return 1;
             }
+
             strcat(string, buffer);
         }
         
         prev = addNode(prev, string);
 
-        if (prev == NULL){
-            exitProgram(EXIT_FAILURE, "addNode failed");
+        if (prev == NULL) {
+            return 1;
         }
 
-        if (start == NULL) {
+        if (flag_start) {
+            flag_start = 0;
             start = prev;
         }
 
@@ -88,11 +100,35 @@ int main(int argc, char* argv[]){
     }
 
     if (ferror(stdin)){
-        exitProgram(EXIT_FAILURE, "fgets failed");
+        return 1;
+    }
+
+    if (feof(stdin)){
+        return 2;
+    }
+
+
+    *startList = start;
+    return 0;
+}
+
+int main(){
+    Node* start = NULL;
+    Node** startPointer = &start;
+
+    switch (getListFromUser(startPointer)) {
+        case 1: 
+            exitProgram(EXIT_FAILURE, "getListFromUser failed");
+            break;
+        case 2:
+            fprintf(stderr, "getListFromUser failed: EOF\n");
+            exitProgram(EXIT_FAILURE, NULL);
     }
 
     puts("strings:");
-    printListAndFree(start);
+    printList(start);
+
+    freeList(start);
 
     exitProgram(EXIT_SUCCESS, NULL);
 }
