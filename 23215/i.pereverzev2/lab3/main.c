@@ -10,7 +10,7 @@ void opentry()
         perror("can't open the file");
         exit(1);
     } else {
-	printf("file opened successfully\n");
+	    printf("file opened successfully\n");
         fclose(fd);
     }
 }
