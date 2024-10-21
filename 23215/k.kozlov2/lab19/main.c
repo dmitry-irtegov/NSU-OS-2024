@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <dirent.h>
+#include <sys/types.h>
 #include <string.h>
 
 int match(char *name, char *pattern);
@@ -8,7 +9,13 @@ int main() {
     char pattern[1000];
     char flag = 0;
     struct dirent *entry;
+
     DIR *dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("can't open directory");
+        return 1;
+    }
 
     printf("Enter a pattern: ");
     (void)fgets(pattern, 1000, stdin);
@@ -29,7 +36,10 @@ int main() {
     if (!flag)
         printf("%s\n", pattern);
 
-    closedir(dir);
+    if (closedir(dir) == -1) {
+        perror("can't close directory");
+    }
+    
     return 0;
 }
 
