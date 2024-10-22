@@ -66,7 +66,7 @@ func Parceline(line []byte) int {
 				panic("syntax error\n")
 			}
 			head.Infile = string(line[i:])
-			i = bytes.IndexAny(line[i:], delim)
+			i += bytes.IndexAny(line[i:], delim)
 			if i == -1 {
 				i = len(line) - 1
 			}
@@ -91,7 +91,7 @@ func Parceline(line []byte) int {
 			} else {
 				head.Outfile = string(line[i : i+min(bytes.IndexAny(line[i:], delim), bytes.IndexByte(line[i:], delimbyte))])
 			}
-			i = bytes.IndexAny(line[i:], delim)
+			i += bytes.IndexAny(line[i:], delim)
 			if i == -1 {
 				i = len(line) - 1
 			}
@@ -111,7 +111,7 @@ func Parceline(line []byte) int {
 			}
 			head.Cmds[ncmds].Cmdargs[nargs] = string(line[i : i+min(bytes.IndexAny(line[i:], delim), bytes.IndexByte(line[i:], delimbyte))])
 			nargs++
-			i = bytes.IndexAny(line[i:], delim)
+			i += bytes.IndexAny(line[i:], delim)
 			if i == -1 {
 				i = len(line) - 1
 			}
