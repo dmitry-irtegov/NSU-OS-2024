@@ -4,15 +4,21 @@
 #include <stdio.h>
 #include <string.h>
 
+void exitProgram(int status, char* message) {
+    if (message != NULL) {
+        perror(message);
+    }
+    exit(status);
+}
+
 int main(int argc, char* argv[]){
     if (argc < 2){
-        perror("Missing filename");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Missing filename\n");
+        exitProgram(EXIT_FAILURE, NULL);
     }
     int file = open(argv[1], O_RDWR);
     if (file == -1){
-        perror("failed open");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed open");
     }
 
     struct flock info;
@@ -22,32 +28,27 @@ int main(int argc, char* argv[]){
     info.l_type = F_WRLCK;
 
     if (fcntl(file, F_SETLK, &info)){
-        perror("failed fcntl");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed fcntl");
     }
     char* command = malloc(strlen(argv[1]) + 4);
     if (command == NULL){
-        perror("failed malloc");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed malloc");
     }
     if (sprintf(command, "vi %s", argv[1])<0){
-        perror("failed sprintf");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed sprintf");
     }
 
     if (system(command) == -1){
-        perror("failed system");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed system");
     }
 
     info.l_type = F_UNLCK;
     if (fcntl(file, F_SETLK, &info)){
-        perror("failed fcntl");
-        exit(EXIT_FAILURE);
+        exitProgram(EXIT_FAILURE, "failed fcntl");
     }
 
     free(command);
     close(file);
 
-    exit(EXIT_SUCCESS);
+    exitProgram(EXIT_SUCCESS, NULL);
 }
