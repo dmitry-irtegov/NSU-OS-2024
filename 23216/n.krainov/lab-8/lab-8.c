@@ -19,7 +19,7 @@ int main(int argc, char* argv[]){
     info.l_len = 0;
     info.l_start = 0;
     info.l_whence = SEEK_SET;
-    info.l_type = F_RDLCK;
+    info.l_type = F_WRLCK;
 
     if (fcntl(file, F_SETLK, &info)){
         perror("failed fcntl");
