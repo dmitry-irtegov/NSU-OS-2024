@@ -23,7 +23,7 @@ void sigcatch(int sig)
             write(1,"\a",1);
     }
 }
-
+ 
 void main()
 {
     count = 0;
