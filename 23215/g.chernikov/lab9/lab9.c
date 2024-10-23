@@ -10,12 +10,13 @@ int main()
 
     if (pid < 0)
     {
-        perror("Error");
+        perror("fork failed");
         exit(1);
     } else if (pid == 0){
-        //все че надо делаем
-        execlp("cat","cat", "file.txt", NULL); //если всё так то просто подменяет наш дочерний процесс новым процессом и поэтому дочерний завершится.
-        exit(1); //если че то пошло не так и дочерний не подменился
+
+        execlp("cat","cat", "file.txt", NULL);
+        perror("exec failed"); 
+        exit(1); 
 
     } else {
         wait(NULL);
