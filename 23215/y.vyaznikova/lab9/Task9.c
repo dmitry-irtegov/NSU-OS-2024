@@ -22,7 +22,8 @@ int main() {
             exit(3);
         }
 
-        printf("\n\nThe parent's process message:\nThe parent process has completed after the subprocess finished\n");
+        printf("\n\nThe parent's process message:");
+        printf("\nParent process completed after finish of subprocess\n");
     }
     
     exit(0);
