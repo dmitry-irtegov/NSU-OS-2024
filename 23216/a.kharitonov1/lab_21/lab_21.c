@@ -8,6 +8,9 @@ int count;
 void sigcatch(int sig)
 {
     char buf[40];
+    signal(SIGINT, sigcatch);
+    write(1,"\n",1);
+    sleep(3);
     switch(sig){
         case SIGQUIT:
             if (sprintf(buf,"\n%d signals count\n", count) == -1){
@@ -26,7 +29,7 @@ void sigcatch(int sig)
 void main()
 {
     count = 0;
-    sigset(SIGINT, sigcatch);
+    signal(SIGINT, sigcatch);
     sigset(SIGQUIT, sigcatch);
     while(1){
         pause();
