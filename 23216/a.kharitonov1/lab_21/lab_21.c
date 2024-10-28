@@ -36,7 +36,6 @@ int main()
     sigemptyset(&masksignalint);
     sigemptyset(&masksignalquit);
     sigaddset(&masksignalquit, SIGQUIT);
-    sigaddset(&masksignalquit, SIGINT);
     signalint.sa_handler = sigcatch;
     signalquit.sa_handler = sigcatch;
     signalint.sa_mask = masksignalint;
