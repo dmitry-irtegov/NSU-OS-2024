@@ -23,34 +23,11 @@ void sigcatch(int sig)
     }
 }
 
-void sigactionFailureChecker (int sig, const struct sigaction *restrict act, struct sigaction *restrict oact){
-    if (sigaction(sig, act, oact) == -1){
-        perror("sigaction failed");
-        exit(EXIT_FAILURE);
-    }
-}
-
-int main()
+void main()
 {
-    struct sigaction signalint;
-    struct sigaction signalquit;
-    memset(&signalint, 0, sizeof(signalint));
-    memset(&signalint, 0, sizeof(signalquit));
-    sigset_t masksignalint;
-    sigset_t masksignalquit;
-    sigemptyset(&masksignalint);
-    sigemptyset(&masksignalquit);
-    sigaddset(&masksignalquit, SIGQUIT);
-    sigaddset(&masksignalquit, SIGINT);
-    signalint.sa_handler = sigcatch;
-    signalquit.sa_handler = sigcatch;
-    signalint.sa_mask = masksignalint;
-    signalquit.sa_mask = masksignalquit;
-    signalint.sa_flags = SA_NODEFER;
     count = 0;
-    sigactionFailureChecker(SIGINT, &signalint, NULL);
-    sigactionFailureChecker(SIGQUIT, &signalquit, NULL);
-    
+    sigset(SIGINT, sigcatch);
+    sigset(SIGQUIT, sigcatch);
     while(1){
         pause();
     }
