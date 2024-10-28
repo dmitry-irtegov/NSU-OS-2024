@@ -15,11 +15,13 @@ int main()
         execlp("cat", "cat", "testfile", NULL);
         perror("cat wasn't executed");
         return 2;
-    } else if (waitpid(chpid, NULL, 0) == -1) {
-        perror("waitpid error");
-        return 3;
     } else {
-        printf("sample text from parent process\n");
+	if (waitpid(chpid, NULL, 0) == -1) {
+            perror("waitpid error");
+            return 3;
+        } else {
+            printf("sample text from parent process\n");
+        }
     }
     return 0;
 }
