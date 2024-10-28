@@ -2,6 +2,14 @@
 #include <string.h>
 #include <glob.h>
 
+int errfunc(const char *epath, int eerrno) {
+    if (eerrno == GLOB_ABORTED || eerrno == GLOB_NOSPACE || eerrno == GLOB_NOSYS) {
+        fprintf(stderr, "An error occured while reading %s", epath);
+        perror("");
+    }
+    return 0;
+}
+
 int main() {
     glob_t glob_struct;
     int glob_res;
@@ -13,7 +21,7 @@ int main() {
         pattern[strlen(pattern) - 1] = '\0';
     }
 
-    glob_res = glob(pattern, 0, NULL, &glob_struct);
+    glob_res = glob(pattern, 0, &errfunc, &glob_struct);
     if (glob_res == GLOB_NOMATCH) {
         printf("No files found with pattern: %s\n", pattern);
         return -1;
