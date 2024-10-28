@@ -18,8 +18,7 @@ int main() {
     file = fopen(filename, "r");
     if (file == NULL) {
         perror("Error opening file");
-    } 
-    else {
+    }else {
         printf("File opened successfully\n");
         fclose(file);
     }
@@ -28,16 +27,13 @@ int main() {
         perror("Error setting UID");
         exit(EXIT_FAILURE);
     }
-
     printf("After setuid:\n");
     print_uids();
-    fclose(file);
     file = fopen(filename, "r");
 
     if (file == NULL) {
         perror("Error opening file after setuid");
-    } 
-    else {
+    }else {
         printf("File opened successfully after setuid\n");
         fclose(file);
     }
