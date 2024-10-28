@@ -28,18 +28,29 @@ void sigcatch(int sig)
 int main()
 {
     struct sigaction signalint;
+    struct sigaction signalquit;
     memset(&signalint, 0, sizeof(signalint));
+    memset(&signalint, 0, sizeof(signalquit));
     sigset_t masksignalint;
+    sigset_t masksignalquit;
     sigemptyset(&masksignalint);
+    sigemptyset(&masksignalquit);
+    sigaddset(&masksignalquit, SIGQUIT);
+    sigaddset(&masksignalquit, SIGINT);
     signalint.sa_handler = sigcatch;
+    signalquit.sa_handler = sigcatch;
     signalint.sa_mask = masksignalint;
+    signalquit.sa_mask = masksignalquit;
     signalint.sa_flags = SA_NODEFER;
     count = 0;
     if (sigaction(SIGINT, &signalint, NULL)){
         perror("sigaction failed");
         exit(EXIT_FAILURE);
     }
-    sigset(SIGQUIT, sigcatch);
+    if (sigaction(SIGQUIT, &signalquit, NULL)){
+        perror("sigaction failed");
+        exit(EXIT_FAILURE);
+    }
     while(1){
         pause();
     }
