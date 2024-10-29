@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     printf("File locked.\n");
 
     char command[8192];
-    snprintf(command, sizeof(command), "nano %s\n", filename);
+    snprintf(command, sizeof(command), "vi %s\n", filename);
 
     if (system(command) == -1) {
         printf("System command: fail.\n");
