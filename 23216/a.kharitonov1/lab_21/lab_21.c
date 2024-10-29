@@ -18,6 +18,7 @@ void sigcatch(int sig)
             }
             _exit(EXIT_SUCCESS);
         case SIGINT:
+            sleep(3);
             count++;
             write(1,"\a",1);
     }
