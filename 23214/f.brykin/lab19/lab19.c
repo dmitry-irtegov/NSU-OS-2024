@@ -18,6 +18,10 @@ int main() {
     if (len > 0 && pattern[len - 1] == '\n') {
         pattern[len - 1] = '\0';
     }
+    if (strchr(pattern, '/') != NULL) {
+        fprintf(stderr, "Error: Pattern should not contain '/'\n");
+        return EXIT_FAILURE;
+    }
     int found = 0;
     dir = opendir(".");
     if (dir == NULL) {
@@ -33,10 +37,6 @@ int main() {
             closedir(dir);
             return EXIT_FAILURE;
         }
-    }
-    if (closedir(dir) != 0) {
-        perror("Error closing directory");
-        return EXIT_FAILURE;
     }
     if (!found) {
         printf("No files found matching the pattern: %s\n", pattern);
