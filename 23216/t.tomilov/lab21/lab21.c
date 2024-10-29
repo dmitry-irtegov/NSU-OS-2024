@@ -20,8 +20,8 @@ void boop(int sig){
 }
 
 int main(){
-	signal(SIGINT, boop);
-	signal(SIGQUIT, boop);
+	sigset(SIGINT, boop);
+	sigset(SIGQUIT, boop);
 	while(1){
 		pause();
 	}
