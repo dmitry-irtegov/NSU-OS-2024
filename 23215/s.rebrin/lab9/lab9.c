@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
     }
     if ((pid = fork()) == 0) {
         // Папина дочка
-        execlp("cat", "cat", argv[0], NULL);
+        execlp("cat", "cat", argv[1], NULL);
         perror("execlp failed"); 
         exit(1);
     }
