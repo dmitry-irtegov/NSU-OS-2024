@@ -11,13 +11,13 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
     if ((pid = fork()) == 0) {
-        // Папина дочка
+        // РџР°РїРёРЅР° РґРѕС‡РєР°
         execlp("cat", "cat", argv[1], NULL);
         perror("execlp failed"); 
         exit(1);
     }
     else {
-        // Папа
+        // РџР°РїР°
         printf("Parent looking for his child\n");
 
         wait(NULL);
