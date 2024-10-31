@@ -26,6 +26,7 @@ int main()
             perror("unable to write into the pipe from child");
             return 3;
         }
+        close(fildes[0]);
     } else {
         close(fildes[0]);
         char buf[MAXLENGTH];
@@ -34,6 +35,7 @@ int main()
             perror("unable to read");
             return 4;
         }
+        close(fildes[1]);
         for (int i = 0; i < readed; i++) {
             buf[i] = toupper(buf[i]);
         }
