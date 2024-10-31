@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define MAXLENGTH 128
+#define MAXLENGTH 8
 
 int main()
 {
@@ -30,17 +30,19 @@ int main()
     } else {
         close(fildes[0]);
         char buf[MAXLENGTH];
-        ssize_t readed = read(fildes[1], buf, MAXLENGTH - 1);
+        ssize_t readed = 0;
+        while((readed = read(fildes[1], buf, MAXLENGTH - 1)) > 0) {
+            for(int i = 0; i < readed; i++) {
+                buf[i] = toupper(buf[i]);
+                printf("%c", buf[i]);
+            }
+        }
+        printf("\n");
         if(readed == -1) {
             perror("unable to read");
             return 4;
         }
         close(fildes[1]);
-        for (int i = 0; i < readed; i++) {
-            buf[i] = toupper(buf[i]);
-        }
-        buf[readed] = 0;
-        printf("%s\n",buf);
     }
     return 0;
 }
