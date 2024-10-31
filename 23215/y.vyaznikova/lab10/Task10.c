@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
 
         if (WIFEXITED(status)) {
             printf("Child process exited with status: %d\n", WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            printf("Child process terminated by signal: %d\n", WTERMSIG(status));
         }
     }
 
