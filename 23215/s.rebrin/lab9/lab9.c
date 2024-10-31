@@ -3,18 +3,18 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-int main() {
+int main(int argc, char* argv[]) {
     pid_t pid;  
 
-    if (pid == -1) {
-        perror("fork failed");
-        exit(EXIT_FAILURE);
+    if (argc == 0) {
+        perror("need file name");
+        exit(1);
     }
     if ((pid = fork()) == 0) {
         // Папина дочка
-        execlp("cat", "cat", "longfile.txt", NULL);  
+        execlp("cat", "cat", argv[0], NULL);
         perror("execlp failed"); 
-        exit(EXIT_FAILURE);
+        exit(1);
     }
     else {
         // Папа
