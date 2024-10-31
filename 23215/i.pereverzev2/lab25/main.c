@@ -22,8 +22,7 @@ int main()
     if (chpid == 0) {
         close(fildes[1]);
         char buf[] = "Sample Text That Will Be Written inTo the pipe";
-        
-    if (write(fildes[0], buf, strlen(buf)) == -1) {
+        if (write(fildes[0], buf, strlen(buf)) == -1) {
             perror("unable to write into the pipe from child");
             return 3;
         }
@@ -31,10 +30,10 @@ int main()
         close(fildes[0]);
         char buf[MAXLENGTH];
         ssize_t readed = read(fildes[1], buf, MAXLENGTH - 1);
-    if(readed == -1) {
+        if(readed == -1) {
             perror("unable to read");
-        return 4;
-    }
+            return 4;
+        }
         for (int i = 0; i < readed; i++) {
             buf[i] = toupper(buf[i]);
         }
