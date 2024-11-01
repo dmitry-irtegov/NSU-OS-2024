@@ -5,7 +5,9 @@
 #include <sys/stat.h>
 
 int errfunc(const char *epath, int eerrno) {
-if(eerrno == 13){    fprintf(stderr, "Error %s %s\n", epath, strerror(eerrno));}
+    if (eerrno == GLOB_ABORTED || eerrno == GLOB_NOSPACE || eerrno == GLOB_NOSYS) {
+        perror(epath);
+    }
     return 0;
 }
 
