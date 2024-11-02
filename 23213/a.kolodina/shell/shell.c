@@ -186,6 +186,7 @@ void start_process(process* p) {
 }
 
 void start_job(job* curr_job) {
+    signal(SIGTTOU, SIG_IGN);
     for (process* p = curr_job->processes; p; p = p->next) {
         if (p->argv.cmdflag == OUTPIP || p->argv.cmdflag == 3) { 
             if (pipe(p->fildes) == -1) { 
