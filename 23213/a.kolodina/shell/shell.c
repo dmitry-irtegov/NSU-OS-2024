@@ -213,9 +213,7 @@ void start_job(job* curr_job) {
             p->p_pid = pid;
             if (curr_job->job_pgid == 0) {
                 curr_job->job_pgid = p->p_pid; 
-                if (tcsetpgrp(STDIN_FILENO, curr_job->job_pgid) == -1) { 
-                    perror("child getting terminal error");
-                } 
+                tcsetpgrp(STDIN_FILENO, curr_job->job_pgid);
             }
             p->g_pid = curr_job->job_pgid;
             if (setpgid(p->p_pid, curr_job->job_pgid) == -1) { 
