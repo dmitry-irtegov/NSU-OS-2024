@@ -113,7 +113,6 @@ void start_process(process* p) {
     signal (SIGQUIT, SIG_DFL);
     signal (SIGTSTP, SIG_DFL);
     signal (SIGTTIN, SIG_DFL);
-    signal (SIGTTOU, SIG_DFL);
     signal (SIGCHLD, SIG_DFL);
 
     if (setpgid(p->p_pid, p->g_pid)== -1) {
