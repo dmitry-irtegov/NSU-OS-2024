@@ -12,11 +12,13 @@ int main() {
         perror("Getting time failed");
         exit(1);
     }   
-    char *time_str = ctime(&now);
-    if (time_str == NULL) {
-        perror("ctime failed");
+    char *time_ptr = ctime(&now);
+
+    if (time_ptr == NULL){
+        perror("ctime dead");
         exit(1);
     }
-    printf("%s", time_str);
+
+    printf("%s", time_ptr);
     return 0;   
 }
