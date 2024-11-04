@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     if (pid == 0) {
         if (execlp("cat", "cat", argv[1], NULL) == -1) {
-            perror("execvp");
+            perror("execlp");
             exit(EXIT_FAILURE);
         }
     } else {
