@@ -5,6 +5,7 @@
 #include <wait.h>
 int main(int argc, char* argv[])
 {
+    printf("%d - %d\n", getpid(), getppid());
     if(argc < 2){
         perror("Missing filename");
         exit(1);
@@ -13,23 +14,23 @@ int main(int argc, char* argv[])
         perror("Too long filename");
         exit(2);
     }
-    pid_t pid, ret = 123;
+    pid_t cid, ret = 123;
     int status = 234;
     char cmd[100] = "cat ";
-    if((pid = fork()) == 0){
+    if((cid = fork()) == 0){
         //for(int i = 0; i < 100000; i++);
         printf("child's part:\n");
         strcat(cmd, argv[1]);
         execlp("sh", "sh", "-c", cmd, (char *) 0);
-        printf("%s\n", cmd);
-        perror("Cat error");
+        perror("Sh error");
         exit(3);
     }
-    else if(pid > 0){
+    else if(cid > 0){
         if(argc >= 3){
+            printf("parent waiting\n");
             ret = wait(&status);
         }
-        printf("Parent's text: %d - %d\n", ret, status);
+        printf("Parent's text: %d - %d - %d\n", cid, ret, status);
         exit(0);
     }
     else{
