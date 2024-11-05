@@ -47,11 +47,11 @@ void signal_handler(int signal_number) {
 }
 int main() {
     // Установка пользовательских обработчиков сигналов
-    if (signal(SIGINT, signal_handler) == SIG_ERR) {
+    if (sigset(SIGINT, signal_handler) == SIG_ERR) {
         perror("Error setting SIGINT handler");
         return EXIT_FAILURE;
     }
-    if (signal(SIGQUIT, signal_handler) == SIG_ERR) {
+    if (sigset(SIGQUIT, signal_handler) == SIG_ERR) {
         perror("Error setting SIGQUIT handler");
         return EXIT_FAILURE;
     }
