@@ -2,10 +2,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <wait.h>
+#include <string.h>
+#include <errno.h>
 
 extern char **environ;
 
 int execvpe(const char *file, char *const argv[], char *const envp[]) {
+    // Проверка на корректность массива envp
+    for (char *const *env = envp; *env != NULL; env++) {
+        // Проверяем наличие '=' и то, что перед ним есть хотя бы один символ
+        char *equal_sign = strchr(*env, '=');
+        if (equal_sign == NULL || equal_sign == *env) {
+            errno = EINVAL;
+            return 1;
+        }
+    }
+
     // Сохраняем текущее значение environ
     char **old_environ = environ;
 
@@ -27,7 +39,7 @@ int main() {
     char *args[] = {"env", NULL}; // Команда "env" выводит все переменные окружения
 
     // Задаём новое окружение
-    char *new_envp[] = {"PATH=/bin:/usr/bin", NULL};
+    char *new_envp[] = {"PA=", NULL};
 
     // Создаем дочерний процесс
     pid_t pid = fork();
