@@ -23,20 +23,25 @@ Job* findJob(int num){
 }
 
 int fg(Command* cmd) {
+    if (cmd->next != NULL) {
+        fprintf(stderr, "fg: no job control\n");
+        return -1;
+    }
+
     if (cmd->cmdargs[1] == NULL) {
-        fprintf(stderr, "Incorrect arg\n");
+        fprintf(stderr, "fg: Incorrect arg\n");
         return -1;
     }
 
     int num = atoi(cmd->cmdargs[1]);
     if (errno != 0) {
-        fprintf(stderr, "Incorrect arg\n");
+        fprintf(stderr, "fg: Incorrect arg\n");
         return -1;
     }
 
     Job* j = findJob(num);
     if (j == NULL) {
-        fprintf(stderr, "No such job\n");
+        fprintf(stderr, "fg: No such job\n");
         return -1;
     }
 
@@ -47,7 +52,11 @@ int fg(Command* cmd) {
         }
     }
 
-    foregroundJob(j, 1);
+    if (foregroundJob(j, 1)) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int bg(Command* cmd) {
@@ -75,9 +84,13 @@ int bg(Command* cmd) {
         }
     }
 
-    sendSIGCONT(j->pgid);
+    if (sendSIGCONT(j->pgid)) {
+        return -1;
+    }
+
+    return 0;
 }
 
-int jobs() {
+void jobs() {
     updateInfoJobs(1);
 }

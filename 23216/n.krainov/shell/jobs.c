@@ -7,44 +7,61 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <termios.h>
-#include <errno.h>
 #include "shell.h"
 
 Job* head = NULL;
 
-int createProcess(int in, int out, Command* cmd, pid_t pgid) {
+void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     pid_t pid = getpid();
     if (pgid == 0) {
-        setpgid(pid, pid);
+        if (setpgid(pid, pid)) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
     }
     else {
-        setpgid(pid, pgid);
+        if (setpgid(pid, pgid)) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (in != -1) {
-        dup2(in, STDIN_FILENO);
+        if (dup2(in, STDIN_FILENO)) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
         close(in);
     } 
     else if (cmd->infile != NULL) {
         int newIn = open(cmd->infile, O_RDONLY);
-        dup2(newIn, STDIN_FILENO);
+        if (newIn == -1 || dup2(newIn, STDIN_FILENO) == -1) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
         close(newIn);
     }
 
     if (out != -1) {
-        dup2(out, STDOUT_FILENO);
+        if (dup2(out, STDOUT_FILENO) == -1) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
         close(out);
     } 
     else if (cmd->outfile != NULL) {
         int newOut;
         if (cmd->flags & 1) {
-            newOut = open(cmd->infile, O_WRONLY);    
+            newOut = open(cmd->infile, O_WRONLY | O_CREAT);    
         }
         else {
-            newOut = open(cmd->outfile, O_WRONLY | O_APPEND);
+            newOut = open(cmd->outfile, O_WRONLY | O_APPEND | O_CREAT);
         }
         
-        dup2(newOut, STDOUT_FILENO);
+        if (newOut == -1 || dup2(newOut, STDOUT_FILENO) == -1) {
+            perror("createProcess");
+            exit(EXIT_FAILURE);
+        }
         close(newOut);
     }
 
@@ -54,12 +71,13 @@ int createProcess(int in, int out, Command* cmd, pid_t pgid) {
     sigset(SIGTTOU, SIG_DFL);
     sigset(SIGTTIN, SIG_DFL);
 
+
     execvp(cmd->cmdargs[0], cmd->cmdargs);
     perror("exec");
     exit(EXIT_FAILURE);
 }
 
-int waitJob(Job* j) {
+void waitJob(Job* j) {
     int status;
     pid_t pid;
     do {
@@ -68,26 +86,32 @@ int waitJob(Job* j) {
 }
 
 int sendSIGCONT(pid_t pgid) {
-    kill(-pgid, SIGCONT);
-    return 0;
+    return kill(-pgid, SIGCONT);
 }
 
 int foregroundJob(Job* j, int continueJob) {
-    tcsetpgrp(STDIN_FILENO, j->pgid);
+    if (tcsetpgrp(STDIN_FILENO, j->pgid)) {
+        return -1;
+    }
     
     if (continueJob) {
-        sendSIGCONT(j->pgid);
+        if (sendSIGCONT(j->pgid)) {
+            return -1;
+        }
     }
 
     waitJob(j);
-    tcsetpgrp(STDIN_FILENO, getpgrp());
+    if (tcsetpgrp(STDIN_FILENO, getpgrp())) {
+        return -1;
+    }
 
     if (isCompletedJob(j)) {
         freeJob(j);
     }
+    return 0;
 }
 
-int createJobs(Conv* conv) {
+void createJobs(Conv* conv) {
     Job* tail;
     Process* curproc = NULL;
     for (Conv* curconv = conv; curconv; curconv = curconv->next) {
@@ -107,7 +131,7 @@ int createJobs(Conv* conv) {
             tail = tail->next;
         }
 
-
+        
         int filedes[2];
         filedes[0] = -1;
         filedes[1] = -1;
@@ -118,21 +142,18 @@ int createJobs(Conv* conv) {
                 out = filedes[1];
             }
 
-            if (cmd->isShellSpecific) {
-                switch (cmd->isShellSpecific) {
-                    case FG:
-                        fg(cmd);
-                        break;
-                    case BG:
-                        bg(cmd);
-                        break;
-                    case JOBS:
-                        jobs();
-                        break;
-                }
-                continue;
+            //не работает с конвейерами!!!!
+            switch (cmd->isShellSpecific) {
+                case BG:
+                    bg(cmd);
+                    continue;
+                case JOBS:
+                    jobs();
+                    continue;
+                case FG:
+                    fg(cmd);
+                    continue;
             }
-
             pid_t pid = fork();
 
             switch (pid) {
@@ -168,6 +189,4 @@ int createJobs(Conv* conv) {
             foregroundJob(tail, 0);
         }
     }
-    
-    return 0;
 }

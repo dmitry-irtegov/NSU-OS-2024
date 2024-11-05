@@ -103,7 +103,7 @@ int parseline(char *line, Conv* conv) {
                     cur_conv->cmd = calloc(1, sizeof(Command));
                     cur_cmd = cur_conv->cmd;
                 }
-
+                
                 if (strncmp("fg", s, 2) == 0) {
                     cur_cmd->isShellSpecific = FG;
                 }
@@ -114,9 +114,14 @@ int parseline(char *line, Conv* conv) {
                     cur_cmd->isShellSpecific = JOBS;
                 }
 
+                
                 cur_cmd->cmdargs[cur_cmd->count_args++] = s;
                 cur_cmd->cmdargs[cur_cmd->count_args] = NULL;
                 s = strpbrk(s, delim);
+                if (s == NULL) {
+                    freeSpace(conv->next);
+                    return -1;
+                }
                 if (isspace(*s)) *s++ = '\0';
                 break;
         }

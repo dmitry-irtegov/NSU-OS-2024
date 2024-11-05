@@ -4,9 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <wait.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <termios.h>
 #include <errno.h>
 #include "shell.h"
 
@@ -32,6 +29,7 @@ int isCompletedJob(Job* j) {
     return 1;
 }
 
+//находим pid в одном из jobs и обновляем его статус
 int updateInfoPid(Job* j, pid_t pid, int status) {
     if (pid == 0 || errno == ECHILD) {
         errno = 0;
@@ -62,14 +60,14 @@ int updateInfoPid(Job* j, pid_t pid, int status) {
     return -1;
 }
 
-int freeProcessList(Process* p) {
+void freeProcessList(Process* p) {
     if (p != NULL) {
         freeProcessList(p->next);
         free(p);
     }
 }
 
-int freeJob(Job* j) {
+void freeJob(Job* j) {
     if (j->prev != NULL && j->next != NULL) {
         j->prev->next = j->next;
         j->next->prev = j->prev;
@@ -88,7 +86,9 @@ int freeJob(Job* j) {
     free(j);
 }
 
-int updateInfoJobs(int printInfo) {
+//обновляем информацию о jobs, удаляем завершившиеся job'ы. Если printinfo, выводим всю
+//информацию о jobs, иначе выводим только обновившуюся информацию
+void updateInfoJobs(int printInfo) {
     int status;
     pid_t pid;
     do {
@@ -97,15 +97,15 @@ int updateInfoJobs(int printInfo) {
 
     for (Job* j = head, *jnext; j; j = jnext) {
         if (printInfo) {
-            fprintf(stderr, "[%d] ", j->number);
+            printf("[%d] ", j->number);
             if (isCompletedJob(j)) {
-                fprintf(stderr, "Done\n");
+                printf("Done\n");
             }
             else if (isStoppedJob(j)) {
-                fprintf(stderr, "Stopped\n");
+                printf("Stopped\n");
             }
             else {
-                fprintf(stderr, "Running\n");
+                printf("Running\n");
             }
         }
 
@@ -126,7 +126,7 @@ int updateInfoJobs(int printInfo) {
 
         if (isStoppedJob(j) && j->notified == 0) {
             j->notified = 1;
-            if (!printInfo) {
+            if (printInfo == 0) {
                 fprintf(stderr, "[%d] Stop\n", j->number);
             }
         }

@@ -1,13 +1,8 @@
-#include <sys/types.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <wait.h>
-#include <fcntl.h>
 #include <signal.h>
 #include <termios.h>
-#include <errno.h>
 #include "shell.h"
 
 int initShellPreferences() {
@@ -33,7 +28,7 @@ int initShellPreferences() {
 }
 
 int main() {
-    char line[1024];      /*  allow large command lines  */
+    char line[1024];
     
     if (initShellPreferences()) {
         perror("initShellPreferences failed");
@@ -45,9 +40,16 @@ int main() {
     while (promptline(line, sizeof(line)) > 0) {   
         conv = calloc(1, sizeof(Conv));
         if (parseline(line, conv) == -1 || conv->cmd == NULL) {
-            updateInfoJobs(1);
+            updateInfoJobs(0);
+            freeSpace(conv);
+            free(conv);
             continue;
         }  
         createJobs(conv);
+        freeSpace(conv);
+        free(conv);
+        updateInfoJobs(0);
     }  
+
+    exit(EXIT_SUCCESS);
 }

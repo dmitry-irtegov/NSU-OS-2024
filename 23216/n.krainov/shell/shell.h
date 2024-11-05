@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 
+
 #define MAXARGS 256
 
 #define RUNNING 0
@@ -52,8 +53,8 @@ typedef struct job{
 int parseline(char* line, Conv* task);
 int promptline(char *line, int sizline);
 
-int createJobs(Conv* conv);
-int updateInfoJobs(int printInfo);
+void createJobs(Conv* conv);
+void updateInfoJobs(int printInfo);
 
 int isStoppedJob(Job* j);
 int isCompletedJob(Job* j);
@@ -66,6 +67,8 @@ int sendSIGCONT(pid_t pgid);
 
 int fg(Command* cmd);
 int bg(Command* cmd);
-int jobs();
+void jobs();
 
-int freeJob(Job* j);
+void freeJob(Job* j);
+
+void freeSpace(Conv* task);
