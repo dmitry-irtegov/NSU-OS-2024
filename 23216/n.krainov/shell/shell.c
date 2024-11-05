@@ -10,7 +10,7 @@ int initShellPreferences() {
         return -1;
     }
 
-    //rsigset(SIGINT, SIG_IGN);
+    sigset(SIGINT, SIG_IGN);
     sigset(SIGTSTP, SIG_IGN);
     sigset(SIGQUIT, SIG_IGN);
     sigset(SIGTTOU, SIG_IGN);
