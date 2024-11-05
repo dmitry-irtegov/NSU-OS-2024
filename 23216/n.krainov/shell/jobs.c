@@ -52,10 +52,10 @@ void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     else if (cmd->outfile != NULL) {
         int newOut;
         if (cmd->flags & 1) {
-            newOut = open(cmd->infile, O_WRONLY | O_CREAT);    
+            newOut = open(cmd->infile, O_WRONLY | O_CREAT, 777);    
         }
         else {
-            newOut = open(cmd->outfile, O_WRONLY | O_APPEND | O_CREAT);
+            newOut = open(cmd->outfile, O_WRONLY | O_APPEND | O_CREAT, 777);
         }
         
         if (newOut == -1 || dup2(newOut, STDOUT_FILENO) == -1) {
