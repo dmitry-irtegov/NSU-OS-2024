@@ -19,7 +19,7 @@ void freeSpace(Conv* task) {
 int parseline(char *line, Conv* conv) {
     char delim[] = "\t|&<>;\n ";
     
-    char* s = line;
+    char* s = line, flag = 0;
     Conv* cur_conv = conv;
     Command* cur_cmd = NULL;
     while (*s) {
@@ -30,10 +30,13 @@ int parseline(char *line, Conv* conv) {
 
         switch (*s) {
             case '&':
+                if (cur_cmd == NULL) {
+                    fprintf(stderr, "Syntax error! the command was skipped!");
+                    freeSpace(conv->next);
+                    return -1;
+                }
+                flag = 1;
                 cur_conv->bg = 1;
-                cur_conv->next = calloc(1, sizeof(Conv));
-                cur_conv = cur_conv->next;
-                cur_cmd = NULL;
                 *s++ = '\0';
                 break;
             case ';':
@@ -43,9 +46,7 @@ int parseline(char *line, Conv* conv) {
                     return -1;
                 }
 
-                cur_conv->next = calloc(1, sizeof(Conv));
-                cur_conv = cur_conv->next;
-                cur_cmd = NULL;
+                flag = 1;
                 *s++ = '\0';
                 break;
             case '<':
@@ -92,11 +93,27 @@ int parseline(char *line, Conv* conv) {
                 *s++ = '\0';
                 break;
             default:
+                if (flag) {
+                    cur_conv->next = calloc(1, sizeof(Conv));
+                    cur_conv = cur_conv->next;
+                    cur_cmd = NULL;
+                    flag = 0;
+                }
                 if (cur_cmd == NULL) {
                     cur_conv->cmd = calloc(1, sizeof(Command));
                     cur_cmd = cur_conv->cmd;
-                    cur_cmd->next = NULL;
                 }
+
+                if (strncmp("fg", s, 2) == 0) {
+                    cur_cmd->isShellSpecific = FG;
+                }
+                else if (strncmp("bg", s, 2) == 0) {
+                    cur_cmd->isShellSpecific = BG;
+                }
+                else if (strncmp("jobs", s, 4) == 0) {
+                    cur_cmd->isShellSpecific = JOBS;
+                }
+
                 cur_cmd->cmdargs[cur_cmd->count_args++] = s;
                 cur_cmd->cmdargs[cur_cmd->count_args] = NULL;
                 s = strpbrk(s, delim);

@@ -3,8 +3,14 @@
 #include <string.h>
 #include "shell.h"
 
-int promptline(char *prompt, char *line, int sizline) {
+void getPrompt(char* prompt){
+    sprintf(prompt,"%s$ ", getcwd(NULL, 500));
+}
+
+int promptline(char *line, int sizline) {
     int n = 0;
+    char prompt[100];
+    getPrompt(prompt);
 
     write(1, prompt, strlen(prompt));
     while (1) {

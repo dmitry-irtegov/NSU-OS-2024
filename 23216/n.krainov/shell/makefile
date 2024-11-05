@@ -1,3 +1,3 @@
 all: shell
 server:
-	gcc shell.c promptline.c parseline.c -o shell -Wall -Wextra
+	gcc parseline.c promptline.c shell.c jobs.c jobinfo.c jobscommand.c -o shell -Wall -Wextra
