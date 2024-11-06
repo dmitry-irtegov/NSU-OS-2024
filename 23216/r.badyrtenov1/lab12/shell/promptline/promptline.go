@@ -1,27 +1,59 @@
 package prom
 
 import (
+	"fmt"
+	"os"
 	"syscall"
 )
 
-func Promptline(prompt []byte, line []byte) int {
-	_, err := syscall.Write(1, prompt)
+var prompt []byte
+
+func SetPrompt(newPrompt []byte) {
+	prompt = newPrompt
+}
+
+func Promptline(line []byte) []byte {
+	_, err := syscall.Write(int(os.Stdout.Fd()), prompt)
 	if err != nil {
-		panic("write problem\n")
+		fmt.Println("Write problem")
+		os.Exit(1)
 	}
-	len := 0
+	str := make([]byte, 1024)
+	var quotestype byte
+	var i int
 	for {
-		n, err := syscall.Read(0, line[len:cap(line)])
+		n, err := syscall.Read(int(os.Stdin.Fd()), str)
 		if err != nil {
-			panic("read problem\n")
+			fmt.Println("Read problem")
+			os.Exit(2)
 		}
-		len += n
-		if line[len-2] == '\\' && line[len-1] == '\n' {
-			line[len-1] = ' '
-			line[len-2] = ' '
+		line = append(line, str[:n]...)
+		for ; i < len(line); i++ {
+			if quotestype == 0 && line[i] == '\\' && line[i+1] != '\n' {
+				line = append(line[:i], line[i+1:]...)
+			} else if line[i] == '\\' && line[i+1] == quotestype {
+				line = append(line[:i], line[i+1:]...)
+			} else if quotestype == 0 && (line[i] == '\'' || line[i] == '"') {
+				quotestype = line[i]
+				line = append(line[:i], line[i+1:]...)
+				i--
+			} else if line[i] == quotestype {
+				quotestype = 0
+				line = append(line[:i], line[i+1:]...)
+				i--
+			}
+		}
+		if len(line) >= 2 && line[len(line)-2] == '\\' && line[len(line)-1] == '\n' {
+			line = line[:len(line)-2]
+			i -= 2
+			fmt.Print("> ")
 			continue
 		}
-		line[len-1] = 0
-		return (len)
+		if quotestype != 0 {
+			fmt.Print("> ")
+			continue
+		}
+		line[len(line)-1] = 0
+		return line
 	}
 }

@@ -4,52 +4,52 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	head "shell/header"
 	parc "shell/parceline"
 	prom "shell/promptline"
-	"strings"
 	"syscall"
 )
 
-func nullstrskip(line []string) int {
-	var id int = 0
-	for strings.Compare(line[id], "") != 0 {
-		id++
-	}
-	return id
-}
-
 func main() {
-	prompt := []byte(fmt.Sprintf("[%s] ", os.Args[0]))
-	line := make([]byte, 1024)
+	prom.SetPrompt([]byte(fmt.Sprintf("[%s] ", os.Args[0])))
 
 	/* PLACE SIGNAL CODE HERE */
 
-	for prom.Promptline(prompt, line) > 0 {
-		ncmds := parc.Parceline(line)
-		if ncmds <= 0 {
+	for {
+		var line []byte
+		line = prom.Promptline(line)
+		if len(line) <= 0 {
+			break
+		}
+		var stat parc.Status
+		var cmds []parc.Command
+		cmds, stat = parc.Parceline(line, cmds, stat)
+		if len(cmds) <= 0 {
 			continue
 		}
-		for i := 0; i < ncmds; i++ {
-			if len(head.Cmds[i].Cmdargs) == 0 {
-				continue
-			}
-			binary, err := exec.LookPath(head.Cmds[i].Cmdargs[0])
-			if err != nil {
-				fmt.Printf("Command not found: %s\n", head.Cmds[i].Cmdargs[0])
+		for i := 0; i < len(cmds); i++ {
+			if len(parc.GetArgs(cmds[i])) == 0 {
 				continue
 			}
 
-			env := os.Environ()
-			pid, err := syscall.ForkExec(binary, head.Cmds[i].Cmdargs[:nullstrskip(head.Cmds[i].Cmdargs)], &syscall.ProcAttr{
+			binary, err := exec.LookPath(parc.GetArgs(cmds[i])[0])
+			if err != nil {
+				fmt.Printf("Command not found: %s\n", parc.GetArgs(cmds[i])[0])
+				continue
+			}
+
+			pid, err := syscall.ForkExec(binary, parc.GetArgs(cmds[i]), &syscall.ProcAttr{
 				Dir:   "",
-				Env:   env,
-				Files: []uintptr{0, 1, 2},
+				Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 				Sys:   &syscall.SysProcAttr{},
 			})
 
 			if err != nil {
 				fmt.Println("Error during ForkExec:", err)
+				continue
+			}
+
+			if parc.GetBkgrndFlag(stat) {
+				fmt.Println(pid)
 				continue
 			}
 

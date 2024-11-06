@@ -2,129 +2,114 @@ package parc
 
 import (
 	"bytes"
-	head "shell/header"
+	"fmt"
 )
 
-func blankskip(line []byte, id int) int {
-	for line[id] == ' ' {
+type Command struct {
+	cmdargs []string
+	cmdflag byte
+}
+
+type Status struct {
+	infile, outfile, appfile string
+	bkgrnd                   bool
+}
+
+const (
+	OUTPIP = 01
+	INPIP  = 02
+)
+
+func GetBkgrndFlag(stat Status) bool {
+	return stat.bkgrnd
+}
+
+func GetArgs(cmds Command) []string {
+	return cmds.cmdargs
+}
+
+func skipSpaces(line []byte, id int) int {
+	for id+1 < len(line) && line[id] == ' ' {
 		id++
 	}
-	return (id)
+	return id
 }
 
-func min(a int, b int) int {
-	if a == -1 {
-		return b
+func delimId(id int, line []byte) int {
+	s := bytes.IndexAny(line[id:], " |&<>;")
+	if s == -1 {
+		return len(line) - 1
 	}
-	if b == -1 {
-		return a
-	}
-	if a < b {
-		return a
-	}
-	return b
+	return id + s
 }
 
-func Parceline(line []byte) int {
-	var nargs int = 0
-	var ncmds int = 0
-	var rval int = 0
-	var i int = 0
-	var delim string = " \t|&<>;\n"
-	var delimbyte byte = 0
-	var aflg bool = false
-	head.Bkgrnd = false
-	for i := 0; i < head.MAXCMDS; i++ {
-		head.Cmds[i].Cmdflag = 0
-	}
+func Parceline(line []byte, cmds []Command, stat Status) ([]Command, Status) {
+	var tmp Command
+	var aflg bool
 
-	for line[i] != 0 {
-		i = blankskip(line, i)
+	for i := 0; i < len(line); i++ {
+		i = skipSpaces(line, i)
 		if line[i] == 0 {
 			break
 		}
+
 		switch sw := line[i]; sw {
 		case '&':
-			head.Bkgrnd = true
-			line[i] = 0
-			i++
+			stat.bkgrnd = true
+
 		case '|':
-			if nargs == 0 {
-				panic("syntax error\n")
+			if len(tmp.cmdargs) == 0 {
+				fmt.Println("Syntax error: unexpected operator |")
+				return nil, stat
 			}
-			head.Cmds[ncmds].Cmdflag |= head.OUTPIP
-			ncmds++
-			head.Cmds[ncmds].Cmdflag |= head.INPIP
-			line[i] = 0
-			i++
-			nargs = 0
+			tmp.cmdflag |= OUTPIP
+			cmds = append(cmds, tmp)
+			tmp.cmdargs = []string{}
+			tmp.cmdflag = (0 | INPIP)
+
 		case '<':
-			line[i] = 0
-			i++
-			i = blankskip(line, i)
+			i = skipSpaces(line, i)
 			if line[i] == 0 {
-				panic("syntax error\n")
+				fmt.Println("Syntax error: missing input file name after '<'")
+				return nil, stat
 			}
-			head.Infile = string(line[i:])
-			i += bytes.IndexAny(line[i:], delim)
-			if i == -1 {
-				i = len(line) - 1
-			}
-			if line[i] == ' ' {
-				line[i] = 0
-				i++
-			}
+			s := delimId(i, line)
+			stat.infile = string(line[i:s])
+			i = s
+
 		case '>':
-			if line[i+1] == '>' {
+			i++
+			if line[i] == '>' {
 				aflg = true
-				line[i] = 0
 				i++
 			}
-			line[i] = 0
-			i++
-			i = blankskip(line, i)
+			i = skipSpaces(line, i)
 			if line[i] == 0 {
-				panic("syntax error\n")
+				fmt.Println("Syntax error: missing output file name after '>'")
+				return nil, stat
 			}
+			s := delimId(i, line)
 			if aflg {
-				head.Appfile = string(line[i : i+min(bytes.IndexAny(line[i:], delim), bytes.IndexByte(line[i:], delimbyte))])
+				stat.appfile = string(line[i:s])
 			} else {
-				head.Outfile = string(line[i : i+min(bytes.IndexAny(line[i:], delim), bytes.IndexByte(line[i:], delimbyte))])
+				stat.outfile = string(line[i:s])
 			}
-			i += bytes.IndexAny(line[i:], delim)
-			if i == -1 {
-				i = len(line) - 1
-			}
-			if line[i] == ' ' {
-				line[i] = 0
-				i++
-			}
+			i = s
+
 		case ';':
-			line[i] = 0
-			i++
-			ncmds++
-			nargs = 0
+			cmds = append(cmds, tmp)
+			tmp.cmdflag = 0
+			tmp.cmdargs = []string{}
+
 		default:
-			if nargs == 0 {
-				rval = ncmds + 1
-				head.Cmds[ncmds].Cmdargs = make([]string, head.MAXARGS)
-			}
-			head.Cmds[ncmds].Cmdargs[nargs] = string(line[i : i+min(bytes.IndexAny(line[i:], delim), bytes.IndexByte(line[i:], delimbyte))])
-			nargs++
-			i += bytes.IndexAny(line[i:], delim)
-			if i == -1 {
-				i = len(line) - 1
-			}
-			if line[i] == ' ' {
-				line[i] = 0
-				i++
-			}
+			s := delimId(i, line)
+			tmp.cmdargs = append(tmp.cmdargs, string(line[i:s]))
+			i = s
+
 		}
 	}
-	if ncmds != 0 && (head.Cmds[ncmds-1].Cmdflag&head.OUTPIP) != 0 {
-		if nargs == 0 {
-			panic("syntax error\n")
-		}
+	if len(tmp.cmdargs) != 0 {
+		cmds = append(cmds, tmp)
 	}
-	return rval
+	return cmds, stat
 }
