@@ -11,10 +11,6 @@
 
 int main() {
     int sockdes = 0;
-    if (sockdes == -1) {
-        perror("can't create socket");
-        return 1;
-    }
     struct sockaddr_un sock;
     sock.sun_family = AF_UNIX;
     strcpy(sock.sun_path, SOCKNAME);
