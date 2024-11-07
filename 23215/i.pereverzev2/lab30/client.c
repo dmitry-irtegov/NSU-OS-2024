@@ -15,15 +15,15 @@ int main() {
         perror("can't create socket");
         return 1;
     }
-    struct sockaddr sock;
-    sock.sa_family = AF_UNIX;
-    strcpy(sock.sa_data, SOCKNAME);
+    struct sockaddr_un sock;
+    sock.sun_family = AF_UNIX;
+    strcpy(sock.sun_path, SOCKNAME);
     sockdes = socket(PF_UNIX, SOCK_STREAM, 0);
     if (sockdes == -1) {
         perror("can't create socket");
         return 1;
     }
-    if(connect(sockdes, &sock, sizeof(struct sockaddr_un)) == -1) {
+    if(connect(sockdes, (struct sockaddr*)&sock, sizeof(struct sockaddr_un)) == -1) {
         perror("unable to connect from client");
         return 5;
     }

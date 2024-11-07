@@ -12,15 +12,15 @@
 
 int main() {
     int sockdes = 0;
-    struct sockaddr sock;
-    sock.sa_family = AF_UNIX;
-    strncpy(sock.sa_data, SOCKNAME, sizeof(sock.sa_data - 1));
+    struct sockaddr_un sock;
+    sock.sun_family = AF_UNIX;
+    strncpy(sock.sun_path, SOCKNAME, sizeof(sock.sa_data - 1));
     sockdes = socket(PF_UNIX, SOCK_STREAM, 0);
     if (sockdes == -1) {
         perror("unable to create socket");
         return 1;
     }
-    if(bind(sockdes, &sock, sizeof(struct sockaddr_un)) == -1) {
+    if(bind(sockdes, (struct sockaddr*)&sock, sizeof(struct sockaddr_un)) == -1) {
         perror("unable to bind");
         unlink(SOCKNAME);
         return 2;
