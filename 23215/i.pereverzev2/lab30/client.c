@@ -23,12 +23,12 @@ int main() {
         perror("can't create socket");
         return 1;
     }
-    if(connect(sockdes, (struct sockaddr*)&sock, sizeof(struct sockaddr_un)) == -1) {
+    if (connect(sockdes, (struct sockaddr*)&sock, sizeof(struct sockaddr_un)) == -1) {
         perror("unable to connect from client");
         return 5;
     }
     char buf[] = "Sample Text That Will Be Written inTo the socket";
-    if(write(sockdes, buf, strlen(buf)) == -1) {
+    if (write(sockdes, buf, strlen(buf)) == -1) {
         perror("unable to write into the socket from client");
         return 6;
     }
