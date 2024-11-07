@@ -7,7 +7,7 @@
 
 int main() {
     int pipefd[2];
-    char buf[20];
+    char buf[20] = "text for upper LOL\n";
 
     int pipe_status = pipe(pipefd);
 
@@ -27,7 +27,7 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        if (write(pipefd[1], "text for upper LOL\n", 20) == -1) {
+        if (write(pipefd[1], buf, sizeof(buf)) == -1) {
             perror("error in write");
             exit(EXIT_FAILURE);
         }
@@ -44,17 +44,17 @@ int main() {
             exit(EXIT_FAILURE);
         }
         ssize_t lol;
-        lol = read(pipefd[0], &buf, 20);
+        lol = read(pipefd[0], &buf, sizeof(buf));
         if (lol == -1) {
             perror("error in read");
             exit(EXIT_FAILURE);
         }
 
-        for (int i = 0; i < 20; i++) {
+        for (size_t i = 0; i < strlen(buf); i++) {
             buf[i] = toupper(buf[i]);
         }
 
-        if (write(fileno(stdin), &buf, 20) == -1) {
+        if (write(fileno(stdin), &buf, sizeof(buf)) == -1) {
             perror("error in write");
             exit(EXIT_FAILURE);
         }
