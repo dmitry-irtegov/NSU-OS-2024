@@ -4,16 +4,16 @@
 #include <sys/wait.h>
 
 int main(int argc, char* argv[]) {
-    pid_t pid;  
+    pid_t pid;
 
-    if (argc == 0) {
-        perror("need file name");
+    if (argc == 1) {
+        fprintf(stderr,"need file name\n");
         exit(1);
     }
     if ((pid = fork()) == 0) {
         // Папина дочка
         execlp("cat", "cat", argv[1], NULL);
-        perror("execlp failed"); 
+        perror("execlp failed");
         exit(1);
     }
     else {
