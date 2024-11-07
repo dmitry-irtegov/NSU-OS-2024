@@ -2,8 +2,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+int beep_counter = 0; // Обычный int для счётчика
 
-static int beep_counter = 0; // Обычный int для счётчика
+// Функция для перевода числа в строку (асинхронно-безопасная)
+void int_to_str(int num, char *buffer, size_t buffer_size) {
+    int i = 0;
+    
+    // Если число равно 0, просто добавляем '0'
+    if (num == 0) {
+        if (buffer_size > 1) {
+            buffer[i++] = '0';
+            buffer[i] = '\0';
+        }
+        return;
+    }
+
+    // Записываем цифры числа в обратном порядке
+    while (num > 0 && i < buffer_size - 1) {
+        buffer[i++] = '0' + (num % 10);
+        num /= 10;
+    }
+
+    // Добавляем терминальный нуль для завершения строки
+    buffer[i] = '\0';
+
+    // Разворачиваем строку, чтобы получить правильный порядок цифр
+    for (int j = 0; j < i / 2; j++) {
+        char temp = buffer[j];
+        buffer[j] = buffer[i - j - 1];
+        buffer[i - j - 1] = temp;
+    }
+}
 
 void signal_handler(int signal_number) {
     switch (signal_number) {
@@ -13,31 +42,14 @@ void signal_handler(int signal_number) {
             beep_counter++;  // Увеличиваем счетчик
             break;
         case SIGQUIT: {
-            // Конвертируем beep_counter в строку вручную
-            int counter = beep_counter;
+            // Конвертируем beep_counter в строку
             char buffer[50];
-            int i = 0;
-
-            // Обратное заполнение buffer значением counter
-            if (counter == 0) {
-                buffer[i++] = '0';
-            } else {
-                while (counter > 0) {
-                    buffer[i++] = '0' + (counter % 10);
-                    counter /= 10;
-                }
-            }
+            int_to_str(beep_counter, buffer, sizeof(buffer));
             
-            // Разворачиваем число в прямой порядок
-            for (int j = 0; j < i / 2; j++) {
-                char temp = buffer[j];
-                buffer[j] = buffer[i - j - 1];
-                buffer[i - j - 1] = temp;
-            }
-
-            buffer[i++] = '\n';  // Добавляем перенос строки
-            write(STDOUT_FILENO, "Total number of beeps: ", 23);
-            write(STDOUT_FILENO, buffer, i);
+            // Выводим количество сигналов
+            write(STDOUT_FILENO, buffer, sizeof(buffer));
+            write(STDOUT_FILENO, "\n", 1);
+            
             _exit(EXIT_SUCCESS); // Используем _exit для немедленного завершения
         }
         default:
@@ -45,6 +57,7 @@ void signal_handler(int signal_number) {
             break;
     }
 }
+
 int main() {
     // Установка пользовательских обработчиков сигналов
     if (sigset(SIGINT, signal_handler) == SIG_ERR) {
