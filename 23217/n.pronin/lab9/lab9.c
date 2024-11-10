@@ -10,7 +10,7 @@ int main(){
 
     if (pid < 0) {
 
-        perorr("fork error");
+        perror("fork error");
         exit(1);
     }
 
