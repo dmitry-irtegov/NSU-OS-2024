@@ -10,7 +10,10 @@
 int main(int argc, char *argv[])
 {
     if(argc < 2) {
-        FILE* fpt = popen("./a.out w", "r");
+        char *cmd = malloc(strlen(argv[0] + 2));
+        strcpy(cmd, argv[0]);	
+        strcat(cmd, " w");
+        FILE* fpt = popen(cmd, "r");
         if(fpt == NULL) {
             perror("unable to create pipe");
             return 1;
