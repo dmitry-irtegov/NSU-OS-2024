@@ -20,6 +20,7 @@ int main() {
         perror("Error opening file");
     }else {
         printf("File opened successfully\n");
+        fclose(file);
     }
 
     if (setuid(getuid()) == -1) {
@@ -34,6 +35,7 @@ int main() {
         perror("Error opening file after setuid");
     }else {
         printf("File opened successfully after setuid\n");
+        fclose(file);
     }
 
     return 0;
