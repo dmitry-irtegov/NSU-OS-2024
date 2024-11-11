@@ -11,6 +11,10 @@ int main(int argc, char *argv[])
 {
     if(argc < 2) {
         char *cmd = malloc(strlen(argv[0] + 3));
+        if(cmd == NULL) {
+            perror("unable to allocate memory");
+            return 2;
+        }
         strcpy(cmd, argv[0]);	
         strcat(cmd, " w");
         FILE* fpt = popen(cmd, "r");
