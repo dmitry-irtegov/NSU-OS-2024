@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int main() 
+int main()
 {
     int file_des[2] = { 0 };
     if (pipe(file_des) == -1) {
@@ -19,7 +19,7 @@ int main()
         perror("fork() unsuccess");
         exit(EXIT_FAILURE);
     }
-    
+
     unsigned char bufet[] = "SASha was WaLkInG on HIGHway and SUCKed BAGel.";
     int flag = 0;
 
@@ -28,8 +28,7 @@ int main()
             perror("Can't close file_des[0]");
             flag = 1;
         }
-        
-        
+
         ssize_t write_res = write(file_des[1], (const void*)bufet, sizeof(bufet));
         if (write_res == -1) {
             perror("write() unsuccess");
@@ -49,7 +48,7 @@ int main()
             exit(EXIT_FAILURE);
         }
     }
-    else {        
+    else {
         if (close(file_des[1]) == -1) {
             perror("Can't close file_des[1]");
             flag = 1;
