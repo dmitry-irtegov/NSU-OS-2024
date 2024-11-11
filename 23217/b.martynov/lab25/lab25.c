@@ -81,4 +81,6 @@ int main()
 
         printf("%s\n", bufet_for_read);
     }
+
+    return 0;
 }
