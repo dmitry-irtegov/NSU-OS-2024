@@ -34,7 +34,7 @@ int main()
             perror("write() unsuccess");
             flag = 1;
         }
-        else if (write_res < sizeof(bufet)) {
+        else if (write_res < (ssize_t)sizeof(bufet)) {
             printf("write() didn't write the whole sentence\n");
             flag = 1;
         }
@@ -61,7 +61,7 @@ int main()
             perror("read() unsuccess");
             flag = 1;
         }
-        else if (read_res < sizeof(bufet_for_read)) {
+        else if (read_res < (ssize_t)sizeof(bufet_for_read)) {
             printf("read() didn't read the whole sentence\n");
             flag = 1;
         }
@@ -75,7 +75,7 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        for (int i = 0; i < sizeof(bufet_for_read); i++) {
+        for (size_t i = 0; i < sizeof(bufet_for_read); i++) {
             bufet_for_read[i] = toupper((int)(bufet_for_read[i]));
         }
 
