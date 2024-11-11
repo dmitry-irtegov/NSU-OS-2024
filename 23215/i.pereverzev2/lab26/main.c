@@ -10,7 +10,7 @@
 int main(int argc, char *argv[])
 {
     if(argc < 2) {
-        char *cmd = malloc(strlen(argv[0] + 2));
+        char *cmd = malloc(strlen(argv[0] + 3));
         strcpy(cmd, argv[0]);	
         strcat(cmd, " w");
         FILE* fpt = popen(cmd, "r");
