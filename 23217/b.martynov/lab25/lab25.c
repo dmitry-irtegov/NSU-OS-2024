@@ -1,4 +1,6 @@
 #include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -18,7 +20,7 @@ int main()
         exit(EXIT_FAILURE);
     }
     
-    const size_t bufet_size = 47;
+    unsigned char bufet[] = "SASha was WaLkInG on HIGHway and SUCKed BAGel.";
     int flag = 0;
 
     if (fork_res == 0) {
@@ -27,9 +29,8 @@ int main()
             flag = 1;
         }
         
-        unsigned char bufet[bufet_size] = "SASha was WaLkInG on HIGHway and SUCKed BAGel.";
         
-        ssize_t write_res = write(file_des[1], (const void*)bufet, bufet_size * sizeof(char));
+        ssize_t write_res = write(file_des[1], (const void*)bufet, sizeof(bufet));
         if (write_res == -1) {
             perror("write() unsuccess");
             flag = 1;
@@ -54,9 +55,9 @@ int main()
             flag = 1;
         }
 
-        unsigned char bufet[bufet_size] = { 0 };
+        unsigned char bufet_for_read[sizeof(bufet)] = { 0 };
 
-        ssize_t read_res = read(file_des[0], (void*)bufet, bufet_size);
+        ssize_t read_res = read(file_des[0], (void*)bufet_for_read, sizeof(bufet_for_read));
         if (read_res == -1) {
             perror("read() unsuccess");
             flag = 1;
@@ -76,9 +77,9 @@ int main()
         }
 
         for (int i = 0; i < bufet_size; i++) {
-            bufet[i] = toupper((int)bufet[i]);
+            bufet_for_read[i] = toupper((int)(bufet_for_read[i]));
         }
 
-        printf("%s\n", bufet);
+        printf("%s\n", bufet_for_read);
     }
 }
