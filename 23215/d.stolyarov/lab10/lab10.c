@@ -11,13 +11,16 @@ int main(int argc, char* argv[])
     }
     int pid;
     if((pid = fork()) == 0){
+        printf("child id = %d\n", getpid());
         execvp(argv[1], argv + 1);
         perror("exec error");
         exit(2);
     }
     else if(pid > 0) {
-        int status;
+        int status = 0;
+        printf("parent is waiting\n");
         int ret = wait(&status);
+        printf("status = %d\n", status);
         if(ret == -1){
             perror("wait error");
             exit(3);
