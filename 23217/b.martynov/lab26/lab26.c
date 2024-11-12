@@ -28,8 +28,6 @@ int main(int argc, char** argv)
         strcat(str, argv[0]);
         strcat(str, " biba boba");
 
-        printf("'%s'\n", str);
-
         FILE* input = popen(str, "r");
 
         unsigned char bufet_for_read[BUFET_SIZE] = { 0 };
