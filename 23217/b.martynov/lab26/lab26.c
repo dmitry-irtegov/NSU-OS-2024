@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 
 #define STR_SIZE 1024
 #define BUFET_SIZE 1024
