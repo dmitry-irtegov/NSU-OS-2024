@@ -51,7 +51,7 @@ int main() {
             exit(EXIT_FAILURE);
         }
         ssize_t lol;
-        while (lol = read(pipefd[0], &buf, BUFSIZE)){
+        while ((lol = read(pipefd[0], &buf, BUFSIZE))){
             if (lol == -1) {
                 perror("error in read");
                 exit(EXIT_FAILURE);
