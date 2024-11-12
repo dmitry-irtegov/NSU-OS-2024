@@ -35,10 +35,10 @@ int main(int argc, char** argv) {
             perror("waitpid() failed");
             exit(EXIT_FAILURE);
         }
-        
+
         if (WIFEXITED(status))
         {
-            int exitStatus = WEXITSTATUS(status);
+            int exit_status = WEXITSTATUS(status);
             printf("Process was done with code: %d\n", exit_status);
         } 
         else if (WIFSIGNALED(status))
