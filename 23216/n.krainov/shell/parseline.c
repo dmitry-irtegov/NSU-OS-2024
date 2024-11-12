@@ -22,6 +22,8 @@ int parseline(char *line, Conv* conv) {
     char* s = line, flag = 0;
     Conv* cur_conv = conv;
     Command* cur_cmd = NULL;
+    char flagCommand = 1;
+    char flagQuote = 0;
     while (*s) {
         s = blankskip(s);
         if (*s == '\0') {
@@ -61,7 +63,12 @@ int parseline(char *line, Conv* conv) {
 
                 cur_cmd->infile = s;
                 s = strpbrk(s, delim);
+                if (s == NULL) {
+                    freeSpace(conv->next);
+                    return -1;
+                }
                 if (isspace(*s)) *s++ = '\0';
+                
 
                 break;
             case '>':
@@ -77,9 +84,26 @@ int parseline(char *line, Conv* conv) {
                 
                 s = blankskip(s);
 
+                if (*s == '\"') {
+                    *s++ = '\0';
+                    flagQuote = 1;
+                }
+
                 cur_cmd->outfile = s;
-                s = strpbrk(s, delim);
-                if (isspace(*s)) *s++ = '\0';
+                if (flagQuote) {
+                    s = strpbrk(s, "\"");
+                }
+                else{
+                    s = strpbrk(s, delim);
+                }
+                
+                if (s == NULL) {
+                    freeSpace(conv->next);
+                    return -1;
+                }
+                flagQuote = 0;
+                if (isspace(*s) || *s == '\"') *s++ = '\0';
+            
                 break;
             case '|':
                 if (cur_cmd == NULL) {
@@ -87,20 +111,82 @@ int parseline(char *line, Conv* conv) {
                     freeSpace(conv->next);
                     return -1;
                 }
-
+                
                 cur_cmd->next = calloc(1, sizeof(Command));
+                if (cur_cmd->next == NULL) {
+                    perror("calloc failed");
+                    freeSpace(conv->next);
+                    return -1;
+                }
+                cur_cmd->next->prev = cur_cmd;
                 cur_cmd = cur_cmd->next;
                 *s++ = '\0';
+                break;
+            case '\"':
+                if (flag) {
+                    cur_conv->next = calloc(1, sizeof(Conv));
+                    if (cur_conv->next == NULL) {
+                        perror("calloc failed");
+                        freeSpace(conv->next);
+                        return -1;
+                    }
+                    cur_conv = cur_conv->next;
+                    cur_cmd = NULL;
+                    flag = 0;
+                    flagCommand = 1;
+                }
+                if (cur_cmd == NULL) {
+                    cur_conv->cmd = calloc(1, sizeof(Command));
+                    if (cur_conv->cmd == NULL) {
+                        perror("calloc failed");
+                        freeSpace(conv->next);
+                        return -1;
+                    }
+                    cur_cmd = cur_conv->cmd;
+                }
+                if (strncmp("fg", s, 2) == 0) {
+                    cur_cmd->isShellSpecific = FG;
+                }
+                else if (strncmp("bg", s, 2) == 0) {
+                    cur_cmd->isShellSpecific = BG;
+                }
+                else if (strncmp("jobs", s, 4) == 0 && flagCommand) {
+                    cur_cmd->isShellSpecific = JOBS;
+                }
+
+                
+                cur_cmd->cmdargs[cur_cmd->count_args++] = ++s;
+                cur_cmd->cmdargs[cur_cmd->count_args] = NULL;
+                s = strpbrk(s, "\"");
+                if (s == NULL) {
+                    perror(NULL);
+                    freeSpace(conv->next);
+                    return -1;
+                }
+                if (isspace(*s) || *s == '\"') *s++ = '\0';
+                flagCommand = 0;
+
                 break;
             default:
                 if (flag) {
                     cur_conv->next = calloc(1, sizeof(Conv));
+                    if (cur_conv->next == NULL) {
+                        perror("calloc failed");
+                        freeSpace(conv->next);
+                        return -1;
+                    }
                     cur_conv = cur_conv->next;
                     cur_cmd = NULL;
                     flag = 0;
+                    flagCommand = 1;
                 }
                 if (cur_cmd == NULL) {
                     cur_conv->cmd = calloc(1, sizeof(Command));
+                    if (cur_conv->cmd == NULL) {
+                        perror("calloc failed");
+                        freeSpace(conv->next);
+                        return -1;
+                    }
                     cur_cmd = cur_conv->cmd;
                 }
                 
@@ -110,7 +196,7 @@ int parseline(char *line, Conv* conv) {
                 else if (strncmp("bg", s, 2) == 0) {
                     cur_cmd->isShellSpecific = BG;
                 }
-                else if (strncmp("jobs", s, 4) == 0) {
+                else if (strncmp("jobs", s, 4) == 0 && flagCommand) {
                     cur_cmd->isShellSpecific = JOBS;
                 }
 
@@ -123,6 +209,7 @@ int parseline(char *line, Conv* conv) {
                     return -1;
                 }
                 if (isspace(*s)) *s++ = '\0';
+                flagCommand = 0;
                 break;
         }
     }

@@ -63,6 +63,11 @@ int updateInfoPid(Job* j, pid_t pid, int status) {
 void freeProcessList(Process* p) {
     if (p != NULL) {
         freeProcessList(p->next);
+        int index = 0;
+        while (p->cmdargs[index] != NULL && index < MAXARGS) {
+            free(p->cmdargs[index]);
+            index++;
+        }
         free(p);
     }
 }
@@ -86,6 +91,33 @@ void freeJob(Job* j) {
     free(j);
 }
 
+void printJob(Job* j) {
+    printf("[%d] ", j->number);
+    if (isCompletedJob(j)) {
+        printf("Done             ");
+    }
+    else if (isStoppedJob(j)) {
+        printf("Stopped          ");
+    }
+    else {
+        printf("Running          ");
+    }
+
+    for (Process* p = j->p; p; p = p->next) {
+        int index = 0;
+        while (p->cmdargs[index] != NULL && index < MAXARGS) {
+            printf("%s ", p->cmdargs[index]);
+            index++;
+        }
+
+        if (p->next != NULL) {
+            printf("| ");
+        }
+    }
+
+    printf("\n");
+}
+
 //обновляем информацию о jobs, удаляем завершившиеся job'ы. Если printinfo, выводим всю
 //информацию о jobs, иначе выводим только обновившуюся информацию
 void updateInfoJobs(int printInfo) {
@@ -96,22 +128,17 @@ void updateInfoJobs(int printInfo) {
     } while (!updateInfoPid(NULL, pid, status));
 
     for (Job* j = head, *jnext; j; j = jnext) {
+        if (j->pgid == 0) {
+            jnext = j->next;
+            continue;
+        }
         if (printInfo) {
-            printf("[%d] ", j->number);
-            if (isCompletedJob(j)) {
-                printf("Done\n");
-            }
-            else if (isStoppedJob(j)) {
-                printf("Stopped\n");
-            }
-            else {
-                printf("Running\n");
-            }
+            printJob(j);
         }
 
         if (isCompletedJob(j)) {
             if (!printInfo) {
-                fprintf(stderr, "[%d] Done\n", j->number);
+                printJob(j);
             }
             if (j->next != NULL) {
                 jnext = j->next;
@@ -126,9 +153,7 @@ void updateInfoJobs(int printInfo) {
 
         if (isStoppedJob(j) && j->notified == 0) {
             j->notified = 1;
-            if (printInfo == 0) {
-                fprintf(stderr, "[%d] Stop\n", j->number);
-            }
+            printJob(j);
         }
 
         jnext = j->next;

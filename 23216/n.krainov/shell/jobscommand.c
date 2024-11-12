@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -22,27 +21,27 @@ Job* findJob(int num){
     return NULL;
 }
 
-int fg(Command* cmd) {
+void fg(Command* cmd) {
     if (cmd->next != NULL) {
         fprintf(stderr, "fg: no job control\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     if (cmd->cmdargs[1] == NULL) {
         fprintf(stderr, "fg: Incorrect arg\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     int num = atoi(cmd->cmdargs[1]);
     if (errno != 0) {
         fprintf(stderr, "fg: Incorrect arg\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     Job* j = findJob(num);
     if (j == NULL) {
         fprintf(stderr, "fg: No such job\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     j->notified = 0;
@@ -53,28 +52,28 @@ int fg(Command* cmd) {
     }
 
     if (foregroundJob(j, 1)) {
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
-int bg(Command* cmd) {
+void bg(Command* cmd) {
     if (cmd->cmdargs[1] == NULL) {
         fprintf(stderr, "Incorrect arg\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     int num = atoi(cmd->cmdargs[1]);
     if (errno != 0) {
         fprintf(stderr, "Incorrect arg\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     Job* j = findJob(num);
     if (j == NULL) {
         fprintf(stderr, "No such job\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     j->notified = 0;
@@ -85,12 +84,13 @@ int bg(Command* cmd) {
     }
 
     if (sendSIGCONT(j->pgid)) {
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 void jobs() {
     updateInfoJobs(1);
+    exit(EXIT_SUCCESS);
 }

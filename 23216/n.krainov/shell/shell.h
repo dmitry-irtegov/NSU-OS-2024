@@ -18,6 +18,7 @@ typedef struct command{
     char isShellSpecific; //for fg, bg and jobs
     char flags; //0000001 - >, 00000010 - >>
     struct command* next;
+    struct command* prev;
 }Command;
 
 typedef struct conv {
@@ -28,6 +29,7 @@ typedef struct conv {
 
 typedef struct process{
     struct process* next;
+    char *cmdargs[MAXARGS];
     pid_t pid;
     int state;
     int status;
@@ -65,8 +67,8 @@ int foregroundJob(Job* j, int continueJob);
 
 int sendSIGCONT(pid_t pgid);
 
-int fg(Command* cmd);
-int bg(Command* cmd);
+void fg(Command* cmd);
+void bg(Command* cmd);
 void jobs();
 
 void freeJob(Job* j);

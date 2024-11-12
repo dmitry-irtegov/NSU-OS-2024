@@ -39,12 +39,20 @@ int main() {
     
     while (promptline(line, sizeof(line)) > 0) {   
         conv = calloc(1, sizeof(Conv));
-        if (parseline(line, conv) == -1 || conv->cmd == NULL) {
+        
+        if (conv == NULL) {
+            perror("calloc failed");
+            updateInfoJobs(0);
+            continue;
+        }
+        else if (parseline(line, conv) == -1 || conv->cmd == NULL) {
             updateInfoJobs(0);
             freeSpace(conv);
             free(conv);
             continue;
         }  
+
+        
         createJobs(conv);
         freeSpace(conv);
         free(conv);

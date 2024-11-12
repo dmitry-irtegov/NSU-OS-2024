@@ -4,7 +4,7 @@
 #include "shell.h"
 
 void getPrompt(char* prompt){
-    sprintf(prompt,"%s$ ", getcwd(NULL, 500));
+    sprintf(prompt,"%s$ ", getcwd(NULL, 100));
 }
 
 int promptline(char *line, int sizline) {

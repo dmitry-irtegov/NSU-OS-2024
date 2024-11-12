@@ -51,11 +51,11 @@ void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     } 
     else if (cmd->outfile != NULL) {
         int newOut;
-        if (cmd->flags & 1) {
-            newOut = open(cmd->infile, O_WRONLY | O_CREAT, 777);    
+        if (cmd->flags & APP) {
+            newOut = open(cmd->outfile, O_WRONLY | O_CREAT | O_APPEND, 0644);
         }
         else {
-            newOut = open(cmd->outfile, O_WRONLY | O_APPEND | O_CREAT, 777);
+            newOut = open(cmd->outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         }
         
         if (newOut == -1 || dup2(newOut, STDOUT_FILENO) == -1) {
@@ -71,7 +71,17 @@ void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     sigset(SIGTTOU, SIG_DFL);
     sigset(SIGTTIN, SIG_DFL);
 
-
+    switch (cmd->isShellSpecific) {
+        case BG:
+            bg(cmd);
+            break;
+        case JOBS:
+            jobs();
+            break;
+        case FG:
+            fg(cmd);
+            break;
+    }
     execvp(cmd->cmdargs[0], cmd->cmdargs);
     perror("exec");
     exit(EXIT_FAILURE);
@@ -117,6 +127,10 @@ void createJobs(Conv* conv) {
     for (Conv* curconv = conv; curconv; curconv = curconv->next) {
         if (head == NULL) {
             head = calloc(1, sizeof(Job));
+            if (head == NULL) {
+                perror("createJobs failed");
+                return;
+            }   
             head->number = 1;
             tail = head;
         }
@@ -126,6 +140,10 @@ void createJobs(Conv* conv) {
                 tail = tail->next;
             }
             tail->next = calloc(1, sizeof(Job));
+            if (tail->next == NULL) {
+                perror("createJobs failed");
+                return;
+            }
             tail->next->number = tail->number+1;
             tail->next->prev = tail;
             tail = tail->next;
@@ -142,23 +160,12 @@ void createJobs(Conv* conv) {
                 out = filedes[1];
             }
 
-            //не работает с конвейерами!!!!
-            switch (cmd->isShellSpecific) {
-                case BG:
-                    bg(cmd);
-                    continue;
-                case JOBS:
-                    jobs();
-                    continue;
-                case FG:
-                    fg(cmd);
-                    continue;
-            }
             pid_t pid = fork();
 
             switch (pid) {
                 case -1:
-                    break;
+                    perror("createJobs failed");
+                    return;
                 case 0:
                     createProcess(in, out, cmd, tail->pgid);
                     break;
@@ -168,20 +175,45 @@ void createJobs(Conv* conv) {
                     }
                     if (tail->p == NULL) {
                         tail->p = calloc(1, sizeof(Process));
+                        if (tail->p == NULL) {
+                            perror("createJobs failed");
+                            return;
+                        }
                         tail->p->pid = pid;
                         curproc = tail->p;
                     }
                     else {
                         curproc->next = calloc(1, sizeof(Process));
+                        if (curproc->next == NULL) {
+                            perror("createJobs failed");
+                            return;
+                        }
                         curproc = curproc->next;
                         curproc->pid = pid;
                     }
-                    setpgid(pid, tail->pgid);
+                    if (setpgid(pid, tail->pgid)) {
+                        perror("createJobs failed");
+                        return;
+                    }
+
+                    for (int i = 0; i < cmd->count_args; i++) {
+                        curproc->cmdargs[i] = calloc(strlen(cmd->cmdargs[i]) + 1, sizeof(char));
+                        if (curproc->cmdargs[i] == NULL) {
+                            perror("createJobs failed");
+                            return;
+                        }
+                        strcpy(curproc->cmdargs[i], cmd->cmdargs[i]);
+                    }
                     break;
             }
-            close(in);
+            if (in != -1 && close(in) == -1) {
+                perror(NULL);
+            }
             in = filedes[0];
-            close(out);
+            if (out != -1 && close(out) == -1) {
+                perror(NULL);
+            }
+            
             out = -1;
         }
         
