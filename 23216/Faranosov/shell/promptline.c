@@ -9,12 +9,11 @@ void clearLine(char* line) {
 }
 
 void promptline(char* line, int sizeline) {
-	printf("Start promptline\n");
 	int n = 0, gettedcnt = 0;
 	clearLine(line);
 	while (1) {
 		gettedcnt = read(0, (line + n), sizeline - n);
-		
+
 		if (gettedcnt == -1) {
 			perror("read error");
 			exit(1);
@@ -36,6 +35,4 @@ void promptline(char* line, int sizeline) {
 		}
 		else break;
 	}
-	printf("line == %s\nEnd Prompt\n", line);
-
 }

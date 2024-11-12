@@ -35,7 +35,6 @@ void printJob(job* j);
 void printJobs();
 
 int setfd(streams* stream, char fdtocls) {
-	printf("Start setfd - %d\n", fdtocls);
 	int fd = 0;
 	switch (fdtocls) {
 	case 0:
@@ -71,7 +70,6 @@ int setfd(streams* stream, char fdtocls) {
 }
 
 command* copycmd(command* cmd) {
-	printf("Start copycmd %s\n", cmd->cmdargs[0]);
 	command* newCom = NULL;
 	newCom = malloc(sizeof(command));
 	if (newCom == NULL) {
@@ -92,18 +90,15 @@ command* copycmd(command* cmd) {
 		strcpy(str, cmd->cmdargs[i]);
 		newCom->cmdargs[i] = str;
 		if (newCom->cmdargs[i] == NULL) {
-			printf("len[%s] == %d\n", cmd->cmdargs[i], strlen(cmd->cmdargs[i]) + 1);
 			printf("malloc (newCom->cmdargs[%d]) error\n", i);
 			exit(1);
 		}
 	}
 
-	printf("End copycmd\n");
 	return newCom;
 }
 
 convs* copyconv(convs* old) {
-	printf("Start copyConv\n");
 	convs* newConv = NULL;
 	newConv = malloc(sizeof(convs));
 	if (newConv == NULL) {
@@ -147,13 +142,10 @@ convs* copyconv(convs* old) {
 	newConv->in.flags = old->in.flags;
 	newConv->out.flags = old->out.flags;
 	newConv->err.flags = old->err.flags;
-	
-	printf("End copyconv\n");
 	return newConv;
 }
 
 process* initProc(command* cmd) {
-	printf("Start initProc\n");
 	process* newProc = NULL;
 	newProc = malloc(sizeof(process));
 	if (newProc == NULL) {
@@ -162,12 +154,10 @@ process* initProc(command* cmd) {
 	}
 	newProc->cmd = copycmd(cmd);
 	newProc->nextproc = NULL;
-	printf("End init Proc\n");
 	return newProc;
 }
 
 job* initJob(convs* conv) {
-	printf("Start initJob\n");
 	job* newjob = NULL;
 	newjob = malloc(sizeof(job));
 	if (newjob == NULL) {
@@ -191,14 +181,12 @@ job* initJob(convs* conv) {
 		}
 	}
 	curcmd += conv->cntcommands;
-	printf("End initJob");
 	return newjob;
 }
 
 job* linkConsAndJobs() {
-	printf("Start Link\n");
 
-	job* firstThisJob = NULL, * curJob = lastjob;	
+	job* firstThisJob = NULL, * curJob = lastjob;
 	for (int i = 0; i < MAXCONV && conv[i].cntcommands > 0; i++) {
 		if (curJob == NULL) {
 			curJob = initJob(&conv[i]);
@@ -214,7 +202,6 @@ job* linkConsAndJobs() {
 
 		}
 
-		printJob(curJob);
 		if (curJob->conv->cntcommands != 1) {
 			for (process* p = curJob->proc; p; p = p->nextproc) {
 
@@ -235,23 +222,20 @@ job* linkConsAndJobs() {
 		}
 	}
 
-	printf("End Link\n");
+	
 	return firstThisJob;
 }
 
 job* findJob(pid_t gpid) {
-	printf("Start findJob\n");
 	job* cur = firstjob;
 	while (cur && cur->gpid != gpid) {
 		cur = cur->nextjob;
 	}
 
-	printf("End findJob\n");
 	return cur;
 }
 
 void clear(job* curj) {
-	printf("Start clear job\n");
 	process* proc = curj->proc, * temp;
 	while (proc) {
 		temp = proc->nextproc;
@@ -261,13 +245,10 @@ void clear(job* curj) {
 	}
 	free(curj->conv);
 	free(curj);
-
-	printf("End cear job\n");
 }
 
 void deleteJob(job* curj) {
-	printf("Start deleteJob\n");
-
+	
 	if (curj->nextjob) {
 		curj->nextjob->prevjob = curj->prevjob;
 	}
@@ -283,16 +264,11 @@ void deleteJob(job* curj) {
 
 
 	clear(curj);
-	
-	if (firstjob == NULL) printf("fstJob == NULL\n");
-
-	printf("End deleteJob");
 }
 
 void handling_status(job* curJob, int status) {
-	printf("Handling status\n");
 	if (WIFEXITED(status)) {
-		printf("gpid = %d exited\n", curJob->gpid);
+		if (curJob->conv->flag == BKGRND) printf("gpid = %d exited\n", curJob->gpid);
 		deleteJob(curJob);
 		return;
 	}
@@ -306,18 +282,16 @@ void handling_status(job* curJob, int status) {
 		curJob->state = STOPPED;
 		return;
 	}
-	
+
 }
 
 void checkJobs() {
-	printf("Start checkJobs\n");
 	pid_t getted_id;
 	int status;
 	char shouldCont = 1;
 	do
 	{
 		getted_id = waitpid(-1, &status, WNOHANG);
-		if (getted_id > 0) printf("getted_id = %d\n", getted_id);
 		switch (getted_id) {
 		case 0:
 			shouldCont = 0;
@@ -336,17 +310,14 @@ void checkJobs() {
 
 	} while (shouldCont);
 
-	printf("End checkJobs\n");
 }
 
 void shellawaiting(job* forgjob) {
-	printf("Start shallawaiting (wait %d)\n", forgjob->gpid);
 	char whileWorking = 1;
 	int status;
 	pid_t idToWait = forgjob->gpid, getted_id;
 	for (;;) {
 		getted_id = waitpid(-1, &status, WUNTRACED);
-		if (getted_id != -1) printf("awaitng getted_id = %d\n", getted_id);
 		switch (getted_id) {
 		case -1:
 
@@ -362,7 +333,6 @@ void shellawaiting(job* forgjob) {
 					exit(1);
 				}
 
-				printf("Shallawaiting end\n");
 				return;
 			}
 
@@ -379,7 +349,6 @@ void start_proc(process* proc, int infile, int outfile) {
 		perror("fork (start_proc) error");
 		exit(1);
 	case 0:
-		printf("SS: %s\n", proc->cmd->cmdargs[0]);
 		if (infile != 0) {
 			if (dup2(infile, 0) == -1) {
 				perror("SS: dup2 (in) error");
@@ -402,19 +371,16 @@ void start_proc(process* proc, int infile, int outfile) {
 		}
 
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[0]) == 0) {
-			printf("SS: %s - getted command\n", specCommands[0]);
 			printJobs();
 			exit(0);
 		}
 
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[1]) == 0) {
-			printf("SS: %s - getted command\n", specCommands[1]);
 			setfgjob(findJob(atoi(proc->cmd->cmdargs[1])));
 			exit(0);
 		}
 
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[2]) == 0) {
-			printf("SS: %s - getted command\n", specCommands[2]);
 			setbgjob(findJob(atoi(proc->cmd->cmdargs[1])));
 			exit(0);
 		}
@@ -432,29 +398,24 @@ void start_proc(process* proc, int infile, int outfile) {
 void setsignal(int sig, void (*func)(int), char* procName) {
 	if (signal(sig, func) == SIG_ERR) {
 		perror("setsig error");
-		printf("%d %s\n", sig, procName);
 		exit(1);
 	}
 }
 
 void start_job(job* jobs) {
-	printf("Start start_job; P-Parent, S-Son\n");
 	jobs->state = RUNNING;
 
 	if (jobs == NULL) return;
 	pid_t sid;
 	int status, pipes[2], infile, outfile, errfile, cntcmds, waitVal;
 	infile = cntcmds = outfile = 0;
-	printf("P:start check shell commands\n");
 	if (jobs->conv->cntcommands == 1) {
-		
+
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[3]) == 0) {
-			printf("P: %s - getted command\n", specCommands[3]);
 			exit(0);
 		}
 	}
 
-	printf("P:start fork\n");
 	switch (sid = fork()) {
 	case -1:
 		perror("fork error");
@@ -466,7 +427,7 @@ void start_job(job* jobs) {
 			perror("setpgid (start_job) S");
 			exit(1);
 		}
-		
+
 
 
 		setsignal(SIGINT, SIG_DFL, "Son");
@@ -477,7 +438,6 @@ void start_job(job* jobs) {
 
 
 		if (jobs->conv->flag != BKGRND) {
-			printf("Start proc in fg\n");
 			setsignal(SIGTTOU, SIG_IGN, "Son");
 			if (tcsetpgrp(0, getpid()) == -1) {
 				perror("S (start_job): tcsetpgrp error");
@@ -500,32 +460,24 @@ void start_job(job* jobs) {
 
 
 		for (process* p = jobs->proc; p; p = p->nextproc) {
-			printf("S: start proccess %s\n", p->cmd->cmdargs[0]);
 			if (p == jobs->proc && jobs->conv->in.flags & ISEXIST) {
-				printf("S: proc is first and has infile\n");
 				infile = setfd(&jobs->conv->in, 0);
 			}
 
 			if (!p->nextproc && jobs->conv->out.flags & ISEXIST) {
-				printf("S: proc is last and has outfile\n");
 				outfile = setfd(&jobs->conv->out, 1);
 			}
 
 			if (p->nextproc) {
-				printf("S: proc has next\n");
 				if (pipe(pipes) < 0) {
 					perror("pipe error");
 					exit(1);
-				}
-				else {
-					printf("S: pipes[%d, %d]\n", pipes[0], pipes[1]);
 				}
 				outfile = pipes[1];
 			}
 
 			start_proc(p, infile, outfile);
 
-			printf("S: start closing\n");
 			if (infile != 0) {
 				if (close(infile) == -1) {
 					perror("S: close (infile) error");
@@ -546,7 +498,6 @@ void start_job(job* jobs) {
 		}
 
 
-		printf("S: start waiting\n");
 		while (cntcmds < jobs->conv->cntcommands) {
 			waitVal = waitpid(-1, &status, WUNTRACED);
 			if (waitVal == -1) {
@@ -555,24 +506,20 @@ void start_job(job* jobs) {
 					break;
 				}
 
-				perror("S:waitpid error");
 				exit(1);
 			}
 			else {
 				if (WIFEXITED(status)) {
 					if (WEXITSTATUS(status) != 0) {
-						printf("S: SS exit status == 1\n");
 						exit(1);
 					}
 				}
 				cntcmds++;
 			}
 		}
-		printf("S: ended\n");
 		exit(0);
 		break;
 	default:
-		printf("P: son`s gpid = %d\n", sid);
 		jobs->gpid = sid;
 		jobs->state = 0;
 		if (jobs->conv->flag == 0) {
@@ -583,44 +530,36 @@ void start_job(job* jobs) {
 }
 
 void setbgjob(job* curJob) {
-	printf("Start setbgjob\n");
 
 	setsignal(SIGTTOU, SIG_IGN, "setbgjob");
 
 	if (curJob->state == STOPPED) {
-		printf("Proccess %d was stopped\n", curJob->gpid);
 		kill((-1) * curJob->gpid, SIGCONT);
-		printf("SIGCONT sent\n");
 		curJob->state = RUNNING;
 		curJob->conv->flag = BKGRND;
 	}
-	printf("End setbgjob\n");
 }
 
 void setfgjob(job* curJob) {
-	printf("Start setfgjob\n");
 	tcsetpgrp(terminalfd, curJob->gpid);
 
 	setsignal(SIGTTOU, SIG_DFL, "setfgjob");
 
 	if (curJob->state == STOPPED) {
-		printf("Proccess %d was stopped\n", curJob->gpid);
 		kill((-1) * curJob->gpid, SIGCONT);
-		printf("SIGCONT sent\n");
 		curJob->state = RUNNING;
 		curJob->conv->flag = 0;
 	}
 
 
-	printf("start awaiting\n");
 	shellawaiting(curJob);
-	printf("End setfgjob\n");
+
 }
 
 void printCurDir() {
 	getcwd(curDir, 128);
 
-	printf("%s>\n", curDir);
+	printf("%s> ", curDir);
 }
 
 void printJob(job* j) {
@@ -678,31 +617,24 @@ int main(int argc, char* argv) {
 
 	for (;;) {
 
-		
+
 		promptline(line, 1024);
 		if ((ncmds = parseline(line)) <= 0) continue;
 		curcmd = 0;
-		
 
-		
+
+
 		jobToStart = linkConsAndJobs();
-		printJobs();
+		clearPars();
+
+		checkJobs();
 		
 
-		printf("Start clearPars\n");
-		clearPars();
-		printf("End clearParse, cmds[0].cmdargs == %p\n", cmds[0].cmdargs[0] == NULL ? 0 : cmds[0].cmdargs[0]);
-
-		printf("Start check Jobs\n");
-		checkJobs();
-		printf("End check Jobs\n");
-
-		printf("Start exec getted jobs\n");
+		
 		curcmd = 0;
 		for (job* j = jobToStart; j; j = j->nextjob) {
 			start_job(j);
 		}
-		printf("End exec getted jobs\n");
 
 		printCurDir();
 	}
