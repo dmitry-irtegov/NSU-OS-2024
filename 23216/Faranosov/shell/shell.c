@@ -559,7 +559,7 @@ void setfgjob(job* curJob) {
 void printCurDir() {
 	getcwd(curDir, 128);
 
-	printf("%s> ", curDir);
+	printf("%s>\n", curDir);
 }
 
 void printJob(job* j) {
