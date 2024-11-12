@@ -39,6 +39,12 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
+        for (size_t i = 0; i < BUFET_SIZE; i++) {
+            bufet_for_read[i] = toupper((int)(bufet_for_read[i]));
+        }
+
+        printf("%s\n", bufet_for_read);
+
         pclose(input);
     }
 
