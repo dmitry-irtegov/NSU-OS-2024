@@ -5,9 +5,13 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#define BUFSIZE 255
 
 int main() {
     int pipefd[2];
+    char text[BUFSIZE] = "text for upper LOL\n";
+    char buf[BUFSIZE] = {0};
+
 
     int pipe_status = pipe(pipefd);
 
@@ -23,14 +27,12 @@ int main() {
         exit(EXIT_FAILURE);
     case 0:
 
-        char text[255] = "text for upper LOL\n";
-
         if (close(pipefd[0]) == -1) {
             perror("error in close");
             exit(EXIT_FAILURE);
         }
 
-        if (write(pipefd[1], text, 255) == -1) {
+        if (write(pipefd[1], text, BUFSIZE) == -1) {
             perror("error in write");
             exit(EXIT_FAILURE);
         }
@@ -43,14 +45,12 @@ int main() {
 
     default:
 
-        char buf[255] = {0};
-
         if (close(pipefd[1]) == -1) {
             perror("error in close");
             exit(EXIT_FAILURE);
         }
         ssize_t lol;
-        while ((lol = read(pipefd[0], &buf, 255))){
+        while ((lol = read(pipefd[0], &buf, BUFSIZE))){
             if (lol == -1) {
                 perror("error in read");
                 exit(EXIT_FAILURE);
