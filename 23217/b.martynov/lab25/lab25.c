@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define BUFET_SIZE 1024
+
 int main()
 {
     int file_des[2] = { 0 };
@@ -29,13 +31,9 @@ int main()
             flag = 1;
         }
 
-        ssize_t write_res = write(file_des[1], (const void*)bufet, sizeof(bufet));
+        ssize_t write_res = write(file_des[1], (const void*)bufet, BUFET_SIZE);
         if (write_res == -1) {
             perror("write() unsuccess");
-            flag = 1;
-        }
-        else if (write_res < (ssize_t)sizeof(bufet)) {
-            printf("write() didn't write the whole sentence\n");
             flag = 1;
         }
 
@@ -54,15 +52,11 @@ int main()
             flag = 1;
         }
 
-        unsigned char bufet_for_read[sizeof(bufet)] = { 0 };
+        unsigned char bufet_for_read[BUFET_SIZE] = { 0 };
 
-        ssize_t read_res = read(file_des[0], (void*)bufet_for_read, sizeof(bufet_for_read));
+        ssize_t read_res = read(file_des[0], (void*)bufet_for_read, BUFET_SIZE);
         if (read_res == -1) {
             perror("read() unsuccess");
-            flag = 1;
-        }
-        else if (read_res < (ssize_t)sizeof(bufet_for_read)) {
-            printf("read() didn't read the whole sentence\n");
             flag = 1;
         }
 
@@ -75,7 +69,7 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        for (size_t i = 0; i < sizeof(bufet_for_read); i++) {
+        for (size_t i = 0; i < BUFET_SIZE; i++) {
             bufet_for_read[i] = toupper((int)(bufet_for_read[i]));
         }
 
