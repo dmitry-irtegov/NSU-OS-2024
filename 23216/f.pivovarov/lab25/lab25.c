@@ -8,7 +8,7 @@ void closePipe(const int pipeFDs[2]);
 
 int main() {
     // Opens pipe
-    printf("Opens pipe");
+    printf("Opens pipe\n");
     int pipeFDs[2];
     if (pipe(pipeFDs) == -1) {
         perror("Troubles with pipe");
@@ -33,24 +33,28 @@ int main() {
                 closePipe(pipeFDs);
                 exit(EXIT_FAILURE);
             }
-            closePipe(pipeFDs);
+            printf("Child is end\n");
+            //close(pipeFDs[1]);
             exit(EXIT_SUCCESS);
-        default:
+        default: ;
             // Parent process code
             char buffer[255];
             int readedBytes;
-            if ((readedBytes = read(pipeFDs[0], buffer, 255)) == -1) {
-                perror("Troubles in read");
-                closePipe(pipeFDs);
-                exit(EXIT_FAILURE);
+            close(pipeFDs[1]);
+            while ((readedBytes = read(pipeFDs[0], buffer, 255)) != 0) {
+                if (readedBytes == -1) {
+                    perror("Troubles in read");
+                    close(pipeFDs[0]);
+                    exit(EXIT_FAILURE);
+                }
+                
+                for (int i = 0; i < readedBytes; i++) {
+                    buffer[i] = (char)toupper(buffer[i]);
+                }
+                printf("from child: %s", buffer);
             }
-            
-            for (int i = 0; i < readedBytes; i++) {
-                buffer[i] = (char)toupper(buffer[i]);
-            }
-            printf("from child: %s", buffer);
 
-            closePipe(pipeFDs);
+            close(pipeFDs[0]);
             exit(EXIT_SUCCESS);
         }
 }
