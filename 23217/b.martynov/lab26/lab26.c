@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     unsigned char bufet[] = "SASha was WaLkInG on HIGHway and SUCKed BAGel.";
 
     if (child == 1) {
-        ssize_t write_res = write(1, (const void*)bufet, BUFET_SIZE);
+        ssize_t write_res = write(1, (const void*)bufet, sizeof(bufet));
         if (write_res < 0) {
             perror("write() unsuccess");
             exit(EXIT_FAILURE);
