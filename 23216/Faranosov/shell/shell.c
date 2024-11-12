@@ -48,7 +48,7 @@ int setfd(streams* stream, char fdtocls) {
 	case 1:
 	case 2:
 		if (stream->flags & ISCONT) {
-			fd = open(stream->file, O_WRONLY | O_APPEND | O_CREAT);
+			fd = open(stream->file, O_WRONLY | O_APPEND | O_CREAT, 0770);
 			if (fd == -1) {
 				perror("open out/err fileAppend error");
 				exit(1);
@@ -56,7 +56,7 @@ int setfd(streams* stream, char fdtocls) {
 			return fd;
 		}
 		else {
-			fd = open(stream->file, O_WRONLY | O_CREAT);
+			fd = open(stream->file, O_WRONLY | O_CREAT, 0770);
 			if (fd == -1) {
 				perror("open out/err file error");
 				exit(1);
