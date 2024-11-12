@@ -404,19 +404,19 @@ void start_proc(process* proc, int infile, int outfile) {
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[0]) == 0) {
 			printf("SS: %s - getted command\n", specCommands[0]);
 			printJobs();
-			return;
+			exit(0);
 		}
 
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[1]) == 0) {
 			printf("SS: %s - getted command\n", specCommands[1]);
 			setfgjob(findJob(atoi(proc->cmd->cmdargs[1])));
-			return;
+			exit(0);
 		}
 
 		if (strcmp(proc->cmd->cmdargs[0], specCommands[2]) == 0) {
 			printf("SS: %s - getted command\n", specCommands[2]);
 			setbgjob(findJob(atoi(proc->cmd->cmdargs[1])));
-			return;
+			exit(0);
 		}
 
 
