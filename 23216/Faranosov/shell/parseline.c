@@ -5,10 +5,10 @@
 static char* blankskip(register char*);
 
 int parseline(char* line) {
-	int nargs, ncmds;
+	printf("Start Pars\n");
+	int nargs, ncmds, rval;
 	register char* s;
 	char aflg = 0;
-	int rval;
 	register int i;
 	char isdbl = 0, whstr = 0;
 	static char delim[] = " \"2\t|&<>;\n";
@@ -42,7 +42,7 @@ int parseline(char* line) {
 			*s++ = '\0';
 			break;
 		case '>':
-			
+
 			if (*(s + 1) == '>') {
 				++aflg;
 				*s++ = '\0';
@@ -112,14 +112,14 @@ int parseline(char* line) {
 			*s++ = '\0';
 			nargs = 0;
 			break;
-		
+
 		case ';':
 			*s++ = '\0';
 			++ncmds;
 			curConv++;
 			nargs = 0;
 			break;
-		
+
 		case '2':
 			if (*(s + 1) && *(s + 1) == '>') {
 				*s++ = '\0';
@@ -156,10 +156,41 @@ int parseline(char* line) {
 		}
 	}
 
+	printf("End Pars\n");
 	return rval;
 }
 
 static char* blankskip(register char* s) {
 	while (isspace(*s) && *s) ++s;
 	return s;
+}
+
+
+void clearcmds() {
+	for (int i = 0; i < MAXCMDS && cmds[i].cmdargs[0]; i++) {
+		for (int j = 0; j < MAXARGS && cmds[i].cmdargs[j]; j++) {
+			cmds[i].cmdargs[j] = NULL;
+		}
+
+		cmds[i].cmdflag = 0;
+	}
+}
+
+void clearconvs() {
+
+	for (int i = 0; i < MAXCONV && conv[i].cntcommands != 0; i++) {
+		conv[i].cntcommands = 0;
+		conv[i].flag = 0;
+		conv[i].in.file = NULL;
+		conv[i].out.file = NULL;
+		conv[i].err.file = NULL;
+		conv[i].in.flags = 0;
+		conv[i].err.flags = 0;
+		conv[i].out.flags = 0;
+	}
+}
+
+void clearPars() {
+	clearcmds();
+	clearconvs();
 }

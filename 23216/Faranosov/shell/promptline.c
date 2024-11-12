@@ -1,19 +1,32 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include "shell.h"
 
-void promptline(char* line, int sizeline) {
-	int n = 0;
+void clearLine(char* line) {
+	for (int i = 0; i < 1024; i++) line[i] = '\0';
+}
 
+void promptline(char* line, int sizeline) {
+	printf("Start promptline\n");
+	int n = 0, gettedcnt = 0;
+	clearLine(line);
 	while (1) {
-		n += read(0, (line + n), sizeline - n);
+		gettedcnt = read(0, (line + n), sizeline - n);
+		
+		if (gettedcnt == -1) {
+			perror("read error");
+			exit(1);
+		}
+		n += gettedcnt;
+
 		*(line + n) = '\0';
 
 		/*
-        *  check to see if command line extends onto
-        *  next line.  If so, append next line to command line
-        */
+		*  check to see if command line extends onto
+		*  next line.  If so, append next line to command line
+		*/
 
 		if (*(line + n - 2) == '\\' && *(line + n - 1) == '\n') {
 			*(line + n) = ' ';
@@ -23,4 +36,6 @@ void promptline(char* line, int sizeline) {
 		}
 		else break;
 	}
+	printf("line == %s\nEnd Prompt\n", line);
+
 }

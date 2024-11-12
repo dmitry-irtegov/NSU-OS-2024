@@ -11,11 +11,12 @@ typedef struct process {
 /*job`s state*/
 #define RUNNING 0
 #define STOPPED 1
+#define LINKED 2
 
 typedef struct job {
-	convs* conv;  
+	convs* conv;
 	process* proc;
-	struct job* nextjob, *prevjob;
+	struct job* nextjob, * prevjob;
 	char state;
 	pid_t gpid;
 	struct termios terminalattr;
