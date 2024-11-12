@@ -5,9 +5,10 @@
 #include <unistd.h>
 #include <ctype.h>
 
+#define BUFSIZE 255
+
 int main() {
     int pipefd[2];
-    char buf[20] = "text for upper LOL\n";
 
     int pipe_status = pipe(pipefd);
 
@@ -22,12 +23,15 @@ int main() {
         perror("error in fork");
         exit(EXIT_FAILURE);
     case 0:
+
+        char text[BUFSIZE] = "text for upper LOL\n";
+
         if (close(pipefd[0]) == -1) {
             perror("error in close");
             exit(EXIT_FAILURE);
         }
 
-        if (write(pipefd[1], buf, sizeof(buf)) == -1) {
+        if (write(pipefd[1], text, BUFSIZE) == -1) {
             perror("error in write");
             exit(EXIT_FAILURE);
         }
@@ -39,26 +43,29 @@ int main() {
         exit(EXIT_SUCCESS);
 
     default:
+
+        char buf[BUFSIZE] = {0};
+
         if (close(pipefd[1]) == -1) {
             perror("error in close");
             exit(EXIT_FAILURE);
         }
         ssize_t lol;
-        lol = read(pipefd[0], &buf, sizeof(buf));
-        if (lol == -1) {
-            perror("error in read");
-            exit(EXIT_FAILURE);
-        }
+        while (lol = read(pipefd[0], &buf, BUFSIZE)){
+            if (lol == -1) {
+                perror("error in read");
+                exit(EXIT_FAILURE);
+            }
 
-        for (size_t i = 0; i < strlen(buf); i++) {
-            buf[i] = toupper(buf[i]);
-        }
+            for (size_t i = 0; i < strlen(buf); i++) {
+                buf[i] = toupper(buf[i]);
+            }
 
-        if (write(fileno(stdin), &buf, sizeof(buf)) == -1) {
-            perror("error in write");
-            exit(EXIT_FAILURE);
+            if (write(fileno(stdin), &buf, sizeof(buf)) == -1) {
+                perror("error in write");
+                exit(EXIT_FAILURE);
+            }
         }
-
         if (lol == -1) {
             perror("error in read");
             exit(EXIT_FAILURE);
