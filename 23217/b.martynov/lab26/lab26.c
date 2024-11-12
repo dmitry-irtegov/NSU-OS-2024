@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #define STR_SIZE 1024
 #define BUFET_SIZE 1024
@@ -15,8 +16,8 @@ int main(int argc, char** argv)
     unsigned char bufet[] = "SASha was WaLkInG on HIGHway and SUCKed BAGel.";
 
     if (child == 1) {
-        ssize_t write_res = write(stdout, (const void*)bufet, sizeof(bufet));
-        if (write_res == -1) {
+         ssize_t write_res = write(file_des[1], (const void*)bufet, BUFET_SIZE);
+        if (write_res < 0) {
             perror("write() unsuccess");
             exit(EXIT_FAILURE);
         }
@@ -30,7 +31,7 @@ int main(int argc, char** argv)
 
         unsigned char bufet_for_read[BUFET_SIZE] = { 0 };
 
-        ssize_t read_res = read(stdin, (void*)bufet_for_read, BUFET_SIZE);
+        ssize_t read_res = read(0, (void*)bufet_for_read, BUFET_SIZE);
         if (read_res == -1) {
             perror("read() unsuccess");
             exit(EXIT_FAILURE);
