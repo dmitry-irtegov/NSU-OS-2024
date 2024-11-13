@@ -12,11 +12,22 @@ import (
 func main() {
 	prom.SetPrompt([]byte(fmt.Sprintf("[%s] ", os.Args[0])))
 
-	/* PLACE SIGNAL CODE HERE */
+	/* профилирование памяти в promptline, проверить на учечку памяти/
+	использовать recover для
+	сделать типовой проект на го, со структурами сделать классы
+	напсиать автотесты
+	Вопросы: Copy on Write как работает
+	exec как рабоатет под капотом
+	изменения образа программы
+	PLACE SIGNAL CODE HERE */
 
 	for {
 		var line []byte
-		line = prom.Promptline(line)
+		line, err := prom.Promptline(line)
+		if err != nil {
+			fmt.Println("Write/Read problem")
+			os.Exit(3)
+		}
 		if len(line) <= 0 {
 			break
 		}
@@ -27,6 +38,7 @@ func main() {
 			continue
 		}
 		for i := 0; i < len(cmds); i++ {
+
 			if len(parc.GetArgs(cmds[i])) == 0 {
 				continue
 			}
@@ -37,7 +49,7 @@ func main() {
 				continue
 			}
 
-			pid, err := syscall.ForkExec(binary, parc.GetArgs(cmds[i]), &syscall.ProcAttr{
+			pid, err := syscall.Forkxec(binary, parc.GetArgs(cmds[i]), &syscall.ProcAttr{
 				Dir:   "",
 				Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 				Sys:   &syscall.SysProcAttr{},

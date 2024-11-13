@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	_ "net/http/pprof"
+	"log"
+	"net/http"
 )
 
 var prompt []byte
@@ -12,11 +15,14 @@ func SetPrompt(newPrompt []byte) {
 	prompt = newPrompt
 }
 
-func Promptline(line []byte) []byte {
+func Func() {
+	log.Println(http.ListenAndServe("localhost:6060", nil))
+}
+
+func Promptline(line []byte) ([]byte, error) {
 	_, err := syscall.Write(int(os.Stdout.Fd()), prompt)
 	if err != nil {
-		fmt.Println("Write problem")
-		os.Exit(1)
+		return nil, err
 	}
 	str := make([]byte, 1024)
 	var quotestype byte
@@ -24,8 +30,7 @@ func Promptline(line []byte) []byte {
 	for {
 		n, err := syscall.Read(int(os.Stdin.Fd()), str)
 		if err != nil {
-			fmt.Println("Read problem")
-			os.Exit(2)
+			return nil, err
 		}
 		line = append(line, str[:n]...)
 		for ; i < len(line); i++ {
@@ -54,6 +59,6 @@ func Promptline(line []byte) []byte {
 			continue
 		}
 		line[len(line)-1] = 0
-		return line
+		return line, err
 	}
 }
