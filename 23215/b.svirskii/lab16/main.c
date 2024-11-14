@@ -9,6 +9,7 @@ int main() {
     normal_termios = termios;
     termios.c_lflag &= ~ICANON;
     termios.c_iflag |= IUCLC;
+	termios.c_cc[VMIN] = 1;
     tcsetattr(0, TCSANOW, &termios);
     char answer;
     do {
