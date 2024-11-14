@@ -7,6 +7,9 @@
 
 int main(){
     int fd[2]; pid_t pid;
+    char msgout[40]="tESt LiNe fOr laB_25 hElLO woRld\n";
+    char buf[buffer];
+    ssize_t msglen;
     if (pipe(fd) == -1) {
         perror("problem in pipecreate");
         exit(EXIT_FAILURE);
@@ -17,12 +20,12 @@ int main(){
             perror("problem in fork");
             exit(EXIT_FAILURE);
         case 0:
-            char msgout[40]="tESt LiNe fOr laB_25 hElLO woRld\n";
+
             if (puts(msgout) <0){
                 perror("problem in puts");
                 exit(EXIT_FAILURE);
             }
-            if (close(pipefd[0]) == -1) {
+            if (close(fd[0]) == -1) {
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
@@ -30,15 +33,14 @@ int main(){
                 perror("problem in write");
                 exit(EXIT_FAILURE);
             }
-            if (close(pipefd[1]) == -1) {
+            if (close(fd[1]) == -1) {
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
             exit(EXIT_SUCCESS);
         default:
-            char buf[buffer];
-            ssize_t msglen;
-            if (close(pipefd[1]) == -1) {
+            
+            if (close(fd[1]) == -1) {
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
@@ -56,7 +58,7 @@ int main(){
                 exit(EXIT_FAILURE);
             }
             
-            if (close(pipefd[0]) == -1) {
+            if (close(fd[0]) == -1) {
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
