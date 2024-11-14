@@ -5,12 +5,11 @@
 
 int main(int argc, char *argv[]){
     if (argc != 2){
-        perror("incorrect number of arguments");
+        fprintf(stderr, "incorrect number of arguments\n");
         exit(EXIT_FAILURE);
     }
     int status;
     pid_t pid, child;
-    pid_t parent = getpid();
 
     pid = fork();
     switch (pid){
