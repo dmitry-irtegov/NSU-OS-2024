@@ -31,7 +31,7 @@ void handle_signal(int sig) {
             signal_count++;
             write(STDOUT_FILENO, "\a", sizeof(char)); // Звуковой сигнал
             break;
-        default:
+        default: {
             char buffer[100] = "\nПрограмма завершена. Количество SIGINT - ";
             char count_str[10] = {0}; // Для конвертации числа в строку
             int_to_string(signal_count, count_str); // Преобразуем счётчик в строку
@@ -39,6 +39,7 @@ void handle_signal(int sig) {
             write(STDOUT_FILENO, count_str, strlen(count_str));
             write(STDOUT_FILENO, "\n", sizeof(char));
             _exit(0); // Завершаем программу
+        }
     }
 }
 
