@@ -5,7 +5,7 @@
 #include <ctype.h>
 #define   MSGSIZE   40
 
-int main(int argc, char **argv){
+int main(){
     int fd[2]; pid_t pid;
     if (pipe(fd) == -1) {
         perror("problem in pipe");
