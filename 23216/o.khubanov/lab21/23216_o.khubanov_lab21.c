@@ -6,7 +6,7 @@ int beep_counter = 0; // Обычный int для счётчика
 
 // Функция для перевода числа в строку (асинхронно-безопасная)
 void int_to_str(int num, char *buffer, size_t buffer_size) {
-    int i = 0;
+    size_t i = 0;
     
     // Если число равно 0, просто добавляем '0'
     if (num == 0) {
@@ -27,7 +27,7 @@ void int_to_str(int num, char *buffer, size_t buffer_size) {
     buffer[i] = '\0';
 
     // Разворачиваем строку, чтобы получить правильный порядок цифр
-    for (int j = 0; j < i / 2; j++) {
+    for (size_t j = 0; j < i / 2; j++) {
         char temp = buffer[j];
         buffer[j] = buffer[i - j - 1];
         buffer[i - j - 1] = temp;
