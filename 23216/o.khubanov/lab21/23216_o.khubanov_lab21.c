@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
 int beep_counter = 0; // Обычный int для счётчика
 
 // Функция для перевода числа в строку (асинхронно-безопасная)
@@ -32,6 +33,14 @@ void int_to_str(int num, char *buffer, size_t buffer_size) {
         buffer[j] = buffer[i - j - 1];
         buffer[i - j - 1] = temp;
     }
+
+    // Заполняем оставшиеся ячейки пробелами, если есть свободное место
+    for (size_t j = i; j < buffer_size - 1; j++) {
+        buffer[j] = ' ';
+    }
+
+    // Завершаем строку нулевым символом
+    buffer[buffer_size - 1] = '\0';
 }
 
 void signal_handler(int signal_number) {
