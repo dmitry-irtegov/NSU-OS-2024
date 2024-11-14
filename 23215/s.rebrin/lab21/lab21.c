@@ -17,7 +17,7 @@ void func1(int sig) {
 
     write(1, "\n", 1);
 
-    len = snprintf(buf, sizeof(buf), "%d", a);
+    len = sprintf(buf, "%d", a);
 
     write(1, buf, len);
 
