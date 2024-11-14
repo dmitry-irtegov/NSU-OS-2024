@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 void closePipe(const int pipeFDs[2]);
 
@@ -28,7 +29,7 @@ int main() {
             // Forked process code
             printf("Inside forked\n");
             char *text = "aBoba123";
-            if (write(pipeFDs[1], text, 8) != 8) {
+            if (write(pipeFDs[1], text, strlen(text)) != strlen(text)) {
                 perror("Cannot write text correctly");
                 closePipe(pipeFDs);
                 exit(EXIT_FAILURE);
