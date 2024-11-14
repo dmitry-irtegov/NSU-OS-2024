@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
                 perror("failed to wait");
                 exit(EXIT_FAILURE);
             }
-            printf("some text");
+            write(1, "some text", 9);
     }
     exit(EXIT_SUCCESS);
 }
