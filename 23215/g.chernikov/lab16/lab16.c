@@ -23,7 +23,7 @@ int main(){
 
     printf("?\n");
     char in = getchar();
-
+    printf("%c\n", in);
     tcsetattr(fileno(stdin), TCSANOW, &oldTerm);
 
     exit(0);
