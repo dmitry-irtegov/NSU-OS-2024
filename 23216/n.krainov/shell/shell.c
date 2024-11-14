@@ -5,11 +5,10 @@
 #include <termios.h>
 #include "shell.h"
 
-int initShellPreferences() {
-    if (!isatty(STDIN_FILENO)) {
-        return -1;
-    }
+int flagTTY = 0;
 
+int initShellPreferences() {
+    flagTTY = isatty(STDIN_FILENO);
     sigset(SIGINT, SIG_IGN);
     sigset(SIGTSTP, SIG_IGN);
     sigset(SIGQUIT, SIG_IGN);
@@ -18,11 +17,11 @@ int initShellPreferences() {
 
     pid_t pid = getpid();
     if (setpgid(pid, pid) < 0) {
-        return 1;
+        return -1;
     }
 
-    if (tcsetpgrp(STDIN_FILENO, pid)) {
-        return 1;
+    if (flagTTY && tcsetpgrp(STDIN_FILENO, pid)) {
+        return -1;
     }
     return 0;
 }

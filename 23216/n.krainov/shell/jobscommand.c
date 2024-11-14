@@ -13,7 +13,7 @@ extern Job* head;
 
 Job* findJob(int num){
     for (Job* j = head; j; j = j->next) {
-        if (j->number == num) {
+        if ((num == -1 && j->next == NULL) || j->number == num) {
             return j;
         }
     }
@@ -22,26 +22,27 @@ Job* findJob(int num){
 }
 
 void fg(Command* cmd) {
-    if (cmd->next != NULL) {
+    if (cmd->next != NULL || cmd->prev != NULL) {
         fprintf(stderr, "fg: no job control\n");
-        exit(EXIT_FAILURE);
+        return;
     }
 
+    int num;
     if (cmd->cmdargs[1] == NULL) {
-        fprintf(stderr, "fg: Incorrect arg\n");
-        exit(EXIT_FAILURE);
+        num = -1;
     }
-
-    int num = atoi(cmd->cmdargs[1]);
-    if (errno != 0) {
-        fprintf(stderr, "fg: Incorrect arg\n");
-        exit(EXIT_FAILURE);
+    else {
+        num = atoi(cmd->cmdargs[1]);
+        if (errno != 0) {
+            fprintf(stderr, "fg: Incorrect arg\n");
+            return;
+        }
     }
 
     Job* j = findJob(num);
     if (j == NULL) {
         fprintf(stderr, "fg: No such job\n");
-        exit(EXIT_FAILURE);
+        return;
     }
 
     j->notified = 0;
@@ -49,45 +50,71 @@ void fg(Command* cmd) {
         if (p->state == STOP) {
             p->state = RUNNING;
         }
+
+        int index = 0;
+        while (p->cmdargs[index] != NULL && index < MAXARGS) {
+            fprintf(stderr, "%s ", p->cmdargs[index]);
+            index++;
+        }
+
+        if (p->next != NULL) {
+            fprintf(stderr, "| ");
+        }
     }
 
+    fprintf(stderr, "\n");
     if (foregroundJob(j, 1)) {
-        exit(EXIT_FAILURE);
+        return;
     }
-
-    exit(EXIT_SUCCESS);
 }
 
 void bg(Command* cmd) {
-    if (cmd->cmdargs[1] == NULL) {
-        fprintf(stderr, "Incorrect arg\n");
-        exit(EXIT_FAILURE);
+    if (cmd->next != NULL || cmd->prev != NULL) {
+        fprintf(stderr, "bg: no job control\n");
+        return;
     }
 
-    int num = atoi(cmd->cmdargs[1]);
-    if (errno != 0) {
-        fprintf(stderr, "Incorrect arg\n");
-        exit(EXIT_FAILURE);
+    int num;
+    if (cmd->cmdargs[1] == NULL) {
+        num = -1;
+    }
+    else {
+        num = atoi(cmd->cmdargs[1]);
+        if (errno != 0) {
+            fprintf(stderr, "bg: Incorrect arg\n");
+            return;
+        }
     }
 
     Job* j = findJob(num);
     if (j == NULL) {
-        fprintf(stderr, "No such job\n");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "bg: No such job\n");
+        return;
     }
 
     j->notified = 0;
+    fprintf(stderr, "[%d] ", j->number);
     for (Process* p = j->p; p; p = p->next) {
         if (p->state == STOP) {
             p->state = RUNNING;
         }
+
+        int index = 0;
+        while (p->cmdargs[index] != NULL && index < MAXARGS) {
+            fprintf(stderr, " %s", p->cmdargs[index]);
+            index++;
+        }
+
+        if (p->next != NULL) {
+            fprintf(stderr, " |");
+        }
     }
 
+    fprintf(stderr, "\n");
     if (sendSIGCONT(j->pgid)) {
-        exit(EXIT_FAILURE);
+        perror("bg");
+        return;
     }
-
-    exit(EXIT_SUCCESS);
 }
 
 void jobs() {

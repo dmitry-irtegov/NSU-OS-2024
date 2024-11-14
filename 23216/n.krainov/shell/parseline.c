@@ -38,6 +38,7 @@ int parseline(char *line, Conv* conv) {
                     return -1;
                 }
                 flag = 1;
+                cur_cmd = NULL;
                 cur_conv->bg = 1;
                 *s++ = '\0';
                 break;
@@ -48,6 +49,7 @@ int parseline(char *line, Conv* conv) {
                     return -1;
                 }
 
+                cur_cmd = NULL;
                 flag = 1;
                 *s++ = '\0';
                 break;
@@ -203,8 +205,15 @@ int parseline(char *line, Conv* conv) {
                 
                 cur_cmd->cmdargs[cur_cmd->count_args++] = s;
                 cur_cmd->cmdargs[cur_cmd->count_args] = NULL;
-                s = strpbrk(s, delim);
+                if (*s == '\"') {
+                    s = strpbrk(s, "\"");
+                }
+                else {
+                    s = strpbrk(s, delim);
+                }
+                
                 if (s == NULL) {
+                    fprintf(stderr, "parseline failed");
                     freeSpace(conv->next);
                     return -1;
                 }

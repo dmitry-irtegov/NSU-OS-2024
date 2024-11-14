@@ -15,8 +15,8 @@ typedef struct command{
     int count_args;
     char* infile;
     char* outfile;
-    char isShellSpecific; //for fg, bg and jobs
-    char flags; //0000001 - >, 00000010 - >>
+    char isShellSpecific; 
+    char flags; 
     struct command* next;
     struct command* prev;
 }Command;
@@ -46,7 +46,6 @@ typedef struct job{
 
 #define OUT  1
 #define APP   2
-#define APERSAND 4
 
 #define FG 1
 #define BG 2

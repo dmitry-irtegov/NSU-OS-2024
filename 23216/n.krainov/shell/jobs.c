@@ -10,6 +10,7 @@
 #include "shell.h"
 
 Job* head = NULL;
+extern int flagTTY;
 
 void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     pid_t pid = getpid();
@@ -72,14 +73,14 @@ void createProcess(int in, int out, Command* cmd, pid_t pgid) {
     sigset(SIGTTIN, SIG_DFL);
 
     switch (cmd->isShellSpecific) {
-        case BG:
-            bg(cmd);
-            break;
         case JOBS:
             jobs();
             break;
         case FG:
             fg(cmd);
+            break;
+        case BG:
+            bg(cmd);
             break;
     }
     execvp(cmd->cmdargs[0], cmd->cmdargs);
@@ -100,7 +101,7 @@ int sendSIGCONT(pid_t pgid) {
 }
 
 int foregroundJob(Job* j, int continueJob) {
-    if (tcsetpgrp(STDIN_FILENO, j->pgid)) {
+    if (flagTTY && tcsetpgrp(STDIN_FILENO, j->pgid)) {
         return -1;
     }
     
@@ -111,7 +112,7 @@ int foregroundJob(Job* j, int continueJob) {
     }
 
     waitJob(j);
-    if (tcsetpgrp(STDIN_FILENO, getpgrp())) {
+    if (flagTTY && tcsetpgrp(STDIN_FILENO, getpgrp())) {
         return -1;
     }
 
@@ -125,6 +126,17 @@ void createJobs(Conv* conv) {
     Job* tail;
     Process* curproc = NULL;
     for (Conv* curconv = conv; curconv; curconv = curconv->next) {
+        if (conv->cmd->next == NULL) {
+            if (conv->cmd->isShellSpecific == FG) {
+                fg(conv->cmd);
+                continue;
+            }
+            else if (conv->cmd->isShellSpecific == BG) {
+                bg(conv->cmd);
+                continue;
+            }
+        }
+
         if (head == NULL) {
             head = calloc(1, sizeof(Job));
             if (head == NULL) {
@@ -219,6 +231,14 @@ void createJobs(Conv* conv) {
         
         if (!curconv->bg) {
             foregroundJob(tail, 0);
+        }
+        else {
+            fprintf(stderr, "[%d] ", tail->number);
+            for (Process* p = tail->p; p; p = p->next) {
+                if (p->next == NULL) {
+                    fprintf(stderr, "%d\n", p->pid);
+                }   
+            }
         }
     }
 }
