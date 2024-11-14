@@ -12,7 +12,7 @@ int main(int argc, char **argv){
         exit(EXIT_FAILURE);
     }
     if ((pid=fork()) > 0) {  /* parent */
-        static char msgout[MSGSIZE]="tESt LiNe fOr laB_25 hElLO woRld\n";
+        char msgout[MSGSIZE]="tESt LiNe fOr laB_25 hElLO woRld\n";
         if (puts(msgout) <0){
             perror("problem in puts");
             exit(EXIT_FAILURE);
@@ -24,7 +24,7 @@ int main(int argc, char **argv){
         exit(EXIT_SUCCESS);
     }
     else if (pid == 0) {      /* child */
-        static char msgin[MSGSIZE];
+        char msgin[MSGSIZE];
         ssize_t msglen;
         if((msglen = read(fd[0], msgin, MSGSIZE))==-1){
             perror("problem in read");
