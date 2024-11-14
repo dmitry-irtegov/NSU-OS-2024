@@ -5,15 +5,18 @@
 #include <ctype.h>
 #define   MSGSIZE   40
 
-main(int argc, char **argv)
-{
+int main(int argc, char **argv){
     int fd[2]; pid_t pid;
     if (pipe(fd) == -1) {
         perror("problem in pipe");
         exit(EXIT_FAILURE);
     }
     if ((pid=fork()) > 0) {  /* parent */
-        static char msgout[MSGSIZE]="Hello,world\n";
+        static char msgout[MSGSIZE]="tESt LiNe fOr laB_25 hElLO woRld\n";
+        if (puts(msgout) <0){
+            perror("problem in puts");
+            exit(EXIT_FAILURE);
+        }
         if(write(fd[1], msgout, MSGSIZE)==-1){
             perror("problem in write");
             exit(EXIT_FAILURE);
