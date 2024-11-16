@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include "shell.h"
+#include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -69,11 +70,11 @@ int main(int argc, char *argv[])
                 signal(SIGINT, SIG_DFL);
                 signal(SIGQUIT, SIG_DFL);
                 signal(SIGTSTP, SIG_DFL);
-                curjob.stopped = 0;	
                 if(setpgid(0, 0) == -1) {
-                    perror("unable to place process in his own group");
+                    perror("unable to place process in his own group from child");
                     return 1;
                 }
+                tcsetpgrp(0, getpgrp());
                 if (infile) {
                     int inputfd = open(infile, O_RDONLY);
                     if (inputfd == -1) {
@@ -108,20 +109,32 @@ int main(int argc, char *argv[])
                 // parent
 		        jobs.plus_id++;
                 jobs.mins_id++;
+                jobs.arr[jobs.plus_id].stopped = 0;	
                 jobs.arr[jobs.plus_id].lidpid = chpid;
 		        printf("lidpid is %d\n", chpid);
+                if(setpgid(chpid, chpid) == -1) {
+                    perror("unable to place process in his own group from parent");
+                    return 1;
+                }
                 if (bkgrnd == 0) {
+                    // launch process in foreground
+                    
                     siginfo_t infop;
+                    to_fg(jobs.arr + jobs.plus_id, 0);
                     pid_t code = waitid(P_PID, chpid, &infop, WSTOPPED | WEXITED);
                     if(code == -1 && errno != EINTR) {
                         perror("unable to wait termination of created process");
+                    } else if (code == -1 && errno == EINTR) {
+                        fprintf(stderr, "process was interrupted");
                     }
-                    if(code == -1 && errno != EINTR) {
-	                    jobs.arr[jobs.plus_id].fgrnd = 0;
-                    } else {
-	                    jobs.arr[jobs.plus_id].fgrnd = 1;
-                        printf("%d\n", chpid);
-                    }
+                    tcsetpgrp(0, getpgrp());
+
+                    // if(code == -1 && errno != EINTR) {
+	                //     jobs.arr[jobs.plus_id].fgrnd = 0;
+                    // } else {
+	                //     jobs.arr[jobs.plus_id].fgrnd = 1;
+                    //     printf("%d\n", chpid);
+                    // }
                 }
             }
         }
@@ -131,13 +144,23 @@ int main(int argc, char *argv[])
 
 /* PLACE SIGNAL CODE HERE */
 
-void tobg() 
-{
-    printf("process %d now will be background\n", curjob.lidpid);
-    fflush(stdout);
-    if (jobs[]) {
-        if(setpgid(curjob.lidpid, 0) == -1) {
-	        perror("unable to background");
-	    }
+void to_fg(struct job* jb, int needcont) {
+    tcsetpgrp(0, j->lidpid);
+    if(needcont) {
+        if(sigsend(P_PGID, j->pgid, SIGCONT) == -1) {
+            perror ("unable to send SIGCONT to continue job execution");
+        }
     }
 }
+
+
+// void tobg() 
+// {
+//     printf("process %d now will be background\n", curjob.lidpid);
+//     fflush(stdout);
+//     if (jobs[]) {
+//         if(setpgid(curjob.lidpid, 0) == -1) {
+// 	        perror("unable to background");
+// 	    }
+//     }
+// }
