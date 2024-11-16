@@ -24,8 +24,16 @@ typedef struct jobs_s {
 
 jobsinfo jobs;
 
-void tobg();
 
+void to_fg(struct job* jb, int needcont) {
+    //printf("setting %d to fg\n", jb->lidpid);
+    tcsetpgrp(0, jb->lidpid);
+    if(needcont) {
+        if(sigsend(P_PGID, jb->lidpid, SIGCONT) == -1) {
+            perror ("unable to send SIGCONT to continue job execution");
+        }
+    }
+}
 int main(int argc, char *argv[])
 {
     register int i;
@@ -34,14 +42,15 @@ int main(int argc, char *argv[])
     char prompt[50];      /* shell prompt */
     
     jobs.arsz = 1024;
-    jobs.arr = calloc(sizeof(struct job) * jobs.arsz);
+    jobs.arr = calloc(jobs.arsz, sizeof(struct job));
     jobs.plus_id = -1;
     jobs.mins_id = -2;
     /* PLACE SIGNAL CODE HERE */
 
     sigset(SIGINT, SIG_IGN);
     sigset(SIGQUIT, SIG_IGN);
-    sigset(SIGTSTP, tobg);
+    sigset(SIGTTOU, SIG_IGN);
+    sigset(SIGTTIN, SIG_IGN);
 
     sprintf(prompt,"[%s] ", argv[0]);
 
@@ -118,7 +127,7 @@ int main(int argc, char *argv[])
                 }
                 if (bkgrnd == 0) {
                     // launch process in foreground
-                    
+                    printf("launching in fg and waiting\n");
                     siginfo_t infop;
                     to_fg(jobs.arr + jobs.plus_id, 0);
                     pid_t code = waitid(P_PID, chpid, &infop, WSTOPPED | WEXITED);
@@ -127,8 +136,14 @@ int main(int argc, char *argv[])
                     } else if (code == -1 && errno == EINTR) {
                         fprintf(stderr, "process was interrupted");
                     }
-                    tcsetpgrp(0, getpgrp());
-
+                    printf("try to return shell to foreground\n");
+                    if(tcsetpgrp(0, getpgrp()) == -1) {
+                        perror("unable to return shell to fg");
+                    }
+                    printf("waited, setted shell group to fg\n");
+                    
+                    printf("current fg pgrp is: %d, shell grp is %d\n", tcgetpgrp(0), getpgrp());
+                    
                     // if(code == -1 && errno != EINTR) {
 	                //     jobs.arr[jobs.plus_id].fgrnd = 0;
                     // } else {
@@ -144,14 +159,6 @@ int main(int argc, char *argv[])
 
 /* PLACE SIGNAL CODE HERE */
 
-void to_fg(struct job* jb, int needcont) {
-    tcsetpgrp(0, j->lidpid);
-    if(needcont) {
-        if(sigsend(P_PGID, j->pgid, SIGCONT) == -1) {
-            perror ("unable to send SIGCONT to continue job execution");
-        }
-    }
-}
 
 
 // void tobg() 

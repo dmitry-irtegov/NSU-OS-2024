@@ -1,5 +1,6 @@
 #define MAXARGS 256
 #define MAXCMDS 50
+#include <sys/types.h>
 
 struct command {
     char *cmdargs[MAXARGS];
