@@ -1,0 +1,271 @@
+error: gpg.ssh.allowedSignersFile needs to be configured and exist for ssh signature verification
+[33mcommit 49e21ef48ee0a5b60fb3da1bb61fdec697d204a5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mBorodkin-23217-lab2[m[33m, [m[1;31morigin/Borodkin-23217-lab2[m[33m)[m
+[41mNo signature[m
+Author: Coilyun <nikitab4rodkinboom@gmail.com>
+Date:   Sat Nov 16 12:14:14 2024 +0700
+
+    Nothing
+
+[33mcommit 066c0c44e90c31790e0cd410dcbb4604c5729ead[m[33m ([m[1;31morigin/kutalev/accepted[m[33m, [m[1;32mkutalev/accepted[m[33m)[m
+[41mgpg: Signature made Fri Nov  8 16:00:12 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: cookie0629 <133493778+cookie0629@users.noreply.github.com>
+Date:   Fri Nov 8 16:00:12 2024 +0700
+
+    lab2 (#317)
+    
+    Co-authored-by: Dmitry Irtegov <dirtegov@eastbanctech.com>
+
+[33mcommit 8b3fcfc7bce86b655556fd35d866511e3d932c63[m
+[41mgpg: Signature made Fri Nov  8 15:59:59 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: bd986650 <96487423+bd986650@users.noreply.github.com>
+Date:   Fri Nov 8 15:59:59 2024 +0700
+
+    lab3 (#398)
+
+[33mcommit daaab17bf45e3e37866101fcfe0d3345d34a5764[m
+[41mgpg: Signature made Fri Nov  8 15:59:41 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: bd986650 <96487423+bd986650@users.noreply.github.com>
+Date:   Fri Nov 8 15:59:41 2024 +0700
+
+    lab2 (#328)
+
+[33mcommit 90681fc24418844a792a279776c963856fb5adb3[m
+[41mgpg: Signature made Fri Nov  8 15:59:33 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Bu1nk <104312454+Bu1nk@users.noreply.github.com>
+Date:   Fri Nov 8 15:59:33 2024 +0700
+
+    23217/n.abramkin/lab2 (#341)
+    
+    * Added core files, .DS_Store and .nfs* to .gitignore
+    
+    Update .gitignore
+    
+    add lab2
+    
+    * old gitignore
+    
+    ---------
+    
+    Co-authored-by: Dmitry Irtegov <dirtegov@eastbanctech.com>
+
+[33mcommit 60cddb0dd5d050ea775a0867535ae5694f7f9736[m
+[41mgpg: Signature made Fri Nov  8 15:59:22 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Bu1nk <104312454+Bu1nk@users.noreply.github.com>
+Date:   Fri Nov 8 15:59:22 2024 +0700
+
+    23217/n.abramkin/lab3 (#343)
+    
+    * Added core files, .DS_Store and .nfs* to .gitignore
+    
+    Update .gitignore
+    
+    add lab2
+    
+    * add lab3
+    
+    * remove lab2/
+    
+    * old gitignore
+    
+    ---------
+    
+    Co-authored-by: Dmitry Irtegov <dirtegov@eastbanctech.com>
+
+[33mcommit 4df943ed9321b56e3cb45bbf53a9ed717fec9fe5[m
+[41mgpg: Signature made Fri Nov  8 15:59:17 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Shabalina Lilianna <145035472+crying-leika@users.noreply.github.com>
+Date:   Fri Nov 8 15:59:17 2024 +0700
+
+    lab26 shabalina 23217 (#443)
+
+[33mcommit d10472354233199336e97a2d7ee55c5951691423[m
+[41mgpg: Signature made Fri Nov  8 15:58:56 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Artem <54033048+Artem-MilkyWay@users.noreply.github.com>
+Date:   Fri Nov 8 15:58:56 2024 +0700
+
+    23217/a.mikiyanskii/lab2 (#419)
+    
+    * lab2
+    
+    * Delete 23217/.DS_Store
+    
+    * Delete 23217/a.mikiyanskii/.DS_Store
+
+[33mcommit 03c27d37eb11a55555047ba08a1591be491f5645[m
+[41mgpg: Signature made Fri Nov  8 15:57:37 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Hom4ikTop4ik <85843337+Hom4ikTop4ik@users.noreply.github.com>
+Date:   Fri Nov 8 15:57:37 2024 +0700
+
+    lab3. (#238)
+
+[33mcommit 7fe82968966e178d806171c32d37accd9f3f3453[m
+[41mgpg: Signature made Fri Nov  8 15:57:26 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Hom4ikTop4ik <85843337+Hom4ikTop4ik@users.noreply.github.com>
+Date:   Fri Nov 8 15:57:26 2024 +0700
+
+    lab2. (#237)
+
+[33mcommit 42393af02245db893e43b320895384eaed967a4a[m
+[41mgpg: Signature made Tue Nov  5 14:20:49 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: KolyaPronin <145115145+KolyaPronin@users.noreply.github.com>
+Date:   Tue Nov 5 14:20:49 2024 +0700
+
+    23217/n.pronin/lab2 (#271)
+    
+    * lab2 solution
+    
+    * California_Love.c
+
+[33mcommit d2a07f65541a7184a498d35d629a126146e757e8[m
+[41mgpg: Signature made Fri Nov  1 18:32:25 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Hom4ikTop4ik <85843337+Hom4ikTop4ik@users.noreply.github.com>
+Date:   Fri Nov 1 18:32:25 2024 +0700
+
+    23217_b.martynov_lab27 (#356)
+
+[33mcommit 4178de74bc08dbba234b3a33a2cd681959a19e88[m
+[41mgpg: Signature made Fri Nov  1 18:32:11 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Maksim <83348729+povidllo@users.noreply.github.com>
+Date:   Fri Nov 1 18:32:11 2024 +0700
+
+    lab11 (#350)
+
+[33mcommit a83a92949c591a111354704d2c4173111d0df55b[m
+[41mgpg: Signature made Fri Nov  1 18:32:02 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Maksim <83348729+povidllo@users.noreply.github.com>
+Date:   Fri Nov 1 18:32:02 2024 +0700
+
+    m.kuzminov_23217_Lab10 (#348)
+    
+    * lab9
+    
+    * lab10
+
+[33mcommit 50967ae81bdeca9efe37da090bd5ce096d284e0e[m
+[41mgpg: Signature made Fri Nov  1 18:31:51 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: KolyaPronin <145115145+KolyaPronin@users.noreply.github.com>
+Date:   Fri Nov 1 18:31:51 2024 +0700
+
+    lab3 (#345)
+
+[33mcommit aef1d0dd9b1cb335ae1f94c932514acf819dcb45[m
+[41mgpg: Signature made Fri Nov  1 18:29:32 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Sofya Ivchenko <86058406+Ivsoffy@users.noreply.github.com>
+Date:   Fri Nov 1 18:29:32 2024 +0700
+
+    s.ivchenko 23217 lab3 (#315)
+    
+    * s.ivchenko 23217 lab2
+    
+    * fff
+    
+    * deleted test file
+    
+    * lab3
+    
+    * Delete 23217/.vscode directory
+
+[33mcommit c7dd486ea5ef64390afce36caf2e4d01fad2eb9c[m
+[41mgpg: Signature made Fri Nov  1 18:29:12 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Shabalina Lilianna <145035472+crying-leika@users.noreply.github.com>
+Date:   Fri Nov 1 18:29:12 2024 +0700
+
+    23217 lab10 shabalina (#310)
+
+[33mcommit 79b7b5e5ba2ea6f995dbaa812ec22a8a6569574d[m
+[41mgpg: Signature made Fri Nov  1 18:28:30 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Shabalina Lilianna <145035472+crying-leika@users.noreply.github.com>
+Date:   Fri Nov 1 18:28:30 2024 +0700
+
+    23217 lab9 shabalina (#308)
+
+[33mcommit 5042381d6ae195e844b622685a5dd0ea3c667f66[m
+[41mgpg: Signature made Fri Nov  1 18:27:44 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Maksim <83348729+povidllo@users.noreply.github.com>
+Date:   Fri Nov 1 18:27:44 2024 +0700
+
+    lab9 (#270)
+
+[33mcommit 3917e8cf2e607b27a32a97b3a096f804d42edbbd[m
+[41mgpg: Signature made Fri Nov  1 18:26:47 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Maksim <83348729+povidllo@users.noreply.github.com>
+Date:   Fri Nov 1 18:26:47 2024 +0700
+
+    m.kuzminov_23217_Lab2 (#231)
+    
+    * lab2
+    
+    * lab2 m.kuzminov 23217
+    
+    * lab2 m.kuzminov 23217
+
+[33mcommit ded3101e5efd676462da3b4b23c95f077de5ca79[m
+[41mgpg: Signature made Fri Nov  1 18:26:36 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Shabalina Lilianna <145035472+crying-leika@users.noreply.github.com>
+Date:   Fri Nov 1 18:26:36 2024 +0700
+
+    23217 shabalina lab3 (#230)
+
+[33mcommit ceb4cdd3d8996f6176e3490371176848b00dab85[m
+[41mgpg: Signature made Fri Nov  1 18:26:23 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Sofya Ivchenko <86058406+Ivsoffy@users.noreply.github.com>
+Date:   Fri Nov 1 18:26:23 2024 +0700
+
+    s.ivchenko 23217 lab2 (#229)
+    
+    * s.ivchenko 23217 lab2
+    
+    * fff
+    
+    * deleted test file
+
+[33mcommit 67c97ff417a6c247736b0678f7e7aa5f900044e3[m
+[41mgpg: Signature made Fri Nov  1 18:26:05 2024    [m
+[41mgpg:                using RSA key B5690EEEBB952194[m
+[41mgpg: Can't check signature: No public key[m
+Author: Shabalina Lilianna <145035472+crying-leika@users.noreply.github.com>
+Date:   Fri Nov 1 18:26:05 2024 +0700
+
+    23217 Shabalina lab21 (#365)
