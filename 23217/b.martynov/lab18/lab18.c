@@ -64,7 +64,7 @@ void func(char* fileName)
         groupName = empty;
     }
 
-    
+
     off_t fileSize = S_ISREG(buf.st_mode) ? buf.st_size : -1;
 
     time_t fileMTime = buf.st_mtime;
