@@ -19,10 +19,9 @@ char* shortFileName(char* fileName)
     return name;
 }
 
-void func(char* fileName)
+void printInfo(char* fileName)
 {
     struct stat buf;
-
     if (stat(fileName, &buf) == -1) {
         perror("stat was broken");
         return;
@@ -48,24 +47,29 @@ void func(char* fileName)
     uid_t uid = buf.st_uid;
     gid_t gid = buf.st_gid;
 
-    char* empty = "-";
-    struct passwd* aboutUser;
-    char* userName;
-    if (((aboutUser = getpwuid(uid)) == NULL) || ((userName = aboutUser->pw_name) == NULL))
-    {
+    char *empty = "-";
+
+    struct passwd pwd;
+    char userBuf[1024];
+    char *userName;
+    if (getpwuid_r(uid, &pwd, userBuf, sizeof(userBuf)) == NULL) {
         perror("Can't get user name");
         userName = empty;
+    } else {
+        userName = pwd.pw_name;
     }
-    struct group* aboutGroup;
-    char* groupName;
-    if (((aboutGroup = getgrgid(gid)) == NULL) || ((groupName = aboutGroup->gr_name) == NULL))
-    {
+
+    struct group grp;
+    char groupBuf[1024];
+    char *groupName;
+    if (getgrgid_r(gid, &grp, groupBuf, sizeof(groupBuf)) == NULL) {
         perror("Can't get group name");
         groupName = empty;
+    } else {
+        groupName = grp.gr_name;
     }
 
-
-    off_t fileSize = S_ISREG(buf.st_mode) ? buf.st_size : -1;
+    off_t fileSize = S_ISREG(buf.st_mode) ? buf.st_size : (off_t)-1;
 
     time_t fileMTime = buf.st_mtime;
     char* date = ctime(&fileMTime);
@@ -73,25 +77,21 @@ void func(char* fileName)
     char* sFileName = shortFileName(fileName);
 
     if (fileSize == (off_t)-1) {
-        printf("%s %s %s %20s %s %s\n", mask, userName, groupName, empty, date, sFileName);
+        printf("%s %s %s %4s %s %s\n", mask, userName, groupName, empty, date, sFileName);
     }
-    else  {
-#if defined(_LP64) || _FILE_OFFSET_BITS == 32
-        printf("%s %s %s %20ld %s %s\n", mask, userName, groupName, fileSize, date, sFileName);
-#elif _FILE_OFFSET_BITS == 64
-        printf("%s %s %s %20lld %s %s\n", mask, userName, groupName, fileSize, date, sFileName);
-#endif
+    else {
+        printf("%s %s %s %4jd %s %s\n", mask, userName, groupName, (intmax_t)fileSize, date, sFileName);
     }
 }
 
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        func(".");
+        printInfo(".");
     }
     else {
         for (int i = 1; i < argc; i++) {
-            func(argv[i]);
+            printInfo(argv[i]);
         }
     }
 }
