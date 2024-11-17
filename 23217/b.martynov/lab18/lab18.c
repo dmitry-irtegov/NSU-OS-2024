@@ -73,6 +73,7 @@ void printInfo(char* fileName)
 
     time_t fileMTime = buf.st_mtime;
     char* date = ctime(&fileMTime);
+    date[24] = '\0';
 
     char* sFileName = shortFileName(fileName);
 
