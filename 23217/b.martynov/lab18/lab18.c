@@ -95,4 +95,6 @@ int main(int argc, char** argv)
             printInfo(argv[i]);
         }
     }
+
+    return 0;
 }
