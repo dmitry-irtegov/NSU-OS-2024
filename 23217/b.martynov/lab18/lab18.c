@@ -78,10 +78,10 @@ void printInfo(char* fileName)
     char* sFileName = shortFileName(fileName);
 
     if (fileSize == (off_t)-1) {
-        printf("%s %s %s %4s %s %s\n", mask, userName, groupName, empty, date, sFileName);
+        printf("%s %s\t %s\t %4s %s %s\n", mask, userName, groupName, empty, date, sFileName);
     }
     else {
-        printf("%s %s %s %4jd %s %s\n", mask, userName, groupName, (intmax_t)fileSize, date, sFileName);
+        printf("%s %s\t %s\t %4jd %s %s\n", mask, userName, groupName, (intmax_t)fileSize, date, sFileName);
     }
 }
 
