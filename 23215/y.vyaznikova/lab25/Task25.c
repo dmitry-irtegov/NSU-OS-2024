@@ -46,22 +46,10 @@ int main() {
         close(pipe_fd[0]);
 
         const char *input_text = "TeXT iN DiFFeReNT ReGiSTeRS";
-        ssize_t bytes_written;
         size_t text_length = strlen(input_text);
-        size_t bytes_remaining = text_length;
 
-        const char *text_ptr = input_text;
-        while (bytes_remaining > 0) {
-            size_t chunk_size = (bytes_remaining < BUFFER_SIZE) ? bytes_remaining : BUFFER_SIZE;
-            bytes_written = write(pipe_fd[1], text_ptr, chunk_size);
-
-            if (bytes_written == -1) {
-                perror("Failed to write text to pipe");
-                exit(4);
-            }
-
-            text_ptr += bytes_written;
-            bytes_remaining -= bytes_written;
+        if (write(pipe_fd[1], input_text, text_length) == -1) {
+            perror("Failed to write into pipe");
         }
 
         close(pipe_fd[1]);
