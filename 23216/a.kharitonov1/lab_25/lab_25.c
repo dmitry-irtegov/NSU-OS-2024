@@ -19,11 +19,6 @@ int main(){
             perror("problem in fork");
             exit(EXIT_FAILURE);
         case 0:
-
-            if (puts(msgout) <0){
-                perror("problem in puts");
-                exit(EXIT_FAILURE);
-            }
             if (close(fd[0]) == -1) {
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
