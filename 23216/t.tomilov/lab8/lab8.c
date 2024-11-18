@@ -13,13 +13,25 @@ void printTime(time_t curTime, time_t startTime){
     }
     int time = (int)difftime(curTime, startTime);
     if (time / 3600 > 0){
-        sprintf(buff, "\r%d:%d:%d", time / 3600, (time % 3600) / 60, time % 60);
+        if (sprintf(buff, "\r%d:%d:%d", time / 3600, (time % 3600) / 60, time % 60) < 0){
+            perror("ERROR: failed in sprintf");
+            free(buff);
+            _exit(EXIT_FAILURE);
+        }
     } 
     else if (time / 60 > 0){
-        sprintf(buff, "\r%d:%d", (time % 3600) / 60, time % 60);
+        if (sprintf(buff, "\r%d:%d", (time % 3600) / 60, time % 60) < 0){
+            perror("ERROR: failed in sprintf");
+            free(buff);
+            _exit(EXIT_FAILURE);
+        }
     } 
     else{
-        sprintf(buff, "\r%d", time % 60);
+        if (sprintf(buff, "\r%d", time % 60) < 0){
+            perror("ERROR: failed in sprintf");
+            free(buff);
+            _exit(EXIT_FAILURE);
+        }
     }
     write(1, buff, strlen(buff));
     free(buff);
@@ -95,7 +107,7 @@ int main(int argc, char** argv){
     }
 
     if (snprintf(nano, strlen("nano ") + strlen(argv[1]) + 1, "nano %s", argv[1]) < 0){
-        perror("ERROR: Failed to prepare command!");
+        perror("ERROR: Failed in sprintf!");
         free(nano);
         close(fd);
         exit(EXIT_FAILURE);
