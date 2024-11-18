@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#define   buffer   8
+#define   buffer   16
 
 int main(){
     int fd[2]; pid_t pid;
