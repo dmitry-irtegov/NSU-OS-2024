@@ -50,6 +50,7 @@ int main() {
 
         if (write(pipe_fd[1], input_text, text_length) == -1) {
             perror("Failed to write into pipe");
+            exit(4);
         }
 
         close(pipe_fd[1]);
