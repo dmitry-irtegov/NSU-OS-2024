@@ -7,7 +7,6 @@
 
 int main(){
     int fd[2]; pid_t pid;
-    char msgout[40]="tESt LiNe fOr laB_25 hElLO woRld\n";
     char buf[buffer];
     ssize_t msglen;
     if (pipe(fd) == -1) {
@@ -29,8 +28,24 @@ int main(){
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
-            if(write(fd[1], msgout, 40)==-1){
-                perror("problem in write");
+            while((msglen = read(1,buf,buffer)) >= 0){
+                if (msglen == 0){
+                    continue;
+                }
+                if (buf[msglen-1] == '\n'){
+                    if(write(fd[1], buf, msglen)==-1){
+                        perror("problem in write");
+                        exit(EXIT_FAILURE);
+                    }
+                    break;
+                }
+                if(write(fd[1], buf, msglen)==-1){
+                    perror("problem in write");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            if(msglen <0){
+                perror("problem in read from terminal");
                 exit(EXIT_FAILURE);
             }
             if (close(fd[1]) == -1) {
