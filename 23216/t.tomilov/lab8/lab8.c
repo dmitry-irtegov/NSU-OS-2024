@@ -3,74 +3,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include <time.h>
-
-void printTime(time_t curTime, time_t startTime){
-    char * buff = malloc(sizeof(char) * 16);
-    if (!buff){
-        perror("ERROR: Memory allocation failed!");
-        _exit(EXIT_FAILURE);
-    }
-    int time = (int)difftime(curTime, startTime);
-    if (time / 3600 > 0){
-        if (sprintf(buff, "\r%d:%d:%d", time / 3600, (time % 3600) / 60, time % 60) < 0){
-            perror("ERROR: failed in sprintf");
-            free(buff);
-            _exit(EXIT_FAILURE);
-        }
-    } 
-    else if (time / 60 > 0){
-        if (sprintf(buff, "\r%d:%d", (time % 3600) / 60, time % 60) < 0){
-            perror("ERROR: failed in sprintf");
-            free(buff);
-            _exit(EXIT_FAILURE);
-        }
-    } 
-    else{
-        if (sprintf(buff, "\r%d", time % 60) < 0){
-            perror("ERROR: failed in sprintf");
-            free(buff);
-            _exit(EXIT_FAILURE);
-        }
-    }
-    write(1, buff, strlen(buff));
-    free(buff);
-}
-
-void waitForUnlock(int fd){
-    struct flock lock;
-    lock.l_type = F_WRLCK;
-    lock.l_whence = SEEK_SET;
-    lock.l_start = 0;
-    lock.l_len = 0;
-
-    time_t startTime = time(NULL);
-
-    if (fcntl(fd, F_GETLK, &lock) == -1){
-        perror("ERROR: Failed to check file lock!");
-        close(fd);
-        _exit(EXIT_FAILURE);
-    }
-    if (lock.l_type != F_UNLCK){
-        printf("Waiting for the file to be unlocked...\n");
-        printTime(time(NULL), startTime);
-        sleep(1);
-        while (1){
-            if (fcntl(fd, F_GETLK, &lock) == -1){
-                perror("ERROR: Failed to check file lock!");
-                close(fd);
-                _exit(EXIT_FAILURE);
-            }
-            if (lock.l_type == F_UNLCK){
-                break;
-            }
-            else{
-                printTime(time(NULL), startTime);
-            }
-            sleep(1);
-        }
-    }
-}
 
 int main(int argc, char** argv){
     if (argc != 2){
@@ -86,8 +18,6 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
 
-    waitForUnlock(fd);
-
     lock.l_type = F_WRLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
@@ -102,12 +32,16 @@ int main(int argc, char** argv){
     char* nano = malloc(strlen("nano ") + strlen(argv[1]) + 1);
     if (!nano){
         perror("ERROR: Memory allocation failed!");
+        lock.l_type = F_UNLCK;
+        fcntl(fd, F_SETLK, &lock);
         close(fd);
         exit(EXIT_FAILURE);
     }
 
     if (snprintf(nano, strlen("nano ") + strlen(argv[1]) + 1, "nano %s", argv[1]) < 0){
         perror("ERROR: Failed in sprintf!");
+        lock.l_type = F_UNLCK;
+        fcntl(fd, F_SETLK, &lock);
         free(nano);
         close(fd);
         exit(EXIT_FAILURE);
@@ -115,6 +49,8 @@ int main(int argc, char** argv){
 
     if (system(nano) == -1){
         perror("ERROR: Failed to execute nano!");
+        lock.l_type = F_UNLCK;
+        fcntl(fd, F_SETLK, &lock);
         free(nano);
         close(fd);
         exit(EXIT_FAILURE);
