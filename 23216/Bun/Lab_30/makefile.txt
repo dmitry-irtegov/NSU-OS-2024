@@ -1,0 +1,4 @@
+compile server: 
+    gcc -o server server.c -Wall -Wextra
+compile client:
+    gcc -o client client.c -Wall -Wextra
