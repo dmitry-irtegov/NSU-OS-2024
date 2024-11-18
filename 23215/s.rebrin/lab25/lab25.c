@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
 	else if (pid == 0) {      /* child */
 		read(fd[0], msgin, len);
 		for (int i = 0; msgin[i] != '\0'; i++) {
-			msgin[i] = toupper((unsigned char)msgin[i]);
+			msgin[i] = toupper(msgin[i]);
 		}
 		puts(msgin);
 	}
