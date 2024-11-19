@@ -25,7 +25,7 @@ int main(){
             }
             while((msglen = read(0,buf,buffer)) >= 0){
                 if (msglen == 0){
-                    continue;
+                    break;
                 }
                 if (buf[msglen-1] == '\n'){
                     if(write(fd[1], buf, msglen)==-1){
