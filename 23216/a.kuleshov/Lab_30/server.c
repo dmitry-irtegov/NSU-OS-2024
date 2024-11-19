@@ -67,6 +67,8 @@ int main() {
         perror("read");
     }
 
+    printf("Клиент разорвал соединение.\n");
+
     // Закрытие соединений
     close(client_fd);
     close(server_fd);

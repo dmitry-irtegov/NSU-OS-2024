@@ -5,6 +5,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #define SOCKET_PATH "unix_socket"
 #define BUFFER_SIZE 1024
@@ -33,6 +34,12 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    // Устанавливаем игнорирование сигнала SIGPIPE
+    if (sigset(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        perror("Ошибка установки обработчика для SIGPIPE");
+        exit(EXIT_FAILURE);
+    }
+
     // Ввод данных для отправки
     printf("Для разрыва соединения нажмите Ctrl + D.\n");
     printf("Введите текст для отправки серверу: ");
@@ -52,6 +59,8 @@ int main() {
         // Отправка данных серверу
         if (write(client_fd, buffer, strlen(buffer)) == -1) {
             perror("write");
+            close(client_fd);
+            exit(EXIT_FAILURE);
         }
     }
 }
