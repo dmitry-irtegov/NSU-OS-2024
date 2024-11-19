@@ -35,7 +35,7 @@ int main() {
     }
 
     // Устанавливаем игнорирование сигнала SIGPIPE
-    if (sigset(SIGPIPE, SIG_IGN) == SIG_ERR) {
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
         perror("Ошибка установки обработчика для SIGPIPE");
         exit(EXIT_FAILURE);
     }
