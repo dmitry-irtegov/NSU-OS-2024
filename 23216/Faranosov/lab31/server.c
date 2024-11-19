@@ -142,13 +142,11 @@ int main() {
 	int socket_fd = 0, client_socket_fd = 0, jobid = 0;
 	struct sockaddr_un address;
 	socklen_t addrlen = sizeof(address);
-	int cntOfBytesGetted = 0;
 	char path[] = "/tmp/lab31_socket";
 	address.sun_family = AF_UNIX;
 	strcpy(address.sun_path, path);
 	int on = 1;
 	int cntOfClients = 0;
-	int timer = 0;
 
 
 	for (int i = 0; i < 20; i++) {
@@ -166,10 +164,6 @@ int main() {
 	}
 
 
-	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) {
-		perror("setsockopt error");
-		exit(1);
-	}
 
 	if (unlink(path) == -1) {
 		if (errno != 2) {
@@ -199,6 +193,7 @@ int main() {
 			if (cntOfClients == 0) {
 				exit(0);
 			}
+			break;
 		default:
 			if (pfds[0].revents & POLLIN) {
 				client_socket_fd = accept(socket_fd, (struct sockaddr*)&address, &addrlen);
@@ -206,7 +201,6 @@ int main() {
 				jobid = findFree();
 				pfds[jobid].fd = client_socket_fd;
 				cntOfClients++;
-				timer = 0;
 				continue;
 			}
 

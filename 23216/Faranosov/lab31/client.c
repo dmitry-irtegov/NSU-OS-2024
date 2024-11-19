@@ -13,7 +13,7 @@
 
 
 int main() {
-	int socket_fd = 0, client_socket_fd = 0;
+	int socket_fd = 0;
 	struct sockaddr_un address;
 	socklen_t addrlen = sizeof(address);
 	int cntOfBytesGetted = 0;
