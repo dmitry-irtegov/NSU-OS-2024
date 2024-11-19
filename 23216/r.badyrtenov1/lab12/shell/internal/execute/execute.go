@@ -42,12 +42,12 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 		return
 	} else if cmd.Cmdargs[0] == "jobs" {
 		for i := 0; i < len(jm.Jobs); i++ {
-			id := i
-			if jm.Jobs[id].Status == "Done" {
-				id--
+			if jm.Jobs[i].Status == "Done" {
+				jm.Write(jm.Jobs[i].Pid)
+				i--
+			} else {
+				jm.Write(jm.Jobs[i].Pid)
 			}
-			jm.Write(jm.Jobs[i].Pid)
-			i = id
 		}
 		return
 	}
@@ -129,5 +129,13 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 	_, err = syscall.Wait4(pid, &ws, 0, nil)
 	if err != nil {
 		fmt.Println("Error waiting for process")
+		return
+	}
+
+	for i := 0; i < len(jm.Jobs); i++ {
+		if jm.Jobs[i].Status == "Done" {
+			jm.Write(jm.Jobs[i].Pid)
+			i--
+		}
 	}
 }
