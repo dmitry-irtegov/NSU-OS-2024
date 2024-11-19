@@ -115,10 +115,10 @@ void readInfoFromClient(int fd, int pfdNum) {
 				break;
 			}
 
-			printf("write %d\n", fd);
 			for (int i = 0; i < cntOfBytesGetted; i++) {
 				str[i] = toupper(str[i]);
 			}
+			str[cntOfBytesGetted] = '\0';
 
 			printf("%s\n", str);
 		}
