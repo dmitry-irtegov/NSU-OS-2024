@@ -42,7 +42,12 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 		return
 	} else if cmd.Cmdargs[0] == "jobs" {
 		for i := 0; i < len(jm.Jobs); i++ {
-			jm.Write(i)
+			id := i
+			if jm.Jobs[id].Status == "Done" {
+				id--
+			}
+			jm.Write(jm.Jobs[i].Pid)
+			i = id
 		}
 		return
 	}
@@ -86,13 +91,13 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 	} else if cmd.Appfile != "" {
 		stdout, err = os.OpenFile(cmd.Appfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			fmt.Println("Error opening append file:")
+			fmt.Println("Error opening append file")
 			return
 		}
 		defer func(stdout *os.File) {
 			err := stdout.Close()
 			if err != nil {
-				fmt.Println("Error closing append file:")
+				fmt.Println("Error closing append file")
 				return
 			}
 		}(stdout)
@@ -104,28 +109,25 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 		Sys:   &syscall.SysProcAttr{},
 	})
 	if err != nil {
-		fmt.Println("Error during ForkExec:")
+		fmt.Println("Error during ForkExec")
 		return
 	}
 
+	var ws syscall.WaitStatus
 	if cmd.Bkgrnd {
 		jm.Add(pid, cmd.Cmdargs[0])
 		go func() {
-			var ws syscall.WaitStatus
 			_, err := syscall.Wait4(pid, &ws, 0, nil)
 			if err != nil {
-				fmt.Println("Error waiting for process:")
+				fmt.Println("Error waiting for process")
 			} else {
 				jm.Update(pid, "Done")
 			}
 		}()
 		return
 	}
-
-	var ws syscall.WaitStatus
 	_, err = syscall.Wait4(pid, &ws, 0, nil)
 	if err != nil {
-		fmt.Println("Error waiting for process:")
-		return
+		fmt.Println("Error waiting for process")
 	}
 }

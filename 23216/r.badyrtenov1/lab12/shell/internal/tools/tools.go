@@ -51,8 +51,8 @@ func Promptline() error {
 	if err != nil {
 		cwd = "~"
 	} else {
-		homeDir := os.Getenv("HOME")
-		if strings.HasPrefix(cwd, homeDir) {
+		homeDir, existDir := os.LookupEnv("HOME")
+		if existDir && strings.HasPrefix(cwd, homeDir) {
 			cwd = strings.Replace(cwd, homeDir, "~", 1)
 		}
 	}

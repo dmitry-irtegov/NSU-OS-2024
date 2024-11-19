@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	var parser pars.Parser
 	var jm jobs.JobManager
 	for {
 		err := tools.Promptline()
@@ -15,19 +16,15 @@ func main() {
 			fmt.Println("Prompt problem")
 			return
 		}
-		var parser pars.Parser
-		err = parser.Readline()
+		line, err := parser.Readline()
 		if err != nil {
-			fmt.Println("Readline problem")
+			fmt.Println("Parser problem")
 			return
 		}
-		if len(parser.Line) == 0 {
-			break
+		if len(line) == 0 {
+			return
 		}
-		cmds := parser.Parserline()
-		if len(cmds) == 0 {
-			continue
-		}
+		cmds := parser.Parserline(line)
 		for i := 0; i < len(cmds); i++ {
 			cmds[i].ForkAndExec(&jm)
 		}

@@ -10,87 +10,89 @@ import (
 )
 
 type Parser struct {
-	Line []byte
 }
 
-func (parc *Parser) SkipSpaces(id int) int {
-	for id+1 < len(parc.Line) && parc.Line[id] == ' ' {
+func (parc Parser) SkipSpaces(line []byte, id int) int {
+	for id+1 < len(line) && line[id] == ' ' {
 		id++
 	}
 	return id
 }
 
-func (parc *Parser) QuotesHandling(beginId int) (string, int) {
+func (parc Parser) QuotesHandling(line []byte, beginId int) (string, int) {
 	str := make([]byte, 0)
 	var quotestype byte
-	for quotestype != 0 || !strings.Contains(" |&<>;", string(parc.Line[beginId])) {
-		if quotestype == 0 && parc.Line[beginId] == '\\' {
+	for ; quotestype != 0 || !strings.Contains(" |&<>;", string(line[beginId])); beginId++ {
+		if line[beginId] == '\\' && (quotestype == 0 || (quotestype == '"' && (line[beginId+1] == '"' || line[beginId+1] == '\\'))) {
 			beginId++
-		} else if parc.Line[beginId] == '\\' && quotestype == '"' && parc.Line[beginId+1] == quotestype {
-			beginId++
-		} else if quotestype == 0 && (parc.Line[beginId] == '\'' || parc.Line[beginId] == '"') {
-			quotestype = parc.Line[beginId]
-			beginId++
+		} else if quotestype == 0 && (line[beginId] == '\'' || line[beginId] == '"') {
+			quotestype = line[beginId]
 			continue
-		} else if quotestype != 0 && parc.Line[beginId] == quotestype {
+		} else if quotestype != 0 && line[beginId] == quotestype {
 			quotestype = 0
-			beginId++
 			continue
 		}
-		if beginId >= len(parc.Line)-1 {
+		if beginId >= len(line)-1 {
 			break
 		}
-		str = append(str, parc.Line[beginId])
-		beginId++
+		str = append(str, line[beginId])
 	}
 	return string(str), beginId - 1
 }
 
-func (parc *Parser) Readline() error {
+func (parc Parser) Readline() ([]byte, error) {
 	str := make([]byte, 1024)
+	var line []byte
 	for {
 		n, err := syscall.Read(int(os.Stdin.Fd()), str)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		parc.Line = append(parc.Line, str[:n]...)
+		line = append(line, str[:n]...)
 		var quotestype byte
-		for i := 0; i < len(parc.Line); i++ {
-			if quotestype != '\'' && parc.Line[i] == '\\' && parc.Line[i+1] != '\'' {
+		for i := 0; i < len(line); i++ {
+			if line[i] == '\\' && (quotestype == 0 || (quotestype == '"' && (line[i+1] == '"' || line[i+1] == '\\'))) {
 				i++
-			} else if quotestype == 0 && (parc.Line[i] == '\'' || parc.Line[i] == '"') {
-				quotestype = parc.Line[i]
-			} else if parc.Line[i] == quotestype {
+			} else if quotestype == 0 && (line[i] == '\'' || line[i] == '"') {
+				quotestype = line[i]
+			} else if line[i] == quotestype {
 				quotestype = 0
 			}
 		}
-		if len(parc.Line) >= 2 && parc.Line[len(parc.Line)-2] == '\\' && parc.Line[len(parc.Line)-1] == '\n' {
-			parc.Line = tools.RemoveByte(parc.Line, len(parc.Line)-2, len(parc.Line))
+		if len(line) >= 2 && line[len(line)-2] == '\\' && line[len(line)-1] == '\n' {
+			if quotestype != '\'' {
+				line = tools.RemoveByte(line, len(line)-2, len(line))
+			}
 			fmt.Print("> ")
+			continue
+		}
+		if len(line) >= 1 && line[len(line)-1] != '\n' {
 			continue
 		}
 		if quotestype != 0 {
 			fmt.Print("> ")
 			continue
 		}
-		parc.Line[len(parc.Line)-1] = 0
-		return nil
+		if len(line) >= 1 && line[len(line)-1] == '\n' {
+			line[len(line)-1] = 0
+		}
+		return line, nil
 	}
 }
 
-func (parc *Parser) Parserline() []execute.Command {
+func (parc Parser) Parserline(line []byte) []execute.Command {
 	var cmds []execute.Command
 	var tmp execute.Command
 	var tmpStr string
 	var aflg bool
 
-	for i := 0; i < len(parc.Line); i++ {
-		i = parc.SkipSpaces(i)
-		if parc.Line[i] == 0 {
+	for i := 0; i < len(line); i++ {
+		i = parc.SkipSpaces(line, i)
+		if line[i] == 0 {
 			break
 		}
 
-		switch parc.Line[i] {
+		switch line[i] {
 		case '&':
 			if len(tmp.Cmdargs) == 0 {
 				fmt.Println("Syntax error: missing command before '&'")
@@ -109,25 +111,25 @@ func (parc *Parser) Parserline() []execute.Command {
 			tmp.Cmdflag |= tools.INPIP
 
 		case '<':
-			i = parc.SkipSpaces(i + 1)
-			if parc.Line[i] == 0 {
+			i = parc.SkipSpaces(line, i+1)
+			if line[i] == 0 {
 				fmt.Println("Syntax error: missing input file name after '<'")
 				return nil
 			}
-			tmpStr, i = parc.QuotesHandling(i)
+			tmpStr, i = parc.QuotesHandling(line, i)
 			tmp.Infile = tmpStr
 
 		case '>':
-			if parc.Line[i+1] == '>' {
+			if line[i+1] == '>' {
 				aflg = true
 				i++
 			}
-			i = parc.SkipSpaces(i + 1)
-			if parc.Line[i] == 0 {
+			i = parc.SkipSpaces(line, i+1)
+			if line[i] == 0 {
 				fmt.Println("Syntax error: missing output file name after '>'")
 				return nil
 			}
-			tmpStr, i = parc.QuotesHandling(i)
+			tmpStr, i = parc.QuotesHandling(line, i)
 			if aflg {
 				tmp.Appfile = tmpStr
 			} else {
@@ -143,7 +145,7 @@ func (parc *Parser) Parserline() []execute.Command {
 			tmp.Clear()
 
 		default:
-			tmpStr, i = parc.QuotesHandling(i)
+			tmpStr, i = parc.QuotesHandling(line, i)
 			tmp.Cmdargs = append(tmp.Cmdargs, tmpStr)
 		}
 	}

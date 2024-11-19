@@ -35,9 +35,9 @@ func (jm *JobManager) Write(pid int) {
 func (jm *JobManager) Update(pid int, status string) {
 	jm.jobsMutex.Lock()
 	defer jm.jobsMutex.Unlock()
-	for _, job := range jm.Jobs {
+	for i, job := range jm.Jobs {
 		if pid == job.Pid {
-			job.Status = status
+			jm.Jobs[i].Status = status
 			break
 		}
 	}
