@@ -145,7 +145,6 @@ int main() {
 	char path[] = "/tmp/lab31_socket";
 	address.sun_family = AF_UNIX;
 	strcpy(address.sun_path, path);
-	int on = 1;
 	int cntOfClients = 0;
 
 
