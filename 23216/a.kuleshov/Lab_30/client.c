@@ -10,12 +10,6 @@
 #define SOCKET_PATH "unix_socket"
 #define BUFFER_SIZE 1024
 
-volatile sig_atomic_t server_is_closed = 0;
-
-void server_closed(int sig) {
-    server_is_closed = 1;
-}
-
 int main() {
     int client_fd;
     struct sockaddr_un server_addr;
@@ -41,7 +35,7 @@ int main() {
     }
 
     // Устанавливаем игнорирование сигнала SIGPIPE
-    if (signal(SIGPIPE, server_closed) == SIG_ERR) {
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
         perror("Ошибка установки обработчика для SIGPIPE");
         exit(EXIT_FAILURE);
     }
@@ -65,12 +59,6 @@ int main() {
         // Отправка данных серверу
         if (write(client_fd, buffer, strlen(buffer)) == -1) {
             perror("write");
-            close(client_fd);
-            exit(EXIT_FAILURE);
-        }
-
-        if (server_is_closed == 1) {
-            printf("\nСервер закрыл соединение.\n");
             close(client_fd);
             exit(EXIT_FAILURE);
         }
