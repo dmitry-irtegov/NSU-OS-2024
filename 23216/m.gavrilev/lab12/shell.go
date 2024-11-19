@@ -8,12 +8,9 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
-	"unsafe"
 )
 
-func main() { os.Exit(mainWithReturn()) }
-
-func mainWithReturn() int {
+func main() {
 	prompt := ([]byte)(fmt.Sprintf("[%s] ", os.Args[0]))
 
 	/* PLACE SIGNAL CODE HERE */
@@ -35,7 +32,7 @@ func mainWithReturn() int {
 				continue
 			}
 			if strings.Compare(cmds[i].GetArgs()[0], ("exit")) == 0 {
-				return 0
+				return
 			}
 
 			binary, err := exec.LookPath(cmds[i].GetArgs()[0])
@@ -43,17 +40,24 @@ func mainWithReturn() int {
 				fmt.Printf("command not found: %s\n", cmds[i].GetArgs()[0])
 				continue
 			}
-			ppid, _, errno := syscall.Syscall(syscall.SYS_FORK, 0, 0, 0)
-			pid := *(*int)(unsafe.Pointer(&ppid))
-			if errno != 0 {
-				err = errno
+			env := os.Environ()
+			// слайсы смотреть
+			// exit убрать лишний при риде
+			//
+			pid, err := syscall.ForkExec(binary, cmds[i].GetArgs(), &syscall.ProcAttr{
+				Dir:   "",
+				Env:   env,
+				Files: []uintptr{0, 1, 2},
+				Sys:   &syscall.SysProcAttr{},
+			})
+			if err != nil {
 				fmt.Println("error during fork", err)
 				continue
 			}
 			if pid == 0 {
 				err := syscall.Exec(binary, cmds[i].GetArgs(), os.Environ())
 				fmt.Println("error during exec, it doesnt return here ", err)
-				return 1
+				return
 			} else {
 				var ws syscall.WaitStatus
 				_, err = syscall.Wait4(pid, &ws, 0, nil)
@@ -63,5 +67,4 @@ func mainWithReturn() int {
 			}
 		}
 	}
-	return 0
 }
