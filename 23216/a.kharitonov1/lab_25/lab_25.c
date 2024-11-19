@@ -23,7 +23,7 @@ int main(){
                 perror("problem in pipeclose");
                 exit(EXIT_FAILURE);
             }
-            while((msglen = read(1,buf,buffer)) >= 0){
+            while((msglen = read(0,buf,buffer)) >= 0){
                 if (msglen == 0){
                     continue;
                 }
