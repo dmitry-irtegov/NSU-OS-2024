@@ -67,7 +67,9 @@ int main() {
         perror("read");
     }
 
-    printf("Клиент разорвал соединение.\n");
+    if (num_read == 0) {
+        printf("Клиент разорвал соединение.\n");
+    }
 
     // Закрытие соединений
     close(client_fd);
