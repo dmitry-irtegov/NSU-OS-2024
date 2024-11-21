@@ -2,3 +2,8 @@ compile server:
     gcc -o server server.c -Wall -Wextra
 compile client:
     gcc -o client client.c -Wall -Wextra
+solaris:
+    compile server: 
+        gcc -o server server.c -Wall -Wextra -lsocket
+    compile client:
+        gcc -o client client.c -Wall -Wextra -lsocket
