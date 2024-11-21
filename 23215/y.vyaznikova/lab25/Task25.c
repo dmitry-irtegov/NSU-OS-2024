@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 10
 
 int main() {
     int pipe_fd[2];
