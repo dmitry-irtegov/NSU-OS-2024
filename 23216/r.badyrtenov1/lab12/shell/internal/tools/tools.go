@@ -8,15 +8,12 @@ import (
 )
 
 type Job struct {
-	Pid    int
-	Status string
-	Cmd    string
+	Pid     int
+	Status  string
+	Cmdargs []string
+	Bkgrnd  bool
+	Id      int
 }
-
-const (
-	OUTPIP = 01
-	INPIP  = 02
-)
 
 func RemoveByte(slice []byte, beginId int, endId int) []byte {
 	newSlice := make([]byte, len(slice)+beginId-endId)

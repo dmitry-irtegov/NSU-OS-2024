@@ -80,9 +80,9 @@ func (parc Parser) Readline() ([]byte, error) {
 	}
 }
 
-func (parc Parser) Parserline(line []byte) []execute.Command {
-	var cmds []execute.Command
-	var tmp execute.Command
+func (parc Parser) Parserline(line []byte) []exec.Command {
+	var cmds []exec.Command
+	var tmp exec.Command
 	var tmpStr string
 	var aflg bool
 
@@ -105,10 +105,8 @@ func (parc Parser) Parserline(line []byte) []execute.Command {
 				fmt.Println("Syntax error: missing command before '|'")
 				return nil
 			}
-			tmp.Cmdflag |= tools.OUTPIP
 			cmds = append(cmds, tmp)
-			tmp.Clear()
-			tmp.Cmdflag |= tools.INPIP
+			tmp.Init()
 
 		case '<':
 			i = parc.SkipSpaces(line, i+1)
@@ -142,7 +140,7 @@ func (parc Parser) Parserline(line []byte) []execute.Command {
 				return nil
 			}
 			cmds = append(cmds, tmp)
-			tmp.Clear()
+			tmp.Init()
 
 		default:
 			tmpStr, i = parc.QuotesHandling(line, i)
@@ -151,7 +149,7 @@ func (parc Parser) Parserline(line []byte) []execute.Command {
 	}
 	if len(tmp.Cmdargs) != 0 {
 		cmds = append(cmds, tmp)
-		tmp.Clear()
+		tmp.Init()
 	}
 	return cmds
 }

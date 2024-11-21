@@ -1,53 +1,45 @@
-package execute
+package exec
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"shell/internal/jobs"
+	"shell/internal/signals"
 	"syscall"
 )
 
 type Command struct {
 	Cmdargs                  []string
-	Cmdflag                  byte
 	Infile, Outfile, Appfile string
 	Bkgrnd                   bool
 }
 
-func (cmd *Command) Clear() {
+func (cmd *Command) Init() {
 	cmd.Cmdargs = nil
-	cmd.Cmdflag = 0
 	cmd.Infile = ""
 	cmd.Outfile = ""
 	cmd.Appfile = ""
 	cmd.Bkgrnd = false
 }
 
-func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
+func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
 	if len(cmd.Cmdargs) == 0 {
 		return
 	}
 
-	if cmd.Cmdargs[0] == "cd" {
-		if len(cmd.Cmdargs) == 2 {
-			err := os.Chdir(cmd.Cmdargs[1])
-			if err != nil {
-				fmt.Println("cd: No such file or directory:", cmd.Cmdargs[1])
-				return
+	if cmd.Cmdargs[0] == "jobs" {
+		if len(cmd.Cmdargs) == 1 {
+			for i := 0; i < len(jm.Jobs); i++ {
+				if jm.Jobs[i].Status == "Done" {
+					jm.Write(jm.Jobs[i].Pid)
+					i--
+				} else {
+					jm.Write(jm.Jobs[i].Pid)
+				}
 			}
-		} else if len(cmd.Cmdargs) > 2 {
-			fmt.Println("cd: Too many arguments")
-		}
-		return
-	} else if cmd.Cmdargs[0] == "jobs" {
-		for i := 0; i < len(jm.Jobs); i++ {
-			if jm.Jobs[i].Status == "Done" {
-				jm.Write(jm.Jobs[i].Pid)
-				i--
-			} else {
-				jm.Write(jm.Jobs[i].Pid)
-			}
+		} else {
+			fmt.Println("jobs: Too many arguments")
 		}
 		return
 	}
@@ -75,20 +67,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 	}
 
 	stdout := os.Stdout
-	if cmd.Outfile != "" {
-		stdout, err = os.Create(cmd.Outfile)
-		if err != nil {
-			fmt.Println("Error opening output file")
-			return
-		}
-		defer func(stdout *os.File) {
-			err := stdout.Close()
-			if err != nil {
-				fmt.Println("Error closing output file")
-				return
-			}
-		}(stdout)
-	} else if cmd.Appfile != "" {
+	if cmd.Appfile != "" {
 		stdout, err = os.OpenFile(cmd.Appfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			fmt.Println("Error opening append file")
@@ -102,20 +81,36 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 			}
 		}(stdout)
 	}
+	if cmd.Outfile != "" {
+		stdout, err = os.Create(cmd.Outfile)
+		if err != nil {
+			fmt.Println("Error opening output file")
+			return
+		}
+		defer func(stdout *os.File) {
+			err := stdout.Close()
+			if err != nil {
+				fmt.Println("Error closing output file")
+				return
+			}
+		}(stdout)
+	}
 
 	pid, err := syscall.ForkExec(binary, cmd.Cmdargs, &syscall.ProcAttr{
 		Dir:   "",
 		Files: []uintptr{stdin.Fd(), stdout.Fd(), os.Stderr.Fd()},
-		Sys:   &syscall.SysProcAttr{},
+		Sys: &syscall.SysProcAttr{
+			Setpgid: cmd.Bkgrnd,
+		},
 	})
 	if err != nil {
 		fmt.Println("Error during ForkExec")
 		return
 	}
 
+	jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd)
 	var ws syscall.WaitStatus
 	if cmd.Bkgrnd {
-		jm.Add(pid, cmd.Cmdargs[0])
 		go func() {
 			_, err := syscall.Wait4(pid, &ws, 0, nil)
 			if err != nil {
@@ -126,10 +121,18 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager) {
 		}()
 		return
 	}
-	_, err = syscall.Wait4(pid, &ws, 0, nil)
+
+	ch.FgPidChan <- pid
+	_, err = syscall.Wait4(pid, &ws, syscall.WUNTRACED, nil)
 	if err != nil {
 		fmt.Println("Error waiting for process")
 		return
+	}
+	if !ws.Stopped() {
+		jm.Update(pid, "Done")
+	}
+	if len(ch.FgPidChan) != 0 {
+		_ = <-ch.FgPidChan
 	}
 
 	for i := 0; i < len(jm.Jobs); i++ {
