@@ -42,6 +42,17 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
 			fmt.Println("jobs: Too many arguments")
 		}
 		return
+	} else if cmd.Cmdargs[0] == "cd" {
+		if len(cmd.Cmdargs) == 2 {
+			err := os.Chdir(cmd.Cmdargs[1])
+			if err != nil {
+				fmt.Println("cd: No such file or directory:", cmd.Cmdargs[1])
+				return
+			}
+		} else if len(cmd.Cmdargs) > 2 {
+			fmt.Println("cd: Too many arguments")
+		}
+		return
 	}
 
 	binary, err := exec.LookPath(cmd.Cmdargs[0])

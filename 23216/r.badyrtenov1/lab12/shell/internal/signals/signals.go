@@ -39,13 +39,13 @@ func (ch *Channels) SignalHandler(jm *jobs.JobManager) {
 			} else if sig == syscall.SIGTSTP {
 				fmt.Println()
 				select {
-				case pid := <-ch.FgPidChan:
-					err := syscall.Kill(pid, syscall.SIGSTOP)
+				case foregroundPid := <-ch.FgPidChan:
+					jm.Update(foregroundPid, "Stopped")
+					jm.Write(foregroundPid)
+					err := syscall.Kill(foregroundPid, syscall.SIGSTOP)
 					if err != nil {
 						fmt.Println("Error stopping process")
 					}
-					jm.Update(pid, "Stopped")
-					jm.Write(pid)
 				default:
 					err := tools.Promptline()
 					if err != nil {
