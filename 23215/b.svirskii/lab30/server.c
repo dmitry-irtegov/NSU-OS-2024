@@ -4,13 +4,11 @@
 #include <stdlib.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <errno.h>
 #include "server.h"
 #define BUFF_SIZE (100)
 
 extern const struct sockaddr_un sock_addr;
 extern const int sock_addr_len;
-extern int errno;
 
 int socket_fd;
 
@@ -28,8 +26,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (bind(socket_fd, (struct sockaddr*) &sock_addr, sock_addr_len) == -1
-            && errno != EADDRINUSE) {
+    if (bind(socket_fd, (struct sockaddr*) &sock_addr, sock_addr_len) == -1) {
         fprintf(stderr, "socket binding ended with error\n");
         close_all();
         exit(EXIT_FAILURE);
