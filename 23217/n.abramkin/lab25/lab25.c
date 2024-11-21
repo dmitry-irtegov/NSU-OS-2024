@@ -49,8 +49,18 @@ int main() {
         close(pipe_fd[0]);  // Close the read end
 
         const char *text = "Sample text with Mixed Case.\n";
-        if (write(pipe_fd[1], text, strlen(text)) == -1) {
-            perror("Error writing to pipe");
+        size_t textLen = strlen(text);
+        ssize_t bytesWritten = 0;
+
+        // Write in a loop to ensure all bytes are written
+        while (bytesWritten < (ssize_t)textLen) {
+            ssize_t result = write(pipe_fd[1], text + bytesWritten, textLen - bytesWritten);
+            if (result == -1) {
+                perror("Error writing to pipe");
+                close(pipe_fd[1]);  // Close the write end
+                return 1;
+            }
+            bytesWritten += result;
         }
 
         close(pipe_fd[1]);  // Close the write end
