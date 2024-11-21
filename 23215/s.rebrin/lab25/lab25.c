@@ -5,7 +5,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-#define MSGSIZE 20
 
 int main(int argc, char** argv) {
 
@@ -27,14 +26,19 @@ int main(int argc, char** argv) {
 	}
 
 	if ((pid = fork()) > 0) {  /* parent */
+		close(fd[0]);
 		write(fd[1], msgout, len);
 	}
 	else if (pid == 0) {      /* child */
-		read(fd[0], msgin, len);
-		for (int i = 0; msgin[i] != '\0'; i++) {
-			msgin[i] = toupper(msgin[i]);
+		close(fd[1]);
+		int rd;
+		while ((rd = read(fd[0], msgin, 20)) > 0) {
+			for (int i = 0; i < rd; i++) {
+				msgin[i] = toupper(msgin[i]);
+			}
+			write(1, msgin, rd);
 		}
-		puts(msgin);
+		printf("\n");
 	}
 	else {          /* cannot fork */
 		perror(argv[0]);
