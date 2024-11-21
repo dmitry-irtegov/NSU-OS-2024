@@ -12,14 +12,14 @@ import (
 type Parser struct {
 }
 
-func (parc Parser) SkipSpaces(line []byte, id int) int {
+func (parc *Parser) SkipSpaces(line []byte, id int) int {
 	for id+1 < len(line) && line[id] == ' ' {
 		id++
 	}
 	return id
 }
 
-func (parc Parser) QuotesHandling(line []byte, beginId int) (string, int) {
+func (parc *Parser) QuotesHandling(line []byte, beginId int) (string, int) {
 	str := make([]byte, 0)
 	var quotestype byte
 	for ; quotestype != 0 || !strings.Contains(" |&<>;", string(line[beginId])); beginId++ {
@@ -40,7 +40,7 @@ func (parc Parser) QuotesHandling(line []byte, beginId int) (string, int) {
 	return string(str), beginId - 1
 }
 
-func (parc Parser) Readline() ([]byte, error) {
+func (parc *Parser) Readline() ([]byte, error) {
 	str := make([]byte, 1024)
 	var line []byte
 	for {
@@ -80,7 +80,7 @@ func (parc Parser) Readline() ([]byte, error) {
 	}
 }
 
-func (parc Parser) Parserline(line []byte) []exec.Command {
+func (parc *Parser) Parserline(line []byte) []exec.Command {
 	var cmds []exec.Command
 	var tmp exec.Command
 	var tmpStr string

@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"shell/internal/jobs"
-	"shell/internal/signals"
 	"syscall"
 )
 
@@ -23,7 +22,7 @@ func (cmd *Command) Init() {
 	cmd.Bkgrnd = false
 }
 
-func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
+func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 	if len(cmd.Cmdargs) == 0 {
 		return
 	}
@@ -42,12 +41,12 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
 			fmt.Println("jobs: Too many arguments")
 		}
 		return
-	} else if cmd.Cmdargs[0] == "cd" {
+	}
+	if cmd.Cmdargs[0] == "cd" {
 		if len(cmd.Cmdargs) == 2 {
 			err := os.Chdir(cmd.Cmdargs[1])
 			if err != nil {
 				fmt.Println("cd: No such file or directory:", cmd.Cmdargs[1])
-				return
 			}
 		} else if len(cmd.Cmdargs) > 2 {
 			fmt.Println("cd: Too many arguments")
@@ -133,7 +132,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
 		return
 	}
 
-	ch.FgPidChan <- pid
+	fgPidChan <- pid
 	_, err = syscall.Wait4(pid, &ws, syscall.WUNTRACED, nil)
 	if err != nil {
 		fmt.Println("Error waiting for process")
@@ -142,8 +141,8 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, ch *signals.Channels) {
 	if !ws.Stopped() {
 		jm.Update(pid, "Done")
 	}
-	if len(ch.FgPidChan) != 0 {
-		_ = <-ch.FgPidChan
+	if len(fgPidChan) != 0 {
+		_ = <-fgPidChan
 	}
 
 	for i := 0; i < len(jm.Jobs); i++ {

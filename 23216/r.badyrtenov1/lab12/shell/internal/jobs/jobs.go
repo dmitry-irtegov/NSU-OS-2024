@@ -2,9 +2,12 @@ package jobs
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"shell/internal/tools"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 type JobManager struct {
@@ -58,4 +61,42 @@ func (jm *JobManager) Update(pid int, status string) {
 			break
 		}
 	}
+}
+
+func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPidChan chan int) {
+	signal.Notify(signChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
+	go func() {
+		for sig := range signChan {
+			if sig == syscall.SIGINT {
+				fmt.Println()
+				select {
+				case foregroundPid := <-fgPidChan:
+					err := syscall.Kill(foregroundPid, syscall.SIGINT)
+					if err != nil {
+					}
+				default:
+					err := tools.Promptline()
+					if err != nil {
+						fmt.Println("Error in Prompt")
+					}
+				}
+			} else if sig == syscall.SIGTSTP {
+				fmt.Println()
+				select {
+				case foregroundPid := <-fgPidChan:
+					jm.Update(foregroundPid, "Stopped")
+					jm.Write(foregroundPid)
+					err := syscall.Kill(foregroundPid, syscall.SIGSTOP)
+					if err != nil {
+						fmt.Println("Error stopping process")
+					}
+				default:
+					err := tools.Promptline()
+					if err != nil {
+						fmt.Println("Error in Prompt")
+					}
+				}
+			}
+		}
+	}()
 }
