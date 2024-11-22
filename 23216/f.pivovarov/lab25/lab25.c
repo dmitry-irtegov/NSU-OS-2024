@@ -29,13 +29,14 @@ int main() {
         case 0:
             // Forked process code
             printf("Inside forked\n");
+            close(pipeFDs[0]);
             char *text = "aBoba123";
             if (write(pipeFDs[1], text, strlen(text)) != (int) strlen(text)) {
                 perror("Cannot write text correctly");
-                closePipe(pipeFDs);
+                close(pipeFDs[1]);
                 exit(EXIT_FAILURE);
             }
-            closePipe(pipeFDs);
+            close(pipeFDs[1]);
             printf("Child is end\n");
             exit(EXIT_SUCCESS);
         default: ;
@@ -61,9 +62,4 @@ int main() {
             close(pipeFDs[0]);
             exit(EXIT_SUCCESS);
         }
-}
-
-void closePipe(const int pipeFDs[2]) {
-    close(pipeFDs[0]);
-    close(pipeFDs[1]);
 }
