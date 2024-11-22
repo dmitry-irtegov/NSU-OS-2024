@@ -28,21 +28,33 @@ int main() {
         case 0:
             // Forked process code
             printf("Inside forked\n");
+            char write_buffer[256];
             char *text = "aBoba123";
-            if (write(pipeFDs[1], text, strlen(text)) != strlen(text)) {
-                perror("Cannot write text correctly");
-                closePipe(pipeFDs);
-                exit(EXIT_FAILURE);
+            for (int i = 0; i < (int) strlen(text); i++) {
+                if (((i % 256 == 0) && (i != 0)) || i == (int) strlen(text) - 1) {
+                    switch (write(pipeFDs[1], write_buffer, 256)) {
+                        case -1:
+                            perror("Cannot write text correctly");
+                            closePipe(pipeFDs);
+                            exit(EXIT_FAILURE);
+                        case 256:
+                            break;
+                        default:
+                            printf("Child is end\n");
+                            exit(EXIT_SUCCESS);
+                    }
+                }
+                write_buffer[i % 256] = text[i];
             }
             printf("Child is end\n");
             //close(pipeFDs[1]);
             exit(EXIT_SUCCESS);
         default: ;
             // Parent process code
-            char buffer[255];
+            char buffer[256];
             int readedBytes;
             close(pipeFDs[1]);
-            while ((readedBytes = read(pipeFDs[0], buffer, 255)) != 0) {
+            while ((readedBytes = read(pipeFDs[0], buffer, 256)) != 0) {
                 if (readedBytes == -1) {
                     perror("Troubles in read");
                     close(pipeFDs[0]);
@@ -52,9 +64,10 @@ int main() {
                 for (int i = 0; i < readedBytes; i++) {
                     buffer[i] = (char)toupper(buffer[i]);
                 }
-                printf("from child: %s", buffer);
+                printf("from child: %s\n", buffer);
             }
 
+            printf("parent is end\n");
             close(pipeFDs[0]);
             exit(EXIT_SUCCESS);
         }
