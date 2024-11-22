@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,31 +29,20 @@ int main() {
         case 0:
             // Forked process code
             printf("Inside forked\n");
-            char write_buffer[256];
             char *text = "aBoba123";
-            for (int i = 0; i < (int) strlen(text); i++) {
-                if (((i % 256 == 0) && (i != 0)) || i == (int) strlen(text) - 1) {
-                    switch (write(pipeFDs[1], write_buffer, 256)) {
-                        case -1:
-                            perror("Cannot write text correctly");
-                            closePipe(pipeFDs);
-                            exit(EXIT_FAILURE);
-                        case 256:
-                            break;
-                        default:
-                            printf("Child is end\n");
-                            exit(EXIT_SUCCESS);
-                    }
-                }
-                write_buffer[i % 256] = text[i];
+            if (write(pipeFDs[1], text, strlen(text)) != (int) strlen(text)) {
+                perror("Cannot write text correctly");
+                closePipe(pipeFDs);
+                exit(EXIT_FAILURE);
             }
+            closePipe(pipeFDs);
             printf("Child is end\n");
-            //close(pipeFDs[1]);
             exit(EXIT_SUCCESS);
         default: ;
             // Parent process code
             char buffer[256];
             int readedBytes;
+            wait((int *)&process_id);
             close(pipeFDs[1]);
             while ((readedBytes = read(pipeFDs[0], buffer, 256)) != 0) {
                 if (readedBytes == -1) {
