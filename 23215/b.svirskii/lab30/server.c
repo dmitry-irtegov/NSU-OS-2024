@@ -7,9 +7,6 @@
 #include "server.h"
 #define BUFF_SIZE (100)
 
-extern const struct sockaddr_un sock_addr;
-extern const int sock_addr_len;
-
 int socket_fd;
 
 void close_all() {

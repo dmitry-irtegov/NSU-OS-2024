@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include "server.h"
 
-extern const struct sockaddr_un sock_addr;
-extern const int sock_addr_len;
 
 int main() {
     char* line = NULL;
