@@ -11,8 +11,9 @@
 
 void onBrokenPipe(int signal) {
     (void)signal;
-    fprintf(stderr, "соединение с сервером потеряно\n");
-    exit(EXIT_FAILURE);
+    const char *message = "соединение с сервером потеряно\n";
+    write(STDERR_FILENO, message, strlen(message));
+    _exit(EXIT_FAILURE); // _exit вместо exit, чтобы избежать вызова небезопасных функций
 }
 
 int connectToServer(const char *socketPath) {
