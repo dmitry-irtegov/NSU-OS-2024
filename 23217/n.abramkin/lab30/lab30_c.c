@@ -35,10 +35,17 @@ int main() {
     // Передаем текст серверу
     printf("Enter text to send to server (Ctrl+D to finish):\n");
     while (fgets(buffer, BUFFER_SIZE, stdin)) {
-        if (write(client_sock, buffer, strlen(buffer)) == -1) {
-            perror("Write failed");
-            close(client_sock);
-            exit(EXIT_FAILURE);
+        size_t total_written = 0;                     // Сколько байт уже записано
+        size_t bytes_to_write = strlen(buffer);       // Сколько байт нужно записать
+
+        while (total_written < bytes_to_write) {
+            ssize_t bytes_written = write(client_sock, buffer + total_written, bytes_to_write - total_written);
+            if (bytes_written == -1) {
+                perror("Write failed");
+                close(client_sock);
+                exit(EXIT_FAILURE);
+            }
+            total_written += bytes_written;           // Увеличиваем счетчик записанных байт
         }
     }
 
