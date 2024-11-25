@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 	char* msgin;
 	int len = strlen(argv[1]) + 1;
 
-	msgin = (char*)malloc(len);
+	msgin = (char*)malloc(21);
 
 	if (pipe(fd) == -1) {
 		perror(argv[0]);
