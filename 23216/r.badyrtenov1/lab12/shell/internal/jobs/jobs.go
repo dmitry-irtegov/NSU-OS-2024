@@ -72,6 +72,8 @@ func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPidChan chan int)
 				fmt.Println()
 				select {
 				case foregroundPid := <-fgPidChan:
+					jm.Update(foregroundPid, "Done")
+					jm.Write(foregroundPid)
 					err := syscall.Kill(foregroundPid, syscall.SIGINT)
 					if err != nil {
 						continue

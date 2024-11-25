@@ -138,12 +138,13 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 		fmt.Println("Error waiting for process")
 		return
 	}
-	if !ws.Stopped() {
-		jm.Update(pid, "Done")
-		if len(fgPidChan) != 0 {
-			_ = <-fgPidChan
+	if ws.Stopped() || ws.Signaled() {
+		for len(fgPidChan) != 0 {
 		}
+		return
 	}
+	jm.Update(pid, "Done")
+	<-fgPidChan
 
 	for i := 0; i < len(jm.Jobs); i++ {
 		if jm.Jobs[i].Status == "Done" {
