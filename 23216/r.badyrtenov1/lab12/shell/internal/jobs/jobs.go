@@ -64,18 +64,19 @@ func (jm *JobManager) Update(pid int, status string) {
 	}
 }
 
-func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPidChan *int) {
+func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPidChan chan int) {
 	signal.Notify(signChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
 	go func() {
 		for sig := range signChan {
 			if sig == syscall.SIGINT {
 				fmt.Println()
-				if *fgPidChan != 0 {
-					err := syscall.Kill(*fgPidChan, syscall.SIGINT)
+				select {
+				case foregroundPid := <-fgPidChan:
+					err := syscall.Kill(foregroundPid, syscall.SIGINT)
 					if err != nil {
-						fmt.Println("Error killing process")
+						continue
 					}
-				} else {
+				default:
 					err := tools.Promptline()
 					if err != nil {
 						fmt.Println("Error in Prompt")
@@ -83,15 +84,15 @@ func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPidChan *int) {
 				}
 			} else if sig == syscall.SIGTSTP {
 				fmt.Println()
-				if *fgPidChan != 0 {
-					jm.Update(*fgPidChan, "Stopped")
-					jm.Write(*fgPidChan)
-					err := syscall.Kill(*fgPidChan, syscall.SIGSTOP)
+				select {
+				case foregroundPid := <-fgPidChan:
+					jm.Update(foregroundPid, "Stopped")
+					jm.Write(foregroundPid)
+					err := syscall.Kill(foregroundPid, syscall.SIGSTOP)
 					if err != nil {
 						fmt.Println("Error stopping process")
 					}
-					*fgPidChan = 0
-				} else {
+				default:
 					err := tools.Promptline()
 					if err != nil {
 						fmt.Println("Error in Prompt")
