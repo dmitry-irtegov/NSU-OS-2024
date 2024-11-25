@@ -22,7 +22,7 @@ func (cmd *Command) Init() {
 	cmd.Bkgrnd = false
 }
 
-func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
+func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan *int) {
 	if len(cmd.Cmdargs) == 0 {
 		return
 	}
@@ -132,17 +132,15 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 		return
 	}
 
-	fgPidChan <- pid
+	*fgPidChan = pid
 	_, err = syscall.Wait4(pid, &ws, syscall.WUNTRACED, nil)
 	if err != nil {
 		fmt.Println("Error waiting for process")
 		return
 	}
-	if !ws.Stopped() {
-		jm.Update(pid, "Done")
-	}
-	if len(fgPidChan) != 0 {
-		_ = <-fgPidChan
+	if *fgPidChan != 0 {
+		jm.Update(*fgPidChan, "Done")
+		*fgPidChan = 0
 	}
 
 	for i := 0; i < len(jm.Jobs); i++ {
