@@ -6,6 +6,8 @@
 #include <ctype.h>
 #include <string.h>
 
+#define BUFFERSIZE 20
+
 int main() {
 
     int fd[2];
@@ -27,10 +29,13 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        char buff;
-        while (read(fd[0], &buff, 1)) {
-            buff = toupper(buff);
-            write(1, &buff, 1);
+        char buff[BUFFERSIZE];
+        int bytes_read;
+        while ((bytes_read = read(fd[0], buff, BUFFERSIZE)) > 0) {
+            for (int i = 0; i < bytes_read; i++) {
+                buff[i] = toupper(buff[i]);
+            }
+            write(1, buff, bytes_read);
         }
 
         if (close(fd[0]) != 0) {
