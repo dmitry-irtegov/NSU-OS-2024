@@ -42,6 +42,8 @@ int main() {
             continue;
         }
 
+        buf[nread] = '\0';
+buf[nread] = '\0';
         if (strcmp(buf, "end") == 0) {
             printf("end of server\n");
             close(sfd);
@@ -52,8 +54,8 @@ int main() {
         for (size_t i = 0; i < strlen(buf); i++) {
             buf[i] = toupper(buf[i]);
         }
-        if (strlen(buf) < 30) {
-            buf[strlen(buf)] = '\n';
+        if (strlen(buf) < 29) {
+            buf[strlen(buf)] = '\r';
         }
 
         if (write(fileno(stdin), buf, strlen(buf)) == -1) {
