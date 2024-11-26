@@ -6,8 +6,6 @@
 #include <ctype.h>
 #include <string.h>
 
-void closePipe(const int pipeFDs[2]);
-
 int main() {
     // Opens pipe
     printf("Opens pipe\n");
@@ -24,7 +22,8 @@ int main() {
     switch (process_id) {
         case -1:
             perror("Can't fork()");
-            closePipe(pipeFDs);
+            close(pipeFDs[0]);
+            close(pipeFDs[1]);
             exit(EXIT_FAILURE);
         case 0:
             // Forked process code
