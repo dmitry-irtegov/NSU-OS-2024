@@ -30,17 +30,29 @@ int main(){
                 if (buf[msglen-1] == '\n'){
                     if(write(fd[1], buf, msglen)==-1){
                         perror("problem in write");
+                        if (close(fd[1]) == -1) {
+                            perror("problem in pipeclose");
+                            exit(EXIT_FAILURE);
+                        }
                         exit(EXIT_FAILURE);
                     }
                     break;
                 }
                 if(write(fd[1], buf, msglen)==-1){
                     perror("problem in write");
+                    if (close(fd[1]) == -1) {
+                        perror("problem in pipeclose");
+                        exit(EXIT_FAILURE);
+                    }
                     exit(EXIT_FAILURE);
                 }
             }
             if(msglen <0){
                 perror("problem in read from terminal");
+                if (close(fd[1]) == -1) {
+                    perror("problem in pipeclose");
+                    exit(EXIT_FAILURE);
+                }
                 exit(EXIT_FAILURE);
             }
             if (close(fd[1]) == -1) {
@@ -60,11 +72,19 @@ int main(){
                 }
                 if (write(1,buf,msglen) == -1){
                     perror("problem in write");
+                    if (close(fd[0]) == -1) {
+                        perror("problem in pipeclose");
+                        exit(EXIT_FAILURE);
+                    }
                     exit(EXIT_FAILURE);
                 }
             }
             if(msglen == -1){
                 perror("problem in read");
+                if (close(fd[0]) == -1) {
+                    perror("problem in pipeclose");
+                    exit(EXIT_FAILURE);
+                }
                 exit(EXIT_FAILURE);
             }
             
