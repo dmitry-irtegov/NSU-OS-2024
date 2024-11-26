@@ -64,8 +64,4 @@ int main() {
             exit(EXIT_FAILURE);
         }
     }
-
-    close(sfd);
-    unlink(name);
-    return 0;
 }

@@ -24,6 +24,7 @@ void send_in_chunks(int sfd, const char *msg, size_t len) {
 int main(int argc, char *argv[]) {
     int sfd;
     char name[13] = "test_af_unix";
+    char end[4] = "end";
     struct sockaddr_un addr;
 
     if (argc < 2) {
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
 
     }
 
-    if (write(sfd, "end", 4) != 4) {
+    if (write(sfd, end, strlen(end)) != (ssize_t)strlen(end)) {
         fprintf(stderr, "partial/failed write\n");
         close(sfd);
         exit(EXIT_FAILURE);
