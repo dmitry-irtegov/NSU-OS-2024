@@ -21,7 +21,6 @@ int main(int argc, char *argv[]){
         //child process
         case 0 :
             execvp(argv[1], &argv[1]);
-            printf("\n");
             //if execvp returned failure
             perror("failed to execvp\n");
             exit(EXIT_FAILURE);
@@ -29,14 +28,14 @@ int main(int argc, char *argv[]){
         default:
             child = wait(&status);
             if (child == -1) {
-                perror("failed to wait\n");
+                perror("\nfailed to wait\n");
                 exit(EXIT_FAILURE);
             }
             if(WIFEXITED(status)){
-                printf("proccess successfully ended with code %d\n", WEXITSTATUS(status));
+                printf("\nproccess successfully ended with code %d\n", WEXITSTATUS(status));
             }
             else{
-                printf("proccess killed with code %d\n", WTERMSIG(status));
+                printf("\nproccess killed with code %d\n", WTERMSIG(status));
             }
     }
     exit(EXIT_SUCCESS);
