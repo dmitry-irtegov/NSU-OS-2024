@@ -7,17 +7,16 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"shell/constants"
 	"shell/internal/execute"
 	"shell/internal/parceline"
 	"shell/util"
 	"strings"
-	"syscall"
 )
 
 func main() {
-	signal.Ignore(syscall.SIGINT, syscall.SIGTSTP, syscall.SIGQUIT, syscall.SIGTTOU, syscall.SIGTTIN, syscall.SIGCHLD)
+	//signal.Ignore(syscall.SIGINT, syscall.SIGTSTP, syscall.SIGQUIT, syscall.SIGTTOU, syscall.SIGTTIN) // sigchild not working
+	// notify -> pid signal.kill (signal that was given to fg one process)
 	// prompt := ([]byte)(fmt.Sprintf("[%s] ", os.Args[0]))
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
