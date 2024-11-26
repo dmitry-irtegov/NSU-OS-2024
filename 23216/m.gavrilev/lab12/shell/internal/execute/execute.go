@@ -99,7 +99,7 @@ func (c Exec) ForkAndExec(cmd parc.Command, pipeRead *os.File, pipeWrite *os.Fil
 
 	_, err = syscall.Wait4(pid, &ws, syscall.WEXITED|syscall.WUNTRACED, nil)
 	if err != nil {
-		fmt.Println("error waiting for process")
+		fmt.Println("error waiting for process", err)
 		return
 	}
 }
