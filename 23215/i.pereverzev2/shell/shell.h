@@ -2,6 +2,7 @@
 #define MAXCMDS 50
 #define MAXLINELEN 1024
 #include <sys/types.h>
+#include <termios.h>
 
 struct command {
     char *cmdargs[MAXARGS];
@@ -26,6 +27,10 @@ struct job {
     int nextjob;
     int instoplist;
     struct termios jobattr;
+    int cnt_running;
+    int cnt_stopped;
+    int cnt_ended;
+    int cnt_process;
 };
 
 /*  cmdflag's  */

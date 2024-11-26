@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <termios.h>
+#include <sys/stat.h>
 
 char *infile, *outfile, *appfile;
 struct command cmds[MAXCMDS];
@@ -26,6 +27,7 @@ typedef struct jobs_s {
 } jobsinfo;
 
 jobsinfo jobs;
+struct termios shell_tattr;
 
 void stoplist_add(int job_id) 
 {
@@ -71,7 +73,6 @@ void ensure_joblist_size()
     }
     struct job* oldarr = jobs.arr;
     int newsz = jobs.arsz * 2;
-    //printf("ensure called, increasing size from %d to %d\n", jobs.arsz, newsz);
     jobs.arr = calloc(newsz, sizeof(struct job));
     memcpy(jobs.arr, oldarr, sizeof(struct job) * (jobs.last_id + 1));
     free(oldarr);
@@ -103,6 +104,20 @@ int last_job_id()
     return 0;
 }
 
+
+void update_job_counters(int job_id, int si_code) {
+    if(si_code == CLD_STOPPED){
+        jobs.arr[job_id].cnt_running--;
+        jobs.arr[job_id].cnt_stopped++;
+    } else if (si_code == CLD_EXITED || si_code == CLD_KILLED) {
+        jobs.arr[job_id].cnt_running--;
+        jobs.arr[job_id].cnt_ended++;
+    } else if (si_code == CLD_CONTINUED) {
+        jobs.arr[job_id].cnt_stopped--;
+        jobs.arr[job_id].cnt_running++;
+    }
+}
+
 int update_jobs()
 {
     int changed = 0;
@@ -110,33 +125,40 @@ int update_jobs()
     int code;
     siginfo_t infop;
     for(i = 1; i < jobs.arsz; i++) {
-        infop.si_code = -1;
-        code = waitid(P_PID, jobs.arr[i].lidpid,
-                &infop, WNOHANG|WCONTINUED|WEXITED|WSTOPPED);
-        if(code == -1) {
-            continue; // because fields of infop don't give any useful information
+        if(jobs.arr[i].stat == NONE) {
+            continue;
         }
-        if(infop.si_code == CLD_EXITED) {
-            jobs.arr[i].stat = DONE;
-            stoplist_del(i);
-            changed = 1;
-        } else if(infop.si_code == CLD_STOPPED) {
-            jobs.arr[i].stat = STOPPED;
-            stoplist_add(i);
-            changed = 1;
-        } else if(infop.si_code == CLD_KILLED) {
-            jobs.arr[i].stat = TERMINATED;   
-            stoplist_del(i);
-            changed = 1;
-        } else if(infop.si_code == CLD_CONTINUED) {
-            jobs.arr[i].stat = RUNNING;
-            stoplist_del(i);
-            changed = 1;
+        int k;
+        for(k = 0; k < jobs.arr[i].cnt_process; k++) {
+            infop.si_code = -1;
+            code = waitid(P_PGID, jobs.arr[i].lidpid,
+                          &infop, WNOHANG|WCONTINUED|WEXITED|WSTOPPED);
+            if(code != -1) {
+                update_job_counters(i, infop.si_code);
+            }
+        }
+        if(jobs.arr[i].cnt_process > 0) {
+            enum jstatus prevstat = jobs.arr[i].stat;
+            if(jobs.arr[i].cnt_ended == jobs.arr[i].cnt_process && infop.si_code != CLD_KILLED) {
+                jobs.arr[i].stat = DONE;
+                stoplist_del(i);
+            } else if(jobs.arr[i].cnt_running == 0 && jobs.arr[i].cnt_stopped > 0) {
+                jobs.arr[i].stat = STOPPED;
+                stoplist_add(i);
+            } else if(jobs.arr[i].cnt_ended == jobs.arr[i].cnt_process && infop.si_code == CLD_KILLED) {
+                jobs.arr[i].stat = TERMINATED;   
+                stoplist_del(i);
+            } else if(jobs.arr[i].cnt_running > 0) {
+                jobs.arr[i].stat = RUNNING;
+                stoplist_del(i);
+            }
+            if(jobs.arr[i].stat != prevstat) {
+                changed = 1;
+            }
         }
     }
-    //printf("update jobs called, changed is %d, si_code is %d, code is %d\n",
-     //       changed, infop.si_code, code);
     int newlast = last_job_id();
+    printf("newlast is: %d\n", newlast);
     if(newlast == 0) {
         jobs.plus_id = 0;
         jobs.mins_id = -1;
@@ -145,7 +167,6 @@ int update_jobs()
     } else {
         jobs.last_id = newlast;
     }
-    
     return changed;
 }
 
@@ -200,43 +221,54 @@ int get_job_id(char* spec)
     return id;
 }
 
+
 void job_to_fg(int job_id, int need_cont_sig) {
     siginfo_t infop;
     tcsetpgrp(0, jobs.arr[job_id].lidpid);
     jobs.arr[job_id].fgrnd = 1;
-    setpgid(0, jobs.arr[job_id].lidpid);
+    
     if(need_cont_sig) {
-        if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
-            perror("unable to return job's terminal attributes");
+        if(need_cont_sig == 1) {
+            if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
+                perror("unable to return job's terminal attributes");
+            }
+            jobs.arr[job_id].stat = RUNNING;
+            jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
+            jobs.arr[job_id].cnt_stopped = 0;
         }
-        sigsend(P_PID, jobs.arr[job_id].lidpid, SIGCONT);
-        jobs.arr[job_id].stat = RUNNING;
+        sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
     }
-    pid_t code = waitid(P_PID, jobs.arr[job_id].lidpid, &infop,
+
+    while(jobs.arr[job_id].cnt_running > 0) {
+        infop.si_code = -1;
+        pid_t code = waitid(P_PGID, jobs.arr[job_id].lidpid, &infop,
                         WSTOPPED | WEXITED);
-    if(code == -1) {
-        perror("unable to wait termination of created process");
+        if(code == -1) {
+            perror("unable to wait termination of one of job processes");
+            break;
+        }
+        update_job_counters(job_id, infop.si_code);
     }
+    
     if(tcgetattr(0, &(jobs.arr[job_id].jobattr)) == -1) {
         perror("unable to get terminal attributes after job");
     }
-    if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
-        perror("unable to return job's terminal attributes");
-    }
-    setpgid(0, 0);
     if(tcsetpgrp(0, getpgrp()) == -1) {
         perror("unable to return shell to fg");
     }
+    if(tcsetattr(0, TCSADRAIN, &shell_tattr) == -1) {
+        perror("unable to return shell terminal attributes");
+    }
 
-    if(infop.si_code == CLD_STOPPED){
+    if(jobs.arr[job_id].cnt_stopped > 0 && jobs.arr[job_id].cnt_running == 0){
         jobs.arr[job_id].stat = STOPPED;
         jobs.arr[job_id].fgrnd = 0;
-        fprintf(stderr, "\n[%d]+ Stopped\t\t%s\n",job_id, 
+        fprintf(stderr, "\n[%d]+ job Stopped\t\t%s\n",job_id, 
                 jobs.arr[job_id].cmdline);
         if(jobs.arr[job_id].instoplist == 0) {
             stoplist_add(job_id);            
         }
-    } else if (infop.si_code == CLD_EXITED || infop.si_code == CLD_KILLED) {
+    } else if (jobs.arr[job_id].cnt_ended == jobs.arr[job_id].cnt_process) {
         jobs.arr[job_id].stat = NONE;
         if(jobs.arr[job_id].instoplist == 1) {
             stoplist_del(job_id);            
@@ -254,7 +286,6 @@ void fg(char* arg) {
             return;
         }
     }
-
     job_to_fg(job_id, 1);
 }
 
@@ -269,7 +300,20 @@ void bg(char* arg){
         }
     }
     jobs.arr[job_id].stat = RUNNING;
-    sigsend(P_PID, jobs.arr[job_id].lidpid, SIGCONT);
+    printf("bg, stopped %d\n", jobs.arr[job_id].cnt_stopped);
+    jobs.arr[job_id].cnt_running = jobs.arr[job_id].cnt_stopped;
+    jobs.arr[job_id].cnt_stopped = 0;
+    sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
+}
+
+int fake_pipe(int* arr)
+{
+    static int pcnt = 0;
+    pcnt++;
+    arr[0] = pcnt;
+    pcnt++;
+    arr[1] = pcnt;
+    return 0;
 }
 
 int main()
@@ -278,7 +322,6 @@ int main()
     char line[MAXLINELEN];      /*  allow large command lines  */
     int ncmds;
     char prompt[] = "sh$ ";      /* shell prompt */    
-    struct termios shell_tattr;
     tcgetattr(0, &shell_tattr);
     init_jobs();
     /* PLACE SIGNAL CODE HERE */
@@ -288,11 +331,11 @@ int main()
     sigset(SIGTTOU, SIG_IGN);
     sigset(SIGTTIN, SIG_IGN);
     sigset(SIGTSTP, SIG_IGN);
-    //sprintf(prompt,"[%s] ", argv[0]);
 
     while (promptline(prompt, line, sizeof(line)) > 0) {    /*until eof  */
+        int updcode = update_jobs();
         if ((ncmds = parseline(line)) <= 0) {
-            if(update_jobs()) {
+            if(updcode) {
                 print_jobs(1);
             }
             continue;   /* read next line */
@@ -308,6 +351,8 @@ int main()
     }
 }
 #endif
+        int pipe_fds_cur[2] = {0};
+        int pipe_fds_prev[2] = {0};
         for (i = 0; i < ncmds; i++) {
             
             // parsing of jobs, fg and bg
@@ -324,17 +369,34 @@ int main()
             }
             
             /*  FORK AND EXECUTE  */
+            pipe_fds_prev[0] = pipe_fds_cur[0];
+            pipe_fds_prev[1] = pipe_fds_cur[1];
+            if(cmds[i].cmdflag & OUTPIP) {    
+                if(pipe(pipe_fds_cur) == -1) {
+                    perror("unable to create pipe between processes");
+                }
+            }
             int chpid = fork();
             if (chpid == 0) {
                 // child
                 signal(SIGINT, SIG_DFL);
                 signal(SIGQUIT, SIG_DFL);
-                signal(SIGTSTP, SIG_DFL);
-                if(setpgid(0, 0) == -1) {
-                    perror("unable to place process in his group from child");
-                    return 1;
+                signal(SIGTSTP, SIG_DFL);                
+                sigset(SIGTTOU, SIG_DFL);
+                sigset(SIGTTIN, SIG_DFL);
+                if(cmds[i].cmdflag & INPIP){
+                    if(setpgid(0, jobs.arr[jobs.last_id].lidpid) == -1) {
+                        perror("unable to place process in his job group from child");
+                        return 1;
+                    }
+                } else {
+                    if(setpgid(0, 0) == -1) {
+                        perror("unable to place process in his job group from child");
+                        return 1;
+                    }
                 }
-                if (bkgrnd == 0) {
+                
+                if (bkgrnd == 0 && (!(cmds[i].cmdflag & INPIP))) {
                     tcsetpgrp(0, getpgrp());
                 }
                 if (infile) {
@@ -346,7 +408,8 @@ int main()
                     dup2(inputfd, 0);
                 }
                 if (outfile) {
-                    int outputfd = open(outfile, O_WRONLY | O_CREAT);
+                    int outputfd = open(outfile, O_WRONLY | O_CREAT, 
+                                        S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
                     if (outputfd == -1) {
                         perror("unable to open file for writing");
                         return 3;
@@ -361,6 +424,13 @@ int main()
                     }
                     dup2(appfd, 1);
                 }
+                if (cmds[i].cmdflag & INPIP) {
+                    dup2(pipe_fds_prev[1], 0);
+                }
+                if (cmds[i].cmdflag & OUTPIP) {
+                    dup2(pipe_fds_cur[0], 1);
+                }
+                
                 execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
                 fprintf(stderr, "unable to execute %s\n", cmds[i].cmdargs[0]);
                 return 5;
@@ -369,30 +439,36 @@ int main()
                 perror("unable to fork, out of resources to create process");
             } else {
                 // parent
-                jobs.last_id++;
-                ensure_joblist_size();
-                jobs.arr[jobs.last_id].stat = RUNNING;	
-                jobs.arr[jobs.last_id].lidpid = chpid;
-                int k = 0;
-                jobs.arr[jobs.last_id].cmdline[0] = 0;
-                while(1) {
-                    // store launch command to job
-                    strcat(jobs.arr[jobs.last_id].cmdline, cmds[i].cmdargs[k]);
-                    if(cmds[i].cmdargs[k+1]) {
-                        strcat(jobs.arr[jobs.last_id].cmdline, " ");
-                    } else {
-                        break;
+                if(!(cmds[i].cmdflag & INPIP)) {
+                    // ensure that we are on first process in pipeline
+                    jobs.last_id++;
+                    ensure_joblist_size();
+                    jobs.arr[jobs.last_id].lidpid = chpid;
+                    jobs.arr[jobs.last_id].stat = RUNNING;
+                    jobs.arr[jobs.last_id].cnt_stopped = 0;
+                    int k = 0;
+                    jobs.arr[jobs.last_id].cmdline[0] = 0;
+                    while(1) {
+                        // store launch command to job
+                        strcat(jobs.arr[jobs.last_id].cmdline, cmds[i].cmdargs[k]);
+                        if(cmds[i].cmdargs[k+1]) {
+                            strcat(jobs.arr[jobs.last_id].cmdline, " ");
+                        } else {
+                            break;
+                        }
+                        k++;
                     }
-                    k++;
+                    printf("[%d] %d\n", jobs.last_id, chpid);                
                 }
-		        printf("[%d] %d\n", jobs.last_id, chpid);
-                if(setpgid(chpid, chpid) == -1) {
-                    perror("unable to place process in his group from parent");
+                jobs.arr[jobs.last_id].cnt_process++;
+                jobs.arr[jobs.last_id].cnt_running++;
+                if(setpgid(chpid, jobs.arr[jobs.last_id].lidpid) == -1) {
+                    perror("unable to place process in his job group from parent");
                     return 1;
                 }
-                if (bkgrnd == 0) {
-                    // launch process in foreground
-                    job_to_fg(jobs.last_id, 0);
+                if (bkgrnd == 0 && !(cmds[i].cmdflag & OUTPIP)) {
+                    // launch job in foreground (if we are on last process in pipeline)
+                    job_to_fg(jobs.last_id, 2);
                 }
             }
         }
