@@ -24,23 +24,20 @@ int main(int argc, char *argv[]) {
         case -1:
             perror("fork dead");
             return 1;
-            break;
 
         case 0: // Child process
             printf("Child here\n");
             if(execlp("cat", "cat", argv[1], NULL) == -1){
                 perror("cat dead");//если бы cat норм отработал то это бы и не показалось
-                exit(1);
-                break;
+                return 1;
             }
         default: // Parent process
             if (wait(NULL) == -1) {
                 perror("Couldn't wait for the pid to complete");
-                exit(1);
+                return 1;
             }
 
             printf("\nThis is end\n");
-            break;
     }
 
     return 0;
