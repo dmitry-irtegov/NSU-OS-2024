@@ -28,14 +28,14 @@ int main(int argc, char *argv[]){
         default:
             child = wait(&status);
             if (child == -1) {
-                perror("\nfailed to wait\n");
+                perror("failed to wait\n");
                 exit(EXIT_FAILURE);
             }
             if(WIFEXITED(status)){
-                printf("\nproccess successfully ended with code %d\n", WEXITSTATUS(status));
+                printf("proccess successfully ended with code %d\n", WEXITSTATUS(status));
             }
             else{
-                printf("\nproccess killed with code %d\n", WTERMSIG(status));
+                printf("proccess killed with code %d\n", WTERMSIG(status));
             }
     }
     exit(EXIT_SUCCESS);
