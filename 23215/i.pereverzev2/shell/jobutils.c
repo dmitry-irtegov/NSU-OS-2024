@@ -110,7 +110,6 @@ int update_jobs()
         if(jobs.arr[i].stat == NONE) {
             continue;
         }
-        enum jstatus was = jobs.arr[i].stat;
         int k;
         for(k = 0; k < jobs.arr[i].cnt_process; k++) {
             infop.si_code = -1;
@@ -142,7 +141,6 @@ int update_jobs()
                 if(!jobs.arr[i].instoplist) {
                     stoplist_add(i);
                 }
-                //stoplist_del(i);
             }
             if(jobs.arr[i].stat != prevstat) {
                 changed = 1;
@@ -215,27 +213,23 @@ int get_job_id(char* spec)
 
 void job_to_fg(int job_id, int need_cont_sig) {
     siginfo_t infop;
-    fprintf(stderr, "moving grp %d to fg\n", jobs.arr[job_id].lidpid);
     if(tcsetpgrp(0, jobs.arr[job_id].lidpid) == -1) {
         perror("unable to set processs to fg");
     }
     jobs.arr[job_id].fgrnd = 1;
     
     if(need_cont_sig) {
-        if(need_cont_sig == 1) {
-            if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
-                perror("unable to return job's terminal attributes");
-            }
-            jobs.arr[job_id].stat = RUNNING;
-            jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
-            jobs.arr[job_id].cnt_stopped = 0;
+        if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
+            perror("unable to return job's terminal attributes");
         }
+        jobs.arr[job_id].stat = RUNNING;
+        jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
+        jobs.arr[job_id].cnt_stopped = 0;
         sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
     }
 
     while(jobs.arr[job_id].cnt_running > 0) {
         infop.si_code = -1;
-        fprintf(stderr,"job was moved to fg, running %d\n", jobs.arr[job_id].cnt_running);
         pid_t code = waitid(P_PGID, jobs.arr[job_id].lidpid, &infop,
                         WSTOPPED | WEXITED);
         if(code == -1) {
@@ -254,12 +248,10 @@ void job_to_fg(int job_id, int need_cont_sig) {
     if(tcsetattr(0, TCSADRAIN, &shell_tattr) == -1) {
         perror("unable to return shell terminal attributes");
     }
-    fprintf(stderr, "counters, run: %d stop: %d end: %d proc: %d\n", jobs.arr[job_id].cnt_running, 
-            jobs.arr[job_id].cnt_stopped, jobs.arr[job_id].cnt_ended, jobs.arr[job_id].cnt_process);
     if(jobs.arr[job_id].cnt_stopped > 0 && jobs.arr[job_id].cnt_running == 0){
         jobs.arr[job_id].stat = STOPPED;
         jobs.arr[job_id].fgrnd = 0;
-        fprintf(stderr, "\n[%d]+ job Stopped\t\t%s\n",job_id, 
+        fprintf(stderr, "\n[%d]+ Stopped\t\t%s\n",job_id, 
                 jobs.arr[job_id].cmdline);
         if(jobs.arr[job_id].instoplist == 0) {
             stoplist_add(job_id);            
@@ -282,7 +274,6 @@ void fg(char* arg) {
             return;
         }
     }
-    fprintf(stderr, "fg entered job_id %d\n");
     if(jobs.arr[job_id].stat == RUNNING) {
         job_to_fg(job_id, 0);
     } else {
