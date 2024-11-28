@@ -192,7 +192,6 @@ int main()
                     if(bkgrnd == 0) {
                         job_to_fg(jobs.last_id, 2);
                     } else {
-                        printf("id: %d\n", jobs.last_id);
                         stoplist_add(jobs.last_id);
                     }
                 }

@@ -11,6 +11,9 @@ int promptline(char *prompt, char *line, int sizline)
     while (1) {
         n += read(0, (line + n), sizline-n);
         *(line+n) = '\0';
+        if(n == 1 && *line == '\n') {
+            return(1);
+        }
         /*
          *  check to see if command line extends onto
          *  next line.  If so, append next line to command line

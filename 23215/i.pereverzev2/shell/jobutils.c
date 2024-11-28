@@ -110,6 +110,7 @@ int update_jobs()
         if(jobs.arr[i].stat == NONE) {
             continue;
         }
+        enum jstatus was = jobs.arr[i].stat;
         int k;
         for(k = 0; k < jobs.arr[i].cnt_process; k++) {
             infop.si_code = -1;
@@ -141,6 +142,7 @@ int update_jobs()
                 if(!jobs.arr[i].instoplist) {
                     stoplist_add(i);
                 }
+                //stoplist_del(i);
             }
             if(jobs.arr[i].stat != prevstat) {
                 changed = 1;
@@ -219,12 +221,14 @@ void job_to_fg(int job_id, int need_cont_sig) {
     jobs.arr[job_id].fgrnd = 1;
     
     if(need_cont_sig) {
-        if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
-            perror("unable to return job's terminal attributes");
+        if(need_cont_sig == 1) {
+            if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
+                perror("unable to return job's terminal attributes");
+            }
+            jobs.arr[job_id].stat = RUNNING;
+            jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
+            jobs.arr[job_id].cnt_stopped = 0;
         }
-        jobs.arr[job_id].stat = RUNNING;
-        jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
-        jobs.arr[job_id].cnt_stopped = 0;
         sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
     }
 
@@ -251,7 +255,7 @@ void job_to_fg(int job_id, int need_cont_sig) {
     if(jobs.arr[job_id].cnt_stopped > 0 && jobs.arr[job_id].cnt_running == 0){
         jobs.arr[job_id].stat = STOPPED;
         jobs.arr[job_id].fgrnd = 0;
-        fprintf(stderr, "\n[%d]+ Stopped\t\t%s\n",job_id, 
+        fprintf(stderr, "\n[%d]+ job Stopped\t\t%s\n",job_id, 
                 jobs.arr[job_id].cmdline);
         if(jobs.arr[job_id].instoplist == 0) {
             stoplist_add(job_id);            
