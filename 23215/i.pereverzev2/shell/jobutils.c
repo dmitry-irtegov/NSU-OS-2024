@@ -110,7 +110,6 @@ int update_jobs()
         if(jobs.arr[i].stat == NONE) {
             continue;
         }
-        enum jstatus was = jobs.arr[i].stat;
         int k;
         for(k = 0; k < jobs.arr[i].cnt_process; k++) {
             infop.si_code = -1;
