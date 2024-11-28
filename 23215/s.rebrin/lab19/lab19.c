@@ -1,40 +1,53 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <limits.h>
+#include <unistd.h>
 
-#define MAX_PATTERN_LEN 256
-
-int match(const char *pattern, const char *str) {
+int match(const char* pattern, const char* str) {
     while (*pattern && *str) {
         if (*pattern == '*') {
-            
-            while (*pattern == '*') pattern++; 
+
+            while (*pattern == '*') pattern++;
             if (!*pattern) return 1;
 
             while (*str) {
-                if (match(pattern, str)) return 1; 
+                if (match(pattern, str)) return 1;
                 str++;
             }
             return 0;
-        } else if (*pattern == '?' || *pattern == *str) {
+        }
+        else if (*pattern == '?' || *pattern == *str) {
             pattern++;
             str++;
-        } else {
-            return 0;  
+        }
+        else {
+            return 0;
         }
     }
 
-    while (*pattern == '*') pattern++;  
-    return !*pattern && !*str;  
+    while (*pattern == '*') pattern++;
+    return !*pattern && !*str;
 }
 
 int main() {
-    char pattern[MAX_PATTERN_LEN];
-    scanf("%s", pattern);
+    char pattern[NAME_MAX + 3];
+    int rd;
+    if ((rd = read(0, pattern, NAME_MAX + 2)) > NAME_MAX) {
+        printf("Too large");
+        fflush(0);
+        return 0;
+    }
 
-    DIR *dir = opendir(".");
+    if (rd > 0 && pattern[rd - 1] == '\n') {
+        pattern[rd - 1] = '\0';  // Заменяем '\n' на '\0'
+    }
+    else {
+        pattern[rd] = '\0';  // Строка завершается корректно
+    }
 
-    struct dirent *entry;
+    DIR* dir = opendir(".");
+    struct dirent* entry;
     int found = 0;
     while ((entry = readdir(dir)) != NULL) {
         if (match(pattern, entry->d_name)) {
@@ -51,3 +64,5 @@ int main() {
 
     return 0;
 }
+
+
