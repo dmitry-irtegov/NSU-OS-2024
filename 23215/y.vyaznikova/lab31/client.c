@@ -11,6 +11,7 @@
 int main() {
     int client_socket;
     struct sockaddr_un server_addr;
+    pid_t pid;
 
     client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (client_socket == -1) {
@@ -28,14 +29,22 @@ int main() {
         exit(2);
     }
 
-    const char *message = "Hello, Server!\n";
-    if (write(client_socket, message, strlen(message)) == -1) {
-        perror("Write to server failed");
+    pid = getpid();
+
+    if (write(client_socket, &pid, sizeof(pid)) == -1) {
+        perror("Write PID to server failed");
         close(client_socket);
         exit(3);
     }
 
-    printf("Message sent to server\n");
+    const char *message = "Hello, Server!\n";
+    if (write(client_socket, message, strlen(message)) == -1) {
+        perror("Write to server failed");
+        close(client_socket);
+        exit(4);
+    }
+
+    printf("Message sent to server (PID: %d)\n", pid);
 
     close(client_socket);
     return 0;
