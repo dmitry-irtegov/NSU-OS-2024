@@ -8,7 +8,7 @@
 #include <poll.h>
 
 #define SOCKET_NAME "sckt"
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 10
 #define MAX_CLIENTS 10
 
 int main() {

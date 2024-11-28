@@ -6,14 +6,14 @@
 #include <sys/un.h>
 
 #define SOCKET_NAME "sckt"
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 10
 
 int main() {
     int client_socket;
     struct sockaddr_un server_addr;
     pid_t pid;
 
-    client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+-    client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (client_socket == -1) {
         perror("Socket creation failed");
         exit(1);
