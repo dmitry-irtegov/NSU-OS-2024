@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
         perror("execvp failed");
         exit(EXIT_FAILURE);
     } else {
-        printf("Parent process PID: %d, Child process PID: %d\n", getpid(), pid);
+        printf("Parent process ID: %d, Child process ID: %d\n", getpid(), pid);
         if (waitpid(pid, &status, 0) == -1) {
             perror("waitpid failed");
             exit(EXIT_FAILURE);
