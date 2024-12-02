@@ -19,7 +19,7 @@ int main(int argc, char** argv){
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
-    if (fcntl(file, F_SETLK, &lock) == -1){
+    if (fcntl(file, F_SETLKW, &lock) == -1){
         perror("problem in lock");
         close(file);
         exit(EXIT_FAILURE);
