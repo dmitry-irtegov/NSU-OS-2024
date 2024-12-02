@@ -48,6 +48,7 @@ request* create_request(int cl) {
         close(cl);
         return NULL;
     }
+    
     request->req = malloc(sizeof(struct aiocb));
     if (request->req == NULL) {
         perror("malloc failed");
@@ -55,6 +56,7 @@ request* create_request(int cl) {
         close(cl);
         return NULL;
     }
+
     request->req->aio_fildes = cl;
     request->req->aio_offset = 0;
     request->req->aio_buf = malloc(BUF_SIZE * sizeof(char));
@@ -65,10 +67,12 @@ request* create_request(int cl) {
         close(cl);
         return NULL;
     }
+
     request->req->aio_nbytes = BUF_SIZE - 1;
     request->req->aio_sigevent.sigev_notify = SIGEV_SIGNAL;
     request->req->aio_sigevent.sigev_signo = SIGIO;
     request->req->aio_sigevent.sigev_value.sival_ptr = request;
+
     if (aio_read(request->req) == -1) {
         perror("aio_read failed");
         char* buf = (char*)request->req->aio_buf;
