@@ -98,7 +98,7 @@ int main() {
                     }
                     char* buf = (char*)requests[i]->req->aio_buf;
                     free(buf);
-                    close(requests[i]->req.aio_fildes);
+                    close(requests[i]->req->aio_fildes);
                     free(requests[i]->req);
                     free(requests[i]);
                     requests[i] = requests[cnt - 1];
@@ -106,7 +106,7 @@ int main() {
                     cnt--;
                     i--;
                 } else {
-                    char* buf = (char*)requests[i]->req.aio_buf;
+                    char* buf = (char*)requests[i]->req->aio_buf;
                     buf[rc] = 0;
                     for (int j = 0; j < rc; j++) {
                         putchar(toupper((unsigned char)buf[j]));
@@ -114,7 +114,7 @@ int main() {
                     requests[i]->completed = 0;
                     if (aio_read(requests[i]->req) == -1) {
                         free(buf);
-                        close(requests[i]->req.aio_fildes);
+                        close(requests[i]->req->aio_fildes);
                         free(requests[i]->req);
                         free(requests[i]);
                         requests[i] = requests[cnt - 1];
@@ -152,7 +152,7 @@ int main() {
         requests[cnt]->req->aio_buf = malloc(BUF_SIZE * sizeof(char));
         if (requests[cnt]->req->aio_buf == NULL) {
             perror("malloc failed");
-            free(requests[cnt]->req)
+            free(requests[cnt]->req);
             free(requests[cnt]);
             requests[cnt] = NULL;
             close(cl);
@@ -166,7 +166,7 @@ int main() {
             perror("aio_read failed");
             char* buf = (char*)requests[cnt]->req.aio_buf;
             free(buf);
-            free(requests[cnt]->req)
+            free(requests[cnt]->req);
             free(requests[cnt]);
             requests[cnt] = NULL;
             close(cl);
