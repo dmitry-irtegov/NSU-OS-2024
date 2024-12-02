@@ -95,8 +95,7 @@ int main() {
                 }
 
                 if (aio_read(completed) == -1) {
-                    char* buffer = (char*)completed->aio_buf;
-                    free(buffer);
+                    free(buf);
                     close(completed->aio_fildes);
                     free(completed);
                 }
@@ -131,7 +130,8 @@ int main() {
         req->aio_sigevent.sigev_value.sival_ptr = req;
         if (aio_read(req) == -1) {
             perror("aio_read failed");
-            free(req->aio_buf);
+            char* buf = (char*)completed->aio_buf;
+            free(buf);
             free(req);
             close(cl);
             continue;
