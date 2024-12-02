@@ -10,7 +10,7 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
     struct flock lock;
-    int file = open(argv[1], O_RDWR | O_CREAT, 0777);
+    int file = open(argv[1], O_RDWR);
     if (file == -1){
         perror("problem in file open");
         exit(EXIT_FAILURE);
