@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 8
 char *socket_path = "socket";
 
 int main() {
