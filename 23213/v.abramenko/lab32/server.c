@@ -132,12 +132,12 @@ int main() {
         if (sigsetjmp(toprocess, 1) != 0) {
             for (int i = 0; i < cnt; i++)
             {
+                printf("%d ", i);
                 if (!requests[i]->completed) {
                     continue;
                 }
                 
                 int rc = aio_return(requests[i]->req);
-                printf("Hell\n");
                 if (rc <= 0) {
                     if (rc == -1) {
                         perror("return failed");
@@ -183,7 +183,6 @@ int main() {
         if (requests[cnt] != NULL) {
             cnt++;
         }
-        printf("hell\n");
         sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }
