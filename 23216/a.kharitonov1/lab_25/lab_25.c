@@ -21,6 +21,10 @@ int main(){
         case 0:
             if (close(fd[0]) == -1) {
                 perror("problem in pipeclose");
+                if (close(fd[1]) == -1) {
+                    perror("problem in pipeclose");
+                    exit(EXIT_FAILURE);
+                }
                 exit(EXIT_FAILURE);
             }
             while((msglen = read(0,buf,buffer)) >= 0){
@@ -64,6 +68,10 @@ int main(){
             
             if (close(fd[1]) == -1) {
                 perror("problem in pipeclose");
+                if (close(fd[0]) == -1) {
+                    perror("problem in pipeclose");
+                    exit(EXIT_FAILURE);
+                }
                 exit(EXIT_FAILURE);
             }
             while((msglen = read(fd[0], buf, buffer))>0){
