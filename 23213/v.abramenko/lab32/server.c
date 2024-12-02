@@ -81,9 +81,10 @@ int main() {
     int cl;
     int cnt = 0;
     request* requests[MAX_CLIENTS];
+    memset(requests, 0, sizeof(requests));
     while (1) {
-        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
         if (sigsetjmp(toprocess, 1) != 0) {
+            sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
             for (int i = 0; i < cnt; i++)
             {
                 if (!requests[i]->completed) {
@@ -97,6 +98,7 @@ int main() {
                     }
                     char* buf = (char*)requests[i]->req.aio_buf;
                     free(buf);
+                    close(requests[i]->req.aio_fildes);
                     free(requests[i]);
                     requests[i] = requests[cnt - 1];
                     requests[cnt - 1] = NULL; 
@@ -110,6 +112,7 @@ int main() {
                     }
                     if (aio_read(&requests[i]->req) == -1) {
                         free(buf);
+                        close(requests[i]->req.aio_fildes);
                         free(requests[i]);
                         requests[i] = requests[cnt - 1];
                         requests[cnt - 1] = NULL; 
@@ -119,8 +122,8 @@ int main() {
                     requests[i]->completed = 0;
                 }
             }
+            sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
         }
-        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
 
         if ((cl = accept(fd, NULL, NULL)) == -1) {
             perror("accept failed");
@@ -134,7 +137,6 @@ int main() {
             close(cl);
             continue;
         }
-
         requests[cnt]->req.aio_fildes = cl;
         requests[cnt]->req.aio_offset = 0;
         requests[cnt]->req.aio_buf = malloc(BUF_SIZE * sizeof(char));
