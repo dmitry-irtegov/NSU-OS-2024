@@ -35,7 +35,7 @@ void sigiohandler(int signo, siginfo_t* info, void* context){
     }
 
     request* req = (request*)info->si_value.sival_ptr;
-    if (aio_error(req->req) == 0) {
+    if (aio_error(&req->req) == 0) {
         req->completed = 1;
         siglongjmp(toprocess, 1);
     }
@@ -90,7 +90,7 @@ int main() {
                     continue;
                 }
                 
-                int rc = aio_return(requests[i]->req);
+                int rc = aio_return(&requests[i]->req);
                 if (rc <= 0) {
                     if (rc == -1) {
                         perror("return failed");
@@ -108,7 +108,7 @@ int main() {
                     for (int j = 0; j < rc; j++) {
                         putchar(toupper((unsigned char)buf[j]));
                     }
-                    if (aio_read(requests[i]->req) == -1) {
+                    if (aio_read(&requests[i]->req) == -1) {
                         free(buf);
                         free(requests[i]);
                         requests[i] = requests[cnt - 1];
@@ -137,7 +137,7 @@ int main() {
         requests[cnt]->req.aio_fildes = cl;
         requests[cnt]->req.aio_offset = 0;
         requests[cnt]->req.aio_buf = malloc(BUF_SIZE * sizeof(char));
-        if (req->aio_buf == NULL) {
+        if (requests[cnt]->req.aio_buf == NULL) {
             perror("malloc failed");
             free(requests[cnt]);
             requests[cnt] = NULL;
@@ -148,7 +148,7 @@ int main() {
         requests[cnt]->req.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
         requests[cnt]->req.aio_sigevent.sigev_signo = SIGIO;
         requests[cnt]->req.aio_sigevent.sigev_value.sival_ptr = requests[cnt];
-        if (aio_read(requests[cnt]->req) == -1) {
+        if (aio_read(&requests[cnt]->req) == -1) {
             perror("aio_read failed");
             char* buf = (char*)requests[cnt]->req.aio_buf;
             free(buf);
