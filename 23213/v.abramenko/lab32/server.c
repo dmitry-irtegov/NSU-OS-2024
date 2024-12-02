@@ -15,6 +15,11 @@
 #define MAX_CLIENTS 10
 #define BUF_SIZE 1024
 
+typedef struct request_s {
+    int completed;
+    struct aiocb req;
+}request;
+
 char* socket_path = "./socket";
 
 void close_handler(int sig) {
@@ -23,16 +28,15 @@ void close_handler(int sig) {
 }
 
 sigjmp_buf toprocess;
-struct aiocb* completed;
 
 void sigiohandler(int signo, siginfo_t* info, void* context){
     if (signo != SIGIO || info->si_signo != SIGIO){
         return;
     }
 
-    struct aiocb* req = (struct aiocb*)info->si_value.sival_ptr;
-    if (aio_error(req) == 0) {
-        completed = req;
+    request* req = (request*)info->si_value.sival_ptr;
+    if (aio_error(req->req) == 0) {
+        req->completed = 1;
         siglongjmp(toprocess, 1);
     }
 }
@@ -74,72 +78,86 @@ int main() {
     sigiohandleraction.sa_flags = SA_SIGINFO;
     sigaction(SIGIO, &sigiohandleraction, NULL);
 
-
     int cl;
+    int cnt = 0;
+    request* requests[MAX_CLIENTS];
     while (1) {
+        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
         if (sigsetjmp(toprocess, 1) != 0) {
-            sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
-            int rc = aio_return(completed);
-            if (rc <= 0) {
-                if (rc == -1) {
-                    perror("return failed");
+            for (int i = 0; i < cnt; i++)
+            {
+                if (!requests[i]->completed) {
+                    continue;
                 }
-                char* buffer = (char*)completed->aio_buf;
-                free(buffer);
-                close(completed->aio_fildes);
-                free(completed);
-            } else {
-                char* buf = (char*)completed->aio_buf;
-                buf[rc] = 0;
-                for (int j = 0; j < rc; j++) {
-                    putchar(toupper((unsigned char)buf[j]));
-                }
-
-                if (aio_read(completed) == -1) {
+                
+                int rc = aio_return(requests[i]->req);
+                if (rc <= 0) {
+                    if (rc == -1) {
+                        perror("return failed");
+                    }
+                    char* buf = (char*)requests[i]->req.aio_buf;
                     free(buf);
-                    close(completed->aio_fildes);
-                    free(completed);
+                    free(requests[i]);
+                    requests[i] = requests[cnt - 1];
+                    requests[cnt - 1] = NULL; 
+                    cnt--;
+                    i--;
+                } else {
+                    char* buf = (char*)requests[i]->req.aio_buf;
+                    buf[rc] = 0;
+                    for (int j = 0; j < rc; j++) {
+                        putchar(toupper((unsigned char)buf[j]));
+                    }
+                    if (aio_read(requests[i]->req) == -1) {
+                        free(buf);
+                        free(requests[i]);
+                        requests[i] = requests[cnt - 1];
+                        requests[cnt - 1] = NULL; 
+                        cnt--;
+                        i--;
+                    }
                 }
             }
-            sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
         }
-
+        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
 
         if ((cl = accept(fd, NULL, NULL)) == -1) {
             perror("accept failed");
             continue;
         }
-        
-        struct aiocb* req = malloc(sizeof(struct aiocb));
-        if (req == NULL) {
-            perror("malloc failed");
-            close(cl);
-            continue;
-        }
 
         sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
+        requests[cnt] = malloc(sizeof(request));
+        if (requests[cnt] == NULL) {
+            perror("malloc failed");
+            close(cl);
+            continue;
+        }
 
-        req->aio_fildes = cl;
-        req->aio_offset = 0;
-        req->aio_buf = malloc(BUF_SIZE * sizeof(char));
+        requests[cnt]->req.aio_fildes = cl;
+        requests[cnt]->req.aio_offset = 0;
+        requests[cnt]->req.aio_buf = malloc(BUF_SIZE * sizeof(char));
         if (req->aio_buf == NULL) {
             perror("malloc failed");
-            free(req);
+            free(requests[cnt]);
+            requests[cnt] = NULL;
             close(cl);
             continue;
         }
-        req->aio_nbytes = BUF_SIZE - 1;
-        req->aio_sigevent.sigev_notify = SIGEV_SIGNAL;
-        req->aio_sigevent.sigev_signo = SIGIO;
-        req->aio_sigevent.sigev_value.sival_ptr = req;
-        if (aio_read(req) == -1) {
+        requests[cnt]->req.aio_nbytes = BUF_SIZE - 1;
+        requests[cnt]->req.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
+        requests[cnt]->req.aio_sigevent.sigev_signo = SIGIO;
+        requests[cnt]->req.aio_sigevent.sigev_value.sival_ptr = requests[cnt];
+        if (aio_read(requests[cnt]->req) == -1) {
             perror("aio_read failed");
-            char* buf = (char*)completed->aio_buf;
+            char* buf = (char*)requests[cnt]->req.aio_buf;
             free(buf);
-            free(req);
+            free(requests[cnt]);
+            requests[cnt] = NULL;
             close(cl);
             continue;
         }
+        cnt++:
         sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }
