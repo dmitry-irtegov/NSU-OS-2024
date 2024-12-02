@@ -51,7 +51,7 @@ int main() {
 
     while (1) {
 
-        ssize_t bytes_read = read(client_socket, buffer, BUFFER_SIZE);
+        ssize_t bytes_read = read(client_socket, buffer, BUFFER_SIZE - 1);
         if (bytes_read <= 0) {
             break;
         }
