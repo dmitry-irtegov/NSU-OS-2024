@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #define BUF_SIZE 1024
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 char *socket_path = "./socket";
 
@@ -33,15 +34,10 @@ int main(int argc, char *argv[]) {
     char buf[BUF_SIZE];
     ssize_t bytes_read;
     while ((bytes_read = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
-        ssize_t bytes_written = 0;
-        while (bytes_written < bytes_read) {
-            ssize_t rc = write(fd, buf + bytes_written, bytes_read - bytes_written);
-            if (rc == -1) {
-                perror("write failed");
-                close(fd);
-                exit(-1);
-            }
-            bytes_written += rc;
+        ssize_t current_sent = write(fd, buf, MIN(bytes_read, sizeof(buf)));
+        if (current_sent == -1) {
+            perror("Failed to write to server socket");
+            exit(-1);
         }
     }
 
