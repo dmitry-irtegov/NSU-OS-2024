@@ -43,7 +43,7 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
     lock.l_type = F_UNLCK;
-    if (fcntl(fd, F_SETLK, &lock) == -1){
+    if (fcntl(file, F_SETLK, &lock) == -1){
         perror("problem in unlock");
         free(cmd);
         close(file);
