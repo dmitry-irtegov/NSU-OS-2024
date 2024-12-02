@@ -10,8 +10,8 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
     struct flock lock;
-    int fd = open(argv[1], O_RDWR | O_CREATE);
-    if (fd == -1){
+    int file = open(argv[1], O_RDWR | O_CREAT);
+    if (file == -1){
         perror("problem in file open");
         exit(EXIT_FAILURE);
     }
@@ -19,37 +19,37 @@ int main(int argc, char** argv){
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
-    if (fcntl(fd, F_SETLKW, &lock) == -1){
+    if (fcntl(file, F_SETLKW, &lock) == -1){
         perror("problem in lock");
-        close(fd);
+        close(file);
         exit(EXIT_FAILURE);
     }
-    char* nano = malloc(strlen("nano ") + strlen(argv[1]) + 1);
-    if (!nano){
+    char* cmd = malloc(strlen("nano ") + strlen(argv[1]) + 1);
+    if (!cmd){
         perror("problem in malloc");
-        close(fd);
+        close(file);
         exit(EXIT_FAILURE);
     }
-    if (snprintf(nano, strlen("nano ") + strlen(argv[1]) + 1, "nano %s", argv[1]) < 0){
+    if (snprintf(cmd, strlen("nano ") + strlen(argv[1]) + 1, "nano %s", argv[1]) < 0){
         perror("problem in snprintf");
-        free(nano);
-        close(fd);
+        free(cmd);
+        close(file);
         exit(EXIT_FAILURE);
     }
-    if (system(nano) == -1){
+    if (system(cmd) == -1){
         perror("failed in nano");
-        free(nano);
-        close(fd);
+        free(cmd);
+        close(file);
         exit(EXIT_FAILURE);
     }
     lock.l_type = F_UNLCK;
     if (fcntl(fd, F_SETLK, &lock) == -1){
         perror("problem in unlock");
-        free(nano);
-        close(fd);
+        free(cmd);
+        close(file);
         exit(EXIT_FAILURE);
     }
-    free(nano);
-    close(fd);
+    free(cmd);
+    close(file);
     exit(EXIT_SUCCESS);
 }
