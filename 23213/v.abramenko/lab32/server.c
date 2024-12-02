@@ -33,8 +33,6 @@ void sigiohandler(int signo, siginfo_t* info, void* context){
     if (signo != SIGIO || info->si_signo != SIGIO){
         return;
     }
-    int a = 0;
-    write(1, &a, sizeof(int));
     request* req = (request*)info->si_value.sival_ptr;
     if (aio_error(req->req) == 0) {
         req->completed = 1;

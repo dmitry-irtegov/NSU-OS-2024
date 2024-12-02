@@ -16,6 +16,7 @@
 
 char* socket_path = "./socket";
 int servfd, clfd;
+int ch = 0;
 
 void close_and_unlink() {
     close(servfd);
@@ -58,6 +59,8 @@ static void SIGIO_handler(int signo, siginfo_t *siginfo, void *context){
 void process(struct aiocb *request){
     ssize_t size = aio_return(request);
     if (size == 0){
+        ch++;
+        write(1, &ch, 1);
         write(1, "EOF, closed connection\n", 23);
 
         char* buffer = (char*) request->aio_buf;
