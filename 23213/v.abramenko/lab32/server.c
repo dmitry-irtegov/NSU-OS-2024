@@ -33,6 +33,7 @@ void sigiohandler(int signo, siginfo_t* info, void* context){
     if (signo != SIGIO || info->si_signo != SIGIO){
         return;
     }
+
     request* req = (request*)info->si_value.sival_ptr;
     if (aio_error(req->req) == 0) {
         req->completed = 1;
@@ -127,8 +128,8 @@ int main() {
     request* requests[MAX_CLIENTS];
     memset(requests, 0, sizeof(requests));
     while (1) {
-        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
         if (sigsetjmp(toprocess, 1) != 0) {
+            sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
             for (int i = 0; i < cnt; i++)
             {
                 if (!requests[i]->completed) {
@@ -168,8 +169,8 @@ int main() {
                     }
                 }
             }
+            sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
         }
-        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
 
         if ((cl = accept(fd, NULL, NULL)) == -1) {
             perror("accept failed");
