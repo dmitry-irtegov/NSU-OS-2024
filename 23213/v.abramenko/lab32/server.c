@@ -48,7 +48,7 @@ request* create_request(int cl) {
         close(cl);
         return NULL;
     }
-    
+
     request->req = malloc(sizeof(struct aiocb));
     if (request->req == NULL) {
         perror("malloc failed");
@@ -137,6 +137,7 @@ int main() {
                 }
                 
                 int rc = aio_return(requests[i]->req);
+                printf("hell\n");
                 if (rc <= 0) {
                     if (rc == -1) {
                         perror("return failed");
@@ -182,6 +183,7 @@ int main() {
         if (requests[cnt] != NULL) {
             cnt++;
         }
+        printf("hell\n");
         sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }
