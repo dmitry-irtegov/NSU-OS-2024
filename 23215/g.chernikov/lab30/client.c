@@ -33,7 +33,7 @@ int main() {
 
     ssize_t bytes_read;
 
-    while ((bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE - 1)) > 0) {
+    while ((bytes_read = read(STDIN_FILENO, buffer, BUFFER_SIZE)) > 0) {
 
         if(bytes_read == -1) {
             perror("read failed");

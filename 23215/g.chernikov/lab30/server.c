@@ -13,7 +13,7 @@ int main() {
 
     int server_socket, client_socket;
     struct sockaddr_un server_addr;
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE + 1];
 
     server_socket = socket(PF_UNIX, SOCK_STREAM, 0);
     if (server_socket < 0) {
@@ -51,7 +51,7 @@ int main() {
 
     while (1) {
 
-        ssize_t bytes_read = read(client_socket, buffer, BUFFER_SIZE - 1);
+        ssize_t bytes_read = read(client_socket, buffer, BUFFER_SIZE);
         if (bytes_read <= 0) {
             break;
         }
