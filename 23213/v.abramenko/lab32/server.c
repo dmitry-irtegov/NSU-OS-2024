@@ -137,7 +137,7 @@ int main() {
                 }
                 
                 int rc = aio_return(requests[i]->req);
-                printf("hell\n");
+                printf("Hell\n");
                 if (rc <= 0) {
                     if (rc == -1) {
                         perror("return failed");
