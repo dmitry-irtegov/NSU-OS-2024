@@ -116,6 +116,7 @@ int main() {
                         cnt--;
                         i--;
                     }
+                    requests[i]->completed = 0;
                 }
             }
         }
