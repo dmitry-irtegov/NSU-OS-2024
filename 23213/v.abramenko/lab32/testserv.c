@@ -78,7 +78,6 @@ void process(struct aiocb *request){
 }
 
 int main(){
-
     if ((servfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
         perror("socket error");
         exit(1);
@@ -111,15 +110,18 @@ int main(){
 
 
     while (1){
+        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
         if (sigsetjmp(toread, 1) == 1){
             process(current_request);
         }
+        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
 
         if ((clfd = accept(servfd, NULL, NULL)) == -1){
             perror("accept error");
             continue;
         }
-        
+        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
         create_request(clfd);
+        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }
