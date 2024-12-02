@@ -164,7 +164,7 @@ int main() {
         requests[cnt]->req->aio_sigevent.sigev_value.sival_ptr = requests[cnt];
         if (aio_read(requests[cnt]->req) == -1) {
             perror("aio_read failed");
-            char* buf = (char*)requests[cnt]->req.aio_buf;
+            char* buf = (char*)requests[cnt]->req->aio_buf;
             free(buf);
             free(requests[cnt]->req);
             free(requests[cnt]);
