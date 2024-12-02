@@ -68,7 +68,7 @@ request* create_request(int cl) {
     request->req->aio_nbytes = BUF_SIZE - 1;
     request->req->aio_sigevent.sigev_notify = SIGEV_SIGNAL;
     request->req->aio_sigevent.sigev_signo = SIGIO;
-    request->req->aio_sigevent.sigev_value.sival_ptr = requests[cnt];
+    request->req->aio_sigevent.sigev_value.sival_ptr = request;
     if (aio_read(request->req) == -1) {
         perror("aio_read failed");
         char* buf = (char*)request->req->aio_buf;
