@@ -77,7 +77,7 @@ int main() {
 
     int cl;
     while (1) {
-        if (sigsetjmp(toprocess, 1) == 1){
+        if (sigsetjmp(toprocess, 1) != 0){
             int rc = aio_return(completed);
             if (rc <= 0) {
                 if (rc == -1) {
@@ -104,7 +104,7 @@ int main() {
         }
 
 
-        if ((cl = accept(fd, NULL, NULL)) == -1){
+        if ((cl = accept(fd, NULL, NULL)) == -1) {
             perror("accept failed");
             continue;
         }
@@ -121,6 +121,7 @@ int main() {
         req->aio_buf = malloc(BUF_SIZE * sizeof(char));
         if (req->aio_buf == NULL) {
             perror("malloc failed");
+            free(req);
             close(cl);
             continue;
         }
@@ -130,6 +131,8 @@ int main() {
         req->aio_sigevent.sigev_value.sival_ptr = req;
         if (aio_read(req) == -1) {
             perror("aio_read failed");
+            free(req->aio_buf);
+            free(req);
             close(cl);
             continue;
         }
