@@ -77,7 +77,8 @@ int main() {
 
     int cl;
     while (1) {
-        if (sigsetjmp(toprocess, 1) != 0){
+        if (sigsetjmp(toprocess, 1) != 0) {
+            sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
             int rc = aio_return(completed);
             if (rc <= 0) {
                 if (rc == -1) {
@@ -100,6 +101,7 @@ int main() {
                     free(completed);
                 }
             }
+            sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
         }
 
 
@@ -107,7 +109,6 @@ int main() {
             perror("accept failed");
             continue;
         }
-
         
         struct aiocb* req = malloc(sizeof(struct aiocb));
         if (req == NULL) {
@@ -115,6 +116,9 @@ int main() {
             close(cl);
             continue;
         }
+
+        sigprocmask(SIG_BLOCK, &sigiohandleraction.sa_mask, NULL);
+
         req->aio_fildes = cl;
         req->aio_offset = 0;
         req->aio_buf = malloc(BUF_SIZE * sizeof(char));
@@ -136,5 +140,6 @@ int main() {
             close(cl);
             continue;
         }
+        sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }

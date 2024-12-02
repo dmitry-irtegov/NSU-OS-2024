@@ -29,7 +29,6 @@ int main(int argc, char *argv[]) {
         close(fd);
         exit(-1);
     }
-    printf("connect\n");
 
     char buf[BUF_SIZE];
     ssize_t bytes_read;
