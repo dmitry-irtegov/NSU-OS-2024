@@ -157,7 +157,7 @@ int main() {
             close(cl);
             continue;
         }
-        cnt++:
+        cnt++;
         sigprocmask(SIG_UNBLOCK, &sigiohandleraction.sa_mask, NULL);
     }
 }
