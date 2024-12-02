@@ -14,7 +14,7 @@
 
 #define MY_MAXCONN 5
 
-char* socket_path = "server_socket";
+char* socket_path = "./socket";
 int servfd, clfd;
 
 void close_and_unlink() {
