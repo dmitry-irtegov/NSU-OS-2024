@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int beep_count = 0;
+volatile int beep_count = 0;
 
-void handle_signal(int sig) {
+void handle_signal(int sig) {   
     switch (sig) {
         case SIGQUIT:
             write(1, "\nAmount of beeps: ", 18); // Фиксированная часть сообщения
@@ -52,7 +52,6 @@ void handle_signal(int sig) {
 }
 
 int main() {
-
     if (signal(SIGINT, handle_signal) == SIG_ERR) {
         perror("Fail to set SIGINT handler");
         return EXIT_FAILURE;
