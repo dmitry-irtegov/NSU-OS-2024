@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-volatile int beep_count = 0;
+volatile sig_atomic_t beep_count = 0;
 
 void handle_signal(int sig) {   
     switch (sig) {
