@@ -30,7 +30,7 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
 
-    lock.l_type = F_RDLCK;
+    lock.l_type = F_WRLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
     lock.l_len = 0;
