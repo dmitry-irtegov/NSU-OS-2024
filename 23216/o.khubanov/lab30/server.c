@@ -10,6 +10,7 @@
 #define CHUNK_SIZE 5 // Размер чанка
 
 void to_uppercase(char *str, size_t len) {
+    size_t i;
     for (size_t i = 0; i < len; i++) {
         str[i] = toupper((unsigned char)str[i]);
     }
@@ -72,16 +73,25 @@ int main() {
     int server_fd, client_fd, result;
 
     result = initialize_socket(SOCKET_PATH, &server_fd);
+    result = initialize_socket(SOCKET_PATH, &server_fd);
     if (result != 0) {
-        if (result == -1) {
-            fprintf(stderr, "Ошибка: не удалось создать сокет.\n");
-        } else if (result == -2) {
-            fprintf(stderr, "Ошибка: не удалось привязать сокет. Возможно, сервер уже работает.\n");
-        } else if (result == -3) {
-            fprintf(stderr, "Ошибка: не удалось настроить прослушивание соединений.\n");
-        }
-        exit(EXIT_FAILURE);
+    	switch (result) {
+        	case -1:
+            		fprintf(stderr, "Ошибка: не удалось создать сокет.\n");
+            		break;
+        	case -2:
+            		fprintf(stderr, "Ошибка: не удалось привязать сокет. Возможно, сервер уже работает.\n");
+            		break;
+        	case -3:
+           		 fprintf(stderr, "Ошибка: не удалось настроить прослушивание соединений.\n");
+            		 break;
+        	default:
+            		 fprintf(stderr, "Неизвестная ошибка: код %d\n", result);
+                         break;
+    	}
+    	exit(EXIT_FAILURE);
     }
+
 
     printf("Сервер слушает соединения на %s\n", SOCKET_PATH);
 
