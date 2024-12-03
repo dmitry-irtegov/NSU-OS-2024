@@ -42,7 +42,7 @@ int socketConnection(const char* socketname) {
         return -1;
     }
     
-    if (connect(socketDescriptor, (struct sockaddr_un *)&addr, sizeof(addr)) == -1) {
+    if (connect(socketDescriptor, (const struct sockaddr *)&addr, sizeof(addr)) == -1) {
         perror("cannot connect");
         close(socketDescriptor);
         return -1;
