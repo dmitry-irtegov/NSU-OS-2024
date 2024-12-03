@@ -55,7 +55,7 @@ int socketInitialization(const char *pathToSocket, int queueConnectionLength) {
     // unlink for cases, when socket already binded with this name
     unlink(PATH_TO_SOCKET);
     // bind and listen
-    if (bind(socketDescriptor, (struct sockaddr_un *)&addr, sizeof(addr)) == -1) {
+    if (bind(socketDescriptor, (const struct sockaddr *)&addr, sizeof(addr)) == -1) {
         perror("cannot bind");
         close(socketDescriptor);
         return -1;
