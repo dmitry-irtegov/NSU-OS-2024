@@ -17,12 +17,12 @@ void sigHandler(int sig) {
 }
 
 int main() {
-    if (sigset(SIGINT, sigHandler) == -1) {
+    if (sigset(SIGINT, sigHandler) == SIG_ERR) {
         perror("Failed to set SIGINT handler");
         exit(EXIT_FAILURE);
     }
 
-    if (sigset(SIGQUIT, sigHandler) == -1) {
+    if (sigset(SIGQUIT, sigHandler) == SIG_ERR) {
         perror("Failed to set SIGQUIT handler");
         exit(EXIT_FAILURE);
     }
