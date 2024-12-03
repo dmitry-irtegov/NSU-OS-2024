@@ -8,10 +8,16 @@ int counter = 0;
 void sigHandler(int sig) {
     switch (sig) { 
     case SIGQUIT: ;
-        printf("Total num of beeps: %d", counter);
-        return ;
+        char *message = "\nTotal beeps num = ";
+        write(1, message, strlen(message));
+        char num[4];
+        int bytesToWrite = sprintf(num, "%d", counter);
+        write(1, num, bytesToWrite);
+        write(1, "\n", 1);
+
+        exit(EXIT_SUCCESS) ;
     case SIGINT: ;
-        printf("\a");
+        write(1, "\a", 1);
         counter++;
     }
 }
@@ -30,6 +36,4 @@ int main() {
     while (1) {
         pause();
     }
-
-    exit(EXIT_SUCCESS);
 }
