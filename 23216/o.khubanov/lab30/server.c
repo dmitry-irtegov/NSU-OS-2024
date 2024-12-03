@@ -10,7 +10,8 @@
 #define CHUNK_SIZE 5 // Размер чанка
 
 void to_uppercase(char *str, size_t len) {
-    for (size_t i = 0; i < len; i++) {
+    size_t i;
+    for (i = 0; i < len; i++) {
         str[i] = toupper((unsigned char)str[i]);
     }
 }
