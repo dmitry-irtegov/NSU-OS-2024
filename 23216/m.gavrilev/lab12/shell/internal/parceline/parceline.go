@@ -54,7 +54,7 @@ func (cmd Command) blankSkip(line []byte, id int) int {
 	return id
 }
 
-func (cmd Command) delimId(id int, line []byte) int {
+func (cmd Command) delimId(line []byte, id int) int {
 	s := bytes.IndexAny(line[id:], " |&<>;")
 	if s == -1 {
 		return len(line) - 1
@@ -95,12 +95,13 @@ func (cmd Command) Parceline(line []byte) []Command {
 			i++
 
 		case '<':
+			i++
 			i = cmd.blankSkip(line, i)
-			if i < len(line) { // TODO: < ____ catch this error
-				fmt.Println("syntax error near unexpected token `<'")
+			s := cmd.delimId(line, i)
+			if i == s {
+				fmt.Println("syntax error near unexpected token `newline'")
 				return nil
 			}
-			s := cmd.delimId(i, line)
 			tmp.infile = string(line[i:s])
 			i = s
 			i++
@@ -116,7 +117,7 @@ func (cmd Command) Parceline(line []byte) []Command {
 				fmt.Println("syntax error near unexpected token `>'")
 				return nil
 			}
-			s := cmd.delimId(i, line)
+			s := cmd.delimId(line, i)
 			if aflg {
 				tmp.appfile = string(line[i:s])
 			} else {
@@ -135,7 +136,7 @@ func (cmd Command) Parceline(line []byte) []Command {
 			i++
 
 		default:
-			s := cmd.delimId(i, line)
+			s := cmd.delimId(line, i)
 			tmp.cmdargs = append(tmp.cmdargs, string(line[i:s]))
 			i = s
 		}
