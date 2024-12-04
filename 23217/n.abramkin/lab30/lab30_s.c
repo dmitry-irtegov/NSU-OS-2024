@@ -7,8 +7,14 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
-#define SOCKET_PATH "/tmp/unix_socket"
+#define SOCKET_PATH "/tmp/unix_socketasdasd"
 #define BUFFER_SIZE 1024
+
+volatile sig_atomic_t stop = 0;
+
+void handle_sigint(int sig) {
+    stop = 1;
+}
 
 void to_uppercase(char *str) {
     while (*str) {
@@ -52,27 +58,40 @@ int main() {
 
     printf("Server is listening on %s\n", SOCKET_PATH);
 
-    // Принимаем входящее соединение
-    if ((client_sock = accept(server_sock, NULL, NULL)) == -1) {
-        perror("Accept failed");
-        close(server_sock);
-        exit(EXIT_FAILURE);
+    // Устанавливаем обработчик сигнала
+    signal(SIGINT, handle_sigint);
+
+    // Принимаем и обрабатываем входящие соединения в цикле
+    while (!stop) {
+        // Принимаем новое соединение
+        if ((client_sock = accept(server_sock, NULL, NULL)) == -1) {
+            perror("Accept failed");
+            continue;  // Продолжаем принимать новые соединения
+        }
+
+        printf("Client connected\n");
+
+        // Читаем данные от клиента
+        ssize_t num_read;
+        while ((num_read = read(client_sock, buffer, BUFFER_SIZE - 1)) > 0) {
+            buffer[num_read] = '\0';  // Завершаем строку
+            to_uppercase(buffer);
+            printf("Received and converted to uppercase: %s\n", buffer);
+        }
+
+        if (num_read == -1) {
+            perror("Read failed");
+        }
+
+        printf("Client disconnected\n");
+
+        // Закрываем клиентский сокет
+        close(client_sock);
     }
 
-    // Читаем данные от клиента
-    ssize_t num_read;
-    while ((num_read = read(client_sock, buffer, BUFFER_SIZE - 1)) > 0) {
-        buffer[num_read] = '\0';  // Завершаем строку
-        to_uppercase(buffer);
-        printf("Received and converted to uppercase: %s\n", buffer);
-    }
+    printf("Shutting down server...\n");
 
-    if (num_read == -1) {
-        perror("Read failed");
-    }
-
-    // Закрываем соединения и удаляем сокетный файл
-    close(client_sock);
+    // Закрываем серверный сокет и удаляем сокетный файл (не достигается из-за бесконечного цикла)
     close(server_sock);
     unlink(SOCKET_PATH);
 

@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
-#define SOCKET_PATH "/tmp/unix_socket"
+#define SOCKET_PATH "/tmp/unix_socketasdasd"
 #define BUFFER_SIZE 1024
 
 int main() {
