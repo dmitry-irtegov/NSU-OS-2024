@@ -91,16 +91,6 @@ int main() {
 
         // Закрываем клиентский сокет
         close(client_sock);
-
-        // Проверяем ввод с консоли
-        printf("Type 'stop' to shut down the server, or press Enter to continue: ");
-        if (fgets(console_input, BUFFER_SIZE, stdin)) {
-            // Убираем символ новой строки
-            console_input[strcspn(console_input, "\n")] = '\0';
-            if (strcmp(console_input, "stop") == 0) {
-                break;  // Выход из основного цикла
-            }
-        }
     }
 
     printf("Shutting down server...\n");
