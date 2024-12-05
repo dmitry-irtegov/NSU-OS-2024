@@ -8,7 +8,6 @@
 #include <sys/un.h>
 #include <pwd.h>
 #include <errno.h>
-#include <sys/stat.h>
 
 #define BUFFER_SIZE 1024
 
@@ -53,13 +52,6 @@ int main() {
     // Привязываем сокет
     if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_un)) == -1) {
         perror("Bind failed");
-        close(server_sock);
-        exit(EXIT_FAILURE);
-    }
-
-    // Удаляем все права на сокетный файл (чтобы только сервер мог его использовать)
-    if (chmod(socket_path, 0) == -1) {
-        perror("Failed to remove socket file permissions");
         close(server_sock);
         exit(EXIT_FAILURE);
     }
