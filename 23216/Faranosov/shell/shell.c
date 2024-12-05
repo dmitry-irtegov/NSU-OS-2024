@@ -20,7 +20,7 @@ int terminalfd;
 
 char curDir[128];
 
-char* specCommands[] = { "jobs", "fg", "bg", "exit" };
+char* specCommands[] = { "jobs", "fg", "bg", "exit", "cd"};
 
 void setbgjob(job* curJob);
 
@@ -291,7 +291,7 @@ void checkJobs() {
 	char shouldCont = 1;
 	do
 	{
-		getted_id = waitpid(-1, &status, WNOHANG);
+		getted_id = waitpid(-1, &status, WNOHANG | WUNTRACED);
 		switch (getted_id) {
 		case 0:
 			shouldCont = 0;
@@ -375,16 +375,6 @@ void start_proc(process* proc, int infile, int outfile) {
 			exit(0);
 		}
 
-		if (strcmp(proc->cmd->cmdargs[0], specCommands[1]) == 0) {
-			setfgjob(findJob(atoi(proc->cmd->cmdargs[1])));
-			exit(0);
-		}
-
-		if (strcmp(proc->cmd->cmdargs[0], specCommands[2]) == 0) {
-			setbgjob(findJob(atoi(proc->cmd->cmdargs[1])));
-			exit(0);
-		}
-
 
 		execvp(proc->cmd->cmdargs[0], proc->cmd->cmdargs);
 		perror("SS: exec error");
@@ -396,7 +386,8 @@ void start_proc(process* proc, int infile, int outfile) {
 }
 
 void setsignal(int sig, void (*func)(int), char* procName) {
-	if (signal(sig, func) == SIG_ERR) {
+	if (setsig(sig, func) == SIG_ERR) {
+		printf("%s\n", procName);
 		perror("setsig error");
 		exit(1);
 	}
@@ -411,9 +402,41 @@ void start_job(job* jobs) {
 	infile = cntcmds = outfile = 0;
 	if (jobs->conv->cntcommands == 1) {
 
+		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
+			if (jobs->proc->cmd->cmdargs == 1) {
+				job* curJ = lastjob;
+				while (curJ != NULL || curJ->conv->flag == 0) {
+					curJ = curJ->prevjob;
+				}
+				if (curJ != NULL) {
+					setfgjob(curJ);
+				}
+			}
+			else {
+				int value = atoi(jobs->proc->cmd->cmdargs[1]);
+				if (value == 0) {
+					printf("atoi error");
+					exit(1);
+				}
+				setfgjob(findJob(value));
+			}
+			return;
+		}
+
+		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[2]) == 0) {
+			setbgjob(findJob(atoi(jobs->proc->cmd->cmdargs[1])));
+			return;
+		}
+
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[3]) == 0) {
 			exit(0);
 		}
+
+		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[4]) == 0) {
+			chdir(jobs->proc->cmd->cmdargs[1]);
+			return;
+		}
+		
 	}
 
 	switch (sid = fork()) {
@@ -557,6 +580,7 @@ void setfgjob(job* curJob) {
 }
 
 void printCurDir() {
+	for (int i = 0; i < 128; i++) curDir[i] = '\0';
 	getcwd(curDir, 128);
 
 	printf("%s>\n", curDir);
@@ -595,10 +619,8 @@ void printJobs() {
 }
 
 int main(int argc, char* argv) {
-	register int i;
 	char line[1024];
 	int ncmds;
-	char prompt[50];
 	terminalfd = 0;
 	job* jobToStart;
 
