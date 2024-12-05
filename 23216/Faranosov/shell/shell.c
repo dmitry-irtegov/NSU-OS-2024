@@ -313,7 +313,6 @@ void checkJobs() {
 }
 
 void shellawaiting(job* forgjob) {
-	char whileWorking = 1;
 	int status;
 	pid_t idToWait = forgjob->gpid, getted_id;
 	for (;;) {
