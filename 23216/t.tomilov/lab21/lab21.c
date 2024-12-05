@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int counter = 0;
+volatile sig_atomic_t counter = 0;
 
 void boop(int sig){
 	if (sig == SIGQUIT){
