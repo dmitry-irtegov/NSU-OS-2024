@@ -8,6 +8,7 @@
 #include <sys/un.h>
 #include <pwd.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #define BUFFER_SIZE 1024
 
