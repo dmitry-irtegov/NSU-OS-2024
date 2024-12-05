@@ -56,6 +56,13 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    // Удаляем все права на сокетный файл (чтобы только сервер мог его использовать)
+    if (chmod(socket_path, 0) == -1) {
+        perror("Failed to remove socket file permissions");
+        close(server_sock);
+        exit(EXIT_FAILURE);
+    }
+
     // Начинаем слушать входящие соединения
     if (listen(server_sock, 5) == -1) {
         perror("Listen failed");
