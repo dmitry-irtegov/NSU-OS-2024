@@ -6,8 +6,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <pwd.h>
+#include <errno.h>
 
-#define SOCKET_PATH "unix_socket"
 #define BUFFER_SIZE 1024
 
 void to_uppercase(char *str) {
@@ -22,6 +23,17 @@ int main() {
     struct sockaddr_un server_addr;
     char buffer[BUFFER_SIZE];
     char console_input[BUFFER_SIZE];
+    char socket_path[BUFFER_SIZE];
+
+    // Получаем текущего пользователя
+    struct passwd *pw = getpwuid(getuid());
+    if (!pw) {
+        perror("Failed to get user info");
+        exit(EXIT_FAILURE);
+    }
+
+    // Формируем имя сокетного файла
+    snprintf(socket_path, sizeof(socket_path), "/tmp/%s_%d_socket", pw->pw_name, getuid());
 
     // Создаем сокет
     if ((server_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -30,12 +42,12 @@ int main() {
     }
 
     // Удаляем старый сокетный файл, если он существует
-    unlink(SOCKET_PATH);
+    unlink(socket_path);
 
     // Настраиваем адрес сокета
     memset(&server_addr, 0, sizeof(struct sockaddr_un));
     server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
+    strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
 
     // Привязываем сокет
     if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_un)) == -1) {
@@ -51,7 +63,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Server is listening on %s\n", SOCKET_PATH);
+    printf("Server is listening on %s\n", socket_path);
 
     // Принимаем и обрабатываем входящие соединения в цикле
     while (1) {
@@ -95,7 +107,7 @@ int main() {
 
     // Закрываем серверный сокет и удаляем сокетный файл
     close(server_sock);
-    unlink(SOCKET_PATH);
+    unlink(socket_path);
 
     return 0;
 }

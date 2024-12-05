@@ -6,13 +6,24 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
-#define SOCKET_PATH "unix_socket"
 #define BUFFER_SIZE 1024
 
 int main() {
     int client_sock;
     struct sockaddr_un server_addr;
     char buffer[BUFFER_SIZE];
+    char console_input[BUFFER_SIZE];
+    char socket_path[BUFFER_SIZE];
+
+    // Получаем текущего пользователя
+    struct passwd *pw = getpwuid(getuid());
+    if (!pw) {
+        perror("Failed to get user info");
+        exit(EXIT_FAILURE);
+    }
+
+    // Формируем имя сокетного файла
+    snprintf(socket_path, sizeof(socket_path), "/tmp/%s_%d_socket", pw->pw_name, getuid());
 
     // Создаем сокет
     if ((client_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
