@@ -8,6 +8,7 @@
 #define MAXARGS 256
 #define MAXCMDS 50
 #define MAXLINELEN 1024
+#define PROMPTLEN 100
 
 struct command {
     char *cmdargs[MAXARGS];

@@ -56,7 +56,7 @@ void ensure_joblist_size()
     struct job* oldarr = jobs.arr;
     int newsz = jobs.arsz * 2;
     jobs.arr = calloc(newsz, sizeof(struct job));
-    memcpy(jobs.arr, oldarr, sizeof(struct job) * (jobs.last_id + 1));
+    memcpy(jobs.arr, oldarr, sizeof(struct job) * jobs.last_id);
     free(oldarr);
     jobs.arsz = newsz;
 }
@@ -141,7 +141,6 @@ int update_jobs()
                 if(!jobs.arr[i].instoplist) {
                     stoplist_add(i);
                 }
-                //stoplist_del(i);
             }
             if(jobs.arr[i].stat != prevstat) {
                 changed = 1;
@@ -211,26 +210,24 @@ int get_job_id(char* spec)
     return id;
 }
 
-
 void job_to_fg(int job_id, int need_cont_sig) {
     siginfo_t infop;
     if(tcsetpgrp(0, jobs.arr[job_id].lidpid) == -1) {
         perror("unable to set processs to fg");
     }
     jobs.arr[job_id].fgrnd = 1;
-    
+    if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
+        perror("unable to return job's terminal attributes");
+    }
     if(need_cont_sig) {
-        if(need_cont_sig == 1) {
-            if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
-                perror("unable to return job's terminal attributes");
-            }
+        if(need_cont_sig == 1) { // only for jobs continued from stopped
+            // (not first time launched)
             jobs.arr[job_id].stat = RUNNING;
             jobs.arr[job_id].cnt_running += jobs.arr[job_id].cnt_stopped;
             jobs.arr[job_id].cnt_stopped = 0;
-        }
-        sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
+        } 
+        kill(-jobs.arr[job_id].lidpid, SIGCONT);
     }
-
     while(jobs.arr[job_id].cnt_running > 0) {
         infop.si_code = -1;
         pid_t code = waitid(P_PGID, jobs.arr[job_id].lidpid, &infop,
@@ -296,7 +293,6 @@ void bg(char* arg){
     }
     jobs.arr[job_id].stat = RUNNING;
     jobs.arr[job_id].cnt_running = jobs.arr[job_id].cnt_stopped;
-    jobs.arr[job_id].cnt_stopped = 0;
     char sign = ' ';
     if(job_id == jobs.plus_id) {
         sign = '+';
@@ -304,6 +300,16 @@ void bg(char* arg){
         sign = '-';
     }
     printf("[%d]%c %s &\n", job_id, sign, jobs.arr[job_id].cmdline);
-    
-    sigsend(P_PGID, jobs.arr[job_id].lidpid, SIGCONT);
+    kill(-jobs.arr[job_id].lidpid, SIGCONT);
+    siginfo_t infop;
+    while(jobs.arr[job_id].cnt_stopped > 0) {
+        infop.si_code = -1;
+        pid_t code = waitid(P_PGID, jobs.arr[job_id].lidpid, &infop,
+                        WCONTINUED);
+        if(code == -1) {
+            perror("one or more of job processes was not continued");
+            break;
+        }
+        jobs.arr[job_id].cnt_stopped--;
+    }
 }
