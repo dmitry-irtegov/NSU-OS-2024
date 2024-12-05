@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
-#define SOCKET_PATH "/tmp/unix_socketasdasd"
+#define SOCKET_PATH "unix_socket"
 #define BUFFER_SIZE 1024
 
 void to_uppercase(char *str) {
