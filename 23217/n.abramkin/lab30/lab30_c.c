@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <pwd.h>
+#include <errno.h>
 
 #define BUFFER_SIZE 1024
 
