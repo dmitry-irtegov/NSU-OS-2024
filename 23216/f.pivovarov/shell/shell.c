@@ -45,22 +45,22 @@ int main(int argc, char *argv[]) {
                     break;
                 case 0: 
                     if (infile) {
-                        int inputfile = open(infile, O_CREAT | O_RDONLY);
-                        if (inputfile == -1 || dup2(STDIN_FILENO, inputfile)) {
+                        int inputfile = open(infile, O_RDONLY);
+                        if (inputfile == -1 || dup2(inputfile, STDIN_FILENO) == -1) {
                             perror("STDIN redirection");
                             exit(EXIT_FAILURE);
                         }
                     }
                     if (outfile) {
-                        int outputfile = open(outfile, O_CREAT | O_WRONLY);
-                        if (outputfile == -1 || dup2(STDOUT_FILENO, outputfile)) {
+                        int outputfile = open(outfile, O_WRONLY | O_CREAT | O_APPEND, 0666);
+                        if (outputfile == -1 || dup2(outputfile, STDOUT_FILENO) == -1) {
                             perror("STDOUT redirection");
                             exit(EXIT_FAILURE);
                         }
                     }
                     if (appfile) {
-                        int appendfile = open(appfile, O_CREAT | O_APPEND);
-                        if (appendfile == -1 || dup2(STDOUT_FILENO, appendfile)) {
+                        int appendfile = open(appfile, O_WRONLY | O_CREAT | O_APPEND, 0666);
+                        if (appendfile == -1 || dup2(appendfile, STDOUT_FILENO) == -1) {
                             perror("STDOUT redirection");
                             exit(EXIT_FAILURE);
                         }
