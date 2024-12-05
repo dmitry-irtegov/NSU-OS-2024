@@ -8,9 +8,13 @@
 #include <poll.h>
 #include <errno.h>
 
-#define SOCKET_NAME "socket"
+#define SOCKET_NAME "sckt"
 #define BUFFER_SIZE 10
 #define MAX_CLIENTS 10
+#define BACKLOG_SIZE 20
+
+static int successful_connections = 0;
+static int active_clients = 0;
 
 ssize_t read_n_bytes(int fd, void *buffer, size_t n) {
     size_t bytes_left = n;
@@ -63,7 +67,7 @@ int main() {
         exit(2);
     }
 
-    if (listen(server_socket, 5) == -1) {
+    if (listen(server_socket, BACKLOG_SIZE) == -1) {
         perror("Listen failed");
         close(server_socket);
         exit(3);
@@ -89,13 +93,16 @@ int main() {
                 continue;
             }
 
-            if (nfds < MAX_CLIENTS + 1) {
+            if (active_clients < MAX_CLIENTS) {
+                successful_connections++;
+                active_clients++;
+                printf("New client connected (total successful: %d)\n", successful_connections);
+                
                 fds[nfds].fd = client_socket;
                 fds[nfds].events = POLLIN;
                 nfds++;
-                printf("New client connected\n");
             } else {
-                printf("Too many clients. Connection rejected.\n");
+                printf("Too many clients. Connection rejected. (total successful: %d)\n", successful_connections);
                 close(client_socket);
             }
         }
@@ -108,6 +115,7 @@ int main() {
                 if (size_read != sizeof(msg_size)) {
                     printf("Client disconnected\n");
                     close(fds[i].fd);
+                    active_clients--;
                     memmove(&fds[i], &fds[i + 1], (nfds - i - 1) * sizeof(struct pollfd));
                     nfds--;
                     i--;
