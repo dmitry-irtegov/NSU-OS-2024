@@ -6,16 +6,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include <signal.h>
 
 #define SOCKET_PATH "/tmp/unix_socketasdasd"
 #define BUFFER_SIZE 1024
-
-volatile sig_atomic_t stop = 0;
-
-void handle_sigint(int sig) {
-    stop = 1;
-}
 
 void to_uppercase(char *str) {
     while (*str) {
@@ -28,6 +21,7 @@ int main() {
     int server_sock, client_sock;
     struct sockaddr_un server_addr;
     char buffer[BUFFER_SIZE];
+    char console_input[BUFFER_SIZE];
 
     // Создаем сокет
     if ((server_sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -59,11 +53,8 @@ int main() {
 
     printf("Server is listening on %s\n", SOCKET_PATH);
 
-    // Устанавливаем обработчик сигнала
-    signal(SIGINT, handle_sigint);
-
     // Принимаем и обрабатываем входящие соединения в цикле
-    while (!stop) {
+    while (1) {
         // Принимаем новое соединение
         if ((client_sock = accept(server_sock, NULL, NULL)) == -1) {
             perror("Accept failed");
@@ -88,11 +79,21 @@ int main() {
 
         // Закрываем клиентский сокет
         close(client_sock);
+
+        // Проверяем ввод с консоли
+        printf("Type 'stop' to shut down the server, or press Enter to continue: ");
+        if (fgets(console_input, BUFFER_SIZE, stdin)) {
+            // Убираем символ новой строки
+            console_input[strcspn(console_input, "\n")] = '\0';
+            if (strcmp(console_input, "stop") == 0) {
+                break;  // Выход из основного цикла
+            }
+        }
     }
 
     printf("Shutting down server...\n");
 
-    // Закрываем серверный сокет и удаляем сокетный файл (не достигается из-за бесконечного цикла)
+    // Закрываем серверный сокет и удаляем сокетный файл
     close(server_sock);
     unlink(SOCKET_PATH);
 
