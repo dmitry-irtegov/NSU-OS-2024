@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
-  if (listen(fd, 5) == -1) {
+  if (listen(fd, 1) == -1) {
     perror("listen error");
     exit(-1);
   }
