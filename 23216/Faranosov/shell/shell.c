@@ -386,7 +386,7 @@ void start_proc(process* proc, int infile, int outfile) {
 }
 
 void setsignal(int sig, void (*func)(int), char* procName) {
-	if (setsig(sig, func) == SIG_ERR) {
+	if (signal(sig, func) == SIG_ERR) {
 		printf("%s\n", procName);
 		perror("setsig error");
 		exit(1);
@@ -403,7 +403,7 @@ void start_job(job* jobs) {
 	if (jobs->conv->cntcommands == 1) {
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
-			if (jobs->proc->cmd->cmdargs == 1) {
+			if (jobs->proc->cmd->cmdargs[1] == NULL) {
 				job* curJ = lastjob;
 				while (curJ != NULL || curJ->conv->flag == 0) {
 					curJ = curJ->prevjob;
@@ -618,7 +618,7 @@ void printJobs() {
 	printf("total: %d\n\n", cnt);
 }
 
-int main(int argc, char* argv) {
+int main() {
 	char line[1024];
 	int ncmds;
 	terminalfd = 0;
