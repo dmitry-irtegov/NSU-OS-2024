@@ -31,9 +31,9 @@ int match(const char* pattern, const char* str) {
 }
 
 int main() {
-    char pattern[NAME_MAX + 3];
+    char pattern[NAME_MAX + 2];
     int rd;
-    if ((rd = read(0, pattern, NAME_MAX + 2)) > NAME_MAX) {
+    if ((rd = read(0, pattern, NAME_MAX + 1)) > NAME_MAX) {
         printf("Too large\n");
         while (getchar() != '\n');
         return 0;
