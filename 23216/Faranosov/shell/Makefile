@@ -1,3 +1,3 @@
 CFLAGS=-Wall -Wextra -o ms
-all: shell.c parseline.c promptline.c
+all:
 	gcc shell.c parseline.c promptline.c $(CFLAGS)
