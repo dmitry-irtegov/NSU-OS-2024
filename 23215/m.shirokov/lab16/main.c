@@ -11,6 +11,7 @@ void set_terminal_mode(struct termios *old_tio) {
         exit(EXIT_FAILURE);
     }
     new_tio = *old_tio;
+    printf("%c\n",new_tio.c_cc[VMIN]);
     new_tio.c_lflag &= ~(ICANON);
     new_tio.c_cc[VMIN] = 1;
     if (tcsetattr(STDIN_FILENO, TCSANOW, &new_tio) != 0) {
