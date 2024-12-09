@@ -13,7 +13,9 @@ void handle(int sig){
         exit(1);
     }
 	new = old;
-	new.c_lflag &= ~ICANON;
+	if ((new.c_lflag & ICANON) != 0){
+		new.c_lflag &= ~ICANON;
+	}
 	new.c_cc[VMIN] = 1;
 	new.c_cc[VTIME] = 0;
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &new)){        // E_BAD_F E_INTR E_IN_VAL E_NO_TTY  E_IO
