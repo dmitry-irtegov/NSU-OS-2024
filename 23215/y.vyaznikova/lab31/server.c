@@ -6,8 +6,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <poll.h>
-#include <errno.h>
 #include <stdint.h>
+#include <errno.h>
 
 #define SOCKET_NAME "sckt"
 #define BUFFER_SIZE 10
@@ -27,7 +27,7 @@ int main() {
     server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_socket == -1) {
         perror("Socket creation failed");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     unlink(SOCKET_NAME);
@@ -39,13 +39,13 @@ int main() {
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         perror("Bind failed");
         close(server_socket);
-        exit(2);
+        exit(EXIT_FAILURE);
     }
 
     if (listen(server_socket, BACKLOG_SIZE) == -1) {
         perror("Listen failed");
         close(server_socket);
-        exit(3);
+        exit(EXIT_FAILURE);
     }
 
     printf("Server is listening...\n");
@@ -72,12 +72,12 @@ int main() {
                 successful_connections++;
                 active_clients++;
                 printf("New client connected (total successful: %d)\n", successful_connections);
-                
+
                 fds[nfds].fd = client_socket;
                 fds[nfds].events = POLLIN;
                 nfds++;
             } else {
-                printf("Too many clients. Connection rejected. (total successful: %d)\n", successful_connections);
+                printf("Too many clients. Connection rejected.\n");
                 close(client_socket);
             }
         }
@@ -99,10 +99,10 @@ int main() {
 
                 size_t total_read = 0;
                 while (total_read < msg_size) {
-                    bytes_read = read(fds[i].fd, buffer, 
-                                   (msg_size - total_read < BUFFER_SIZE) ? 
-                                   msg_size - total_read : BUFFER_SIZE);
-                    
+                    bytes_read = read(fds[i].fd, buffer,
+                        (msg_size - total_read < BUFFER_SIZE) ? 
+                        msg_size - total_read : BUFFER_SIZE);
+
                     if (bytes_read <= 0) {
                         break;
                     }
@@ -111,7 +111,7 @@ int main() {
                         buffer[j] = toupper(buffer[j]);
                     }
                     write(1, buffer, bytes_read);
-                    
+
                     total_read += bytes_read;
                 }
             }
