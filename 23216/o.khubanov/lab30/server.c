@@ -75,19 +75,21 @@ int main() {
     result = initialize_socket(SOCKET_PATH, &server_fd);
      
     switch (result) {
-        case -1:
-            	fprintf(stderr, "Ошибка: не удалось создать сокет.\n");
-            	exit(EXIT_FAILURE);
-        case -2:
-           	fprintf(stderr, "Ошибка: не удалось привязать сокет. Возможно, сервер уже работает.\n");
-		exit(EXIT_FAILURE);
-        case -3:
-           	fprintf(stderr, "Ошибка: не удалось настроить прослушивание соединений.\n");
-            	exit(EXIT_FAILURE);
-        default:
-                fprintf(stderr, "Неизвестная ошибка: код %d\n", result);
-                exit(EXIT_FAILURE);
-    	}
+    case -1:
+        fprintf(stderr, "Ошибка: не удалось создать сокет.\n");
+        exit(EXIT_FAILURE);
+
+    case -2:
+        fprintf(stderr, "Ошибка: не удалось привязать сокет. Возможно, сервер уже работает.\n");
+        exit(EXIT_FAILURE);
+
+    case -3:
+        fprintf(stderr, "Ошибка: не удалось настроить прослушивание соединений.\n");
+        exit(EXIT_FAILURE);
+
+    default: // Обработка случая, когда результат 0
+        break;
+}
 
 
     printf("Сервер слушает соединения на %s\n", SOCKET_PATH);
