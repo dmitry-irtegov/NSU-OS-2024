@@ -80,12 +80,13 @@ void print_file_info(const char *path, size_t owner_width, size_t group_width) {
 
     const char *file_name = get_file_name(path);
 
-    // Печать информации с выравниванием
-    printf("%c%s %3ld %-*s %-*s %8s %s %s\n",
-           type, permissions, n_links,
-           (int)owner_width, owner,
-           (int)group_width, group,
-           size, mod_time, file_name);
+    printf("%c%s %3lu %-*s %-*s %8s %s %s\n",
+       type, permissions, n_links, 
+       (int)owner_width, owner,
+       (int)group_width, group,
+       size, mod_time, file_name);
+
+           
 }
 
 // Рассчитать максимальные ширины колонок
