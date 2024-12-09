@@ -6,9 +6,7 @@
 
 struct termios original_terminal_attributes;
 
-void sigcont_handler(int signo) {
-    fflush(stdin);
-    fflush(stdout);
+void sigcont_handler() {
     tcsetattr(0, TCSANOW, &original_terminal_attributes);
 }
 
@@ -20,7 +18,6 @@ int main() {
     }
 
     original_terminal_attributes = terminal_attributes;
-
     original_terminal_attributes.c_lflag &= ~(ICANON);
     original_terminal_attributes.c_cc[VMIN] = 1;
 
