@@ -80,7 +80,7 @@ void print_file_info(const char *path, size_t owner_width, size_t group_width) {
 
     const char *file_name = get_file_name(path);
 
-    printf("%c%s %3lu %-*s %-*s %8s %s %s\n",
+    printf("%c%s %3u %-*s %-*s %8s %s %s\n",
        type, permissions, n_links, 
        (int)owner_width, owner,
        (int)group_width, group,
