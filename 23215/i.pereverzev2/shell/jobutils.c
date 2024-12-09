@@ -219,6 +219,7 @@ void job_to_fg(int job_id, int need_cont_sig) {
     if(tcsetattr(0, TCSADRAIN, &(jobs.arr[job_id].jobattr)) == -1) {
         perror("unable to return job's terminal attributes");
     }
+
     if(need_cont_sig) {
         if(need_cont_sig == 1) { // only for jobs continued from stopped
             // (not first time launched)
@@ -228,6 +229,7 @@ void job_to_fg(int job_id, int need_cont_sig) {
         } 
         kill(-jobs.arr[job_id].lidpid, SIGCONT);
     }
+
     while(jobs.arr[job_id].cnt_running > 0) {
         infop.si_code = -1;
         pid_t code = waitid(P_PGID, jobs.arr[job_id].lidpid, &infop,
@@ -274,6 +276,9 @@ void fg(char* arg) {
             return;
         }
     }
+    if(jobs.arr[job_id].fgrnd == 1) {
+        return;
+    }
     if(jobs.arr[job_id].stat == RUNNING) {
         job_to_fg(job_id, 0);
     } else {
@@ -290,6 +295,9 @@ void bg(char* arg){
             fprintf(stderr, "incorrect argument of fg\n");
             return;
         }
+    }
+    if(jobs.arr[job_id].fgrnd == 0) {
+        return;
     }
     jobs.arr[job_id].stat = RUNNING;
     jobs.arr[job_id].cnt_running = jobs.arr[job_id].cnt_stopped;

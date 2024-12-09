@@ -229,8 +229,8 @@ int main()
                 }
                 if (!(cmds[i].cmdflag & OUTPIP)) {
                     // launch job in foreground (if we are on last process in pipeline)
+                    jobs.arr[jobs.last_id].jobattr = shell_tattr;
                     if(bkgrnd == 0) {
-                        jobs.arr[jobs.last_id].jobattr = shell_tattr;
                         job_to_fg(jobs.last_id, 2);
                     } else {
                         stoplist_add(jobs.last_id);
