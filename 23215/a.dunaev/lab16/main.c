@@ -8,6 +8,10 @@ struct termios old, new;
 char response;
 
 void handle(int sig){
+	if (tcgetattr(STDIN_FILENO, &old)){                             // E_BAD_F E_NO_TTY
+    	perror("Bad parameters");
+        exit(1);
+    }
 	new = old;
 	new.c_lflag &= ~ICANON;
 	new.c_cc[VMIN] = 1;
@@ -22,11 +26,6 @@ void handle(int sig){
 int main() {  
     printf("Enter a single character: ");
     fflush(stdout); 
-        
-    if (tcgetattr(STDIN_FILENO, &old)){                             // E_BAD_F E_NO_TTY
-    	perror("Bad parameters");
-        exit(1);
-    }
     
     signal(SIGCONT, handle);    
 
