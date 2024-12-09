@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"shell/internal/jobs"
+	"shell/internal/tools"
+	"strconv"
 	"syscall"
 )
 
@@ -12,6 +14,7 @@ type Command struct {
 	Cmdargs                  []string
 	Infile, Outfile, Appfile string
 	Bkgrnd                   bool
+	Cmdflag                  byte
 }
 
 func (cmd *Command) Init() {
@@ -22,23 +25,43 @@ func (cmd *Command) Init() {
 	cmd.Bkgrnd = false
 }
 
-func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
+func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.File, tmpPipe *os.File, writePipe *os.File) {
 	if len(cmd.Cmdargs) == 0 {
 		return
 	}
 
+	if cmd.Cmdflag == 2 {
+		var err error
+		tmpPipe, writePipe, err = os.Pipe()
+		if err != nil {
+			fmt.Println("Error creating pipe")
+		}
+	}
+
 	if cmd.Cmdargs[0] == "jobs" {
 		if len(cmd.Cmdargs) == 1 {
-			for i := 0; i < len(jm.Jobs); i++ {
-				if jm.Jobs[i].Status == "Done" {
-					jm.Write(jm.Jobs[i].Pid)
-					i--
-				} else {
-					jm.Write(jm.Jobs[i].Pid)
+			for i := 1; i <= jm.IdLastJob; i++ {
+				for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
+					if elem.Value.(tools.Job).Id == i {
+						jm.Write(elem.Value.(tools.Job).Pid)
+						break
+					}
 				}
 			}
 		} else {
-			fmt.Println("jobs: Too many arguments")
+			for i := 1; i < len(cmd.Cmdargs); i++ {
+				var flag bool
+				for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
+					if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[i] {
+						jm.Write(elem.Value.(tools.Job).Pid)
+						flag = true
+						break
+					}
+				}
+				if !flag {
+					fmt.Println("jobs: No such job:", cmd.Cmdargs[i])
+				}
+			}
 		}
 		return
 	}
@@ -48,9 +71,75 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 			if err != nil {
 				fmt.Println("cd: No such file or directory:", cmd.Cmdargs[1])
 			}
-		} else if len(cmd.Cmdargs) > 2 {
+		} else if len(cmd.Cmdargs) != 1 {
 			fmt.Println("cd: Too many arguments")
 		}
+		return
+	}
+	if cmd.Cmdargs[0] == "fg" {
+		var pid int
+		if len(cmd.Cmdargs) == 1 {
+			if jm.Jobs.Back() == nil {
+				fmt.Println("fg: No such job: current")
+				return
+			}
+			pid = jm.Jobs.Back().Value.(tools.Job).Pid
+			jm.Fg(pid)
+		} else {
+			var flag bool
+			for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
+				if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[1] {
+					pid = elem.Value.(tools.Job).Pid
+					jm.Fg(pid)
+					flag = true
+					break
+				}
+			}
+			if !flag {
+				fmt.Println("fg: No such job:", cmd.Cmdargs[1])
+				return
+			}
+		}
+
+		jm.WaitForForeground(pid, fgPid)
+		return
+	}
+	if cmd.Cmdargs[0] == "bg" {
+		var pid int
+		if len(cmd.Cmdargs) == 1 {
+			if jm.Jobs.Back() == nil {
+				fmt.Println("bg: No such job: current")
+				return
+			} else if jm.Jobs.Back().Value.(tools.Job).Bkgrnd {
+				fmt.Println("bg: Job", jm.Jobs.Back().Value.(tools.Job).Id, "already in background")
+				return
+			}
+			pid = jm.Jobs.Back().Value.(tools.Job).Pid
+			jm.Bg(pid)
+		} else {
+			for i := 1; i < len(cmd.Cmdargs); i++ {
+				var flag bool
+				for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
+					if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[i] {
+						if elem.Value.(tools.Job).Bkgrnd {
+							fmt.Println("bg: Job", cmd.Cmdargs[i], "already in background")
+							flag = true
+							return
+						}
+						pid = elem.Value.(tools.Job).Pid
+						jm.Bg(pid)
+						flag = true
+						break
+					}
+				}
+				if !flag {
+					fmt.Println("bg: No such job:", cmd.Cmdargs[i])
+					return
+				}
+			}
+		}
+
+		jm.WaitForBackground(pid)
 		return
 	}
 
@@ -61,6 +150,9 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 	}
 
 	stdin := os.Stdin
+	if cmd.Cmdflag == 1 {
+		stdin = readPipe
+	}
 	if cmd.Infile != "" {
 		stdin, err = os.Open(cmd.Infile)
 		if err != nil {
@@ -77,6 +169,9 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 	}
 
 	stdout := os.Stdout
+	if cmd.Cmdflag == 2 {
+		stdout = writePipe
+	}
 	if cmd.Appfile != "" {
 		stdout, err = os.OpenFile(cmd.Appfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -118,38 +213,26 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPidChan chan int) {
 		return
 	}
 
+	if readPipe != nil {
+		err = readPipe.Close()
+		if err != nil {
+			fmt.Println("Error closing readPipe")
+		}
+	}
+	if writePipe != nil {
+		err = writePipe.Close()
+		if err != nil {
+			fmt.Println("Error closing writePipe")
+		}
+	}
+	writePipe = nil
+	readPipe = tmpPipe
+	tmpPipe = nil
+
 	jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd)
-	var ws syscall.WaitStatus
 	if cmd.Bkgrnd {
-		go func() {
-			_, err := syscall.Wait4(pid, &ws, 0, nil)
-			if err != nil {
-				fmt.Println("Error waiting for process")
-			} else {
-				jm.Update(pid, "Done")
-			}
-		}()
+		jm.WaitForBackground(pid)
 		return
 	}
-
-	fgPidChan <- pid
-	_, err = syscall.Wait4(pid, &ws, syscall.WUNTRACED, nil)
-	if err != nil {
-		fmt.Println("Error waiting for process")
-		return
-	}
-	if ws.Stopped() || ws.Signaled() {
-		for len(fgPidChan) != 0 {
-		}
-		return
-	}
-	jm.Update(pid, "Done")
-	<-fgPidChan
-
-	for i := 0; i < len(jm.Jobs); i++ {
-		if jm.Jobs[i].Status == "Done" {
-			jm.Write(jm.Jobs[i].Pid)
-			i--
-		}
-	}
+	jm.WaitForForeground(pid, fgPid)
 }

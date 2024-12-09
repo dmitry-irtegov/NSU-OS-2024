@@ -11,9 +11,13 @@ import (
 func main() {
 	var parser pars.Parser
 	var jm jobs.JobManager
-	fgPidChan := make(chan int, 1)
+	var readPipe *os.File
+	var tmpPipe *os.File
+	var writePipe *os.File
+	var fgPid int
 	signChan := make(chan os.Signal, 1)
-	jm.SignalHandler(signChan, fgPidChan)
+	jm.Init()
+	jm.SignalHandler(signChan, &fgPid)
 	for {
 		err := tools.Promptline()
 		if err != nil {
@@ -29,9 +33,11 @@ func main() {
 			fmt.Println("\nexit")
 			return
 		}
+
 		cmds := parser.Parserline(line)
 		for i := 0; i < len(cmds); i++ {
-			cmds[i].ForkAndExec(&jm, fgPidChan)
+			cmds[i].ForkAndExec(&jm, &fgPid, readPipe, tmpPipe, writePipe)
 		}
+		tmpPipe = nil
 	}
 }

@@ -24,15 +24,6 @@ func RemoveByte(slice []byte, beginId int, endId int) []byte {
 	return newSlice
 }
 
-func RemoveJob(slice []Job, beginId int, endId int) []Job {
-	newSlice := make([]Job, len(slice)+beginId-endId)
-	if beginId != endId {
-		slice = append(slice[:beginId], slice[endId:]...)
-	}
-	copy(newSlice, slice)
-	return newSlice
-}
-
 func Promptline() error {
 	customer, err := user.Current()
 	if err != nil {

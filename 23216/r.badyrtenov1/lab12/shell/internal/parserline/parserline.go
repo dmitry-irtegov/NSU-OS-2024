@@ -105,8 +105,10 @@ func (parc *Parser) Parserline(line []byte) []exec.Command {
 				fmt.Println("Syntax error: missing command before '|'")
 				return nil
 			}
+			tmp.Cmdflag = 2
 			cmds = append(cmds, tmp)
 			tmp.Init()
+			tmp.Cmdflag = 1
 
 		case '<':
 			i = parc.SkipSpaces(line, i+1)
