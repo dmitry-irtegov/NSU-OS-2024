@@ -7,6 +7,8 @@
 struct termios original_terminal_attributes;
 
 void sigcont_handler(int signo) {
+    fflush(stdin);
+    fflush(stdout);
     tcsetattr(0, TCSANOW, &original_terminal_attributes);
 }
 
