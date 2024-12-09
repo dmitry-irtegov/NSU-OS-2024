@@ -43,7 +43,7 @@ out:
 			fmt.Println("parser error", err)
 			return
 		}
-		cmds := parser.Parceline(line)
+		cmds := parser.Parceline(line) //a
 
 		var read *os.File
 		var readNext *os.File
