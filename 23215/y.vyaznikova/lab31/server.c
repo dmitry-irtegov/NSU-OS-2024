@@ -7,6 +7,7 @@
 #include <sys/un.h>
 #include <poll.h>
 #include <errno.h>
+#include <stdint.h>
 
 #define SOCKET_NAME "sckt"
 #define BUFFER_SIZE 10
@@ -15,32 +16,6 @@
 
 static int successful_connections = 0;
 static int active_clients = 0;
-
-ssize_t read_n_bytes(int fd, void *buffer, size_t n) {
-    size_t bytes_left = n;
-    size_t bytes_read = 0;
-    char *buf = (char *)buffer;
-
-    while (bytes_left > 0) {
-        ssize_t result = read(fd, buf + bytes_read, bytes_left);
-        
-        if (result == 0) {
-            return bytes_read;
-        }
-        
-        if (result < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            return -1;
-        }
-        
-        bytes_read += result;
-        bytes_left -= result;
-    }
-    
-    return bytes_read;
-}
 
 int main() {
     int server_socket;
@@ -110,9 +85,9 @@ int main() {
         for (int i = 1; i < nfds; i++) {
             if (fds[i].revents & POLLIN) {
                 uint32_t msg_size;
-                ssize_t size_read = read_n_bytes(fds[i].fd, &msg_size, sizeof(msg_size));
+                ssize_t bytes_read = read(fds[i].fd, &msg_size, sizeof(msg_size));
                 
-                if (size_read != sizeof(msg_size)) {
+                if (bytes_read != sizeof(msg_size)) {
                     printf("Client disconnected\n");
                     close(fds[i].fd);
                     active_clients--;
@@ -122,23 +97,22 @@ int main() {
                     continue;
                 }
 
-                uint32_t bytes_remaining = msg_size;
-                while (bytes_remaining > 0) {
-                    size_t to_read = (bytes_remaining > BUFFER_SIZE - 1) ? BUFFER_SIZE - 1 : bytes_remaining;
-                    ssize_t bytes_read = read_n_bytes(fds[i].fd, buffer, to_read);
+                size_t total_read = 0;
+                while (total_read < msg_size) {
+                    bytes_read = read(fds[i].fd, buffer, 
+                                   (msg_size - total_read < BUFFER_SIZE) ? 
+                                   msg_size - total_read : BUFFER_SIZE);
                     
                     if (bytes_read <= 0) {
-                        printf("Error reading message content\n");
                         break;
                     }
 
-                    buffer[bytes_read] = '\0';
                     for (int j = 0; j < bytes_read; j++) {
                         buffer[j] = toupper(buffer[j]);
                     }
-                    printf("%s", buffer);
+                    write(1, buffer, bytes_read);
                     
-                    bytes_remaining -= bytes_read;
+                    total_read += bytes_read;
                 }
             }
         }
