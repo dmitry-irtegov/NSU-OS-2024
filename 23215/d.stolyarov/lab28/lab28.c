@@ -12,7 +12,7 @@ int main(int argc, char *argv[]){
     }
     srand(t);
     FILE *fptrs[2];
-    if(p2open("sort", fptrs) == -1){
+    if(p2open("sort -n", fptrs) == -1){
         perror("p2open error");
         exit(1);
     }
