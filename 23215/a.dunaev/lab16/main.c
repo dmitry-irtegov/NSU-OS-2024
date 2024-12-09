@@ -13,9 +13,7 @@ void handle(int sig){
         exit(1);
     }
 	new = old;
-	if ((new.c_lflag & ICANON) != 0){
-		new.c_lflag &= ~ICANON;
-	}
+	new.c_lflag &= ~ICANON;
 	new.c_cc[VMIN] = 1;
 	new.c_cc[VTIME] = 0;
 	if (tcsetattr(STDIN_FILENO, TCSANOW, &new)){        // E_BAD_F E_INTR E_IN_VAL E_NO_TTY  E_IO
@@ -23,6 +21,10 @@ void handle(int sig){
 	   	exit(1);
 	}
 	read(STDIN_FILENO, &response, 1);
+	if (tcsetattr(STDIN_FILENO, TCSANOW, &old)){
+		perror("Bad parameters or error in I/O");
+	    exit(1);
+	}
 }
 
 int main() {  
@@ -32,11 +34,6 @@ int main() {
     signal(SIGCONT, handle);    
 
     handle(SIGCONT);
-
-    if (tcsetattr(STDIN_FILENO, TCSANOW, &old)){
-		perror("Bad parameters or error in I/O");
-       	exit(1);
-   	}
 
     printf("\nYou entered: %c\n", response);
 
