@@ -9,6 +9,7 @@ import (
 	"os"
 	"shell/constants"
 	"shell/internal/execute"
+	"shell/internal/jobs"
 	"shell/internal/parceline"
 	"shell/util"
 	"strings"
@@ -23,6 +24,9 @@ func main() {
 	}()
 	var parser parceline.Command
 	var executer execute.Exec
+
+	shell_terminal := os.Stdin
+	// var last_pgid int
 out:
 	for {
 		err := util.Prompt()
@@ -40,12 +44,18 @@ out:
 			return
 		}
 		cmds := parser.Parceline(line)
+
 		var read *os.File
 		var readNext *os.File
 		var write *os.File
 		for i := 0; i < len(cmds); i++ {
 			if strings.Compare(cmds[i].GetArgs()[0], ("exit")) == 0 {
+				jobs.Tcsetpgrp(int(shell_terminal.Fd()), 5000)
 				break out
+			}
+			fmt.Println(strings.Compare(cmds[i].GetArgs()[0], ("fg")))
+			if cmds[i].GetArgs()[0] == "fg" {
+				jobs.Tcsetpgrp(int(shell_terminal.Fd()), 5000)
 			}
 			if cmds[i].GetCmdFlag()&constants.OUTPIP != 0 {
 				readNext, write, err = os.Pipe()

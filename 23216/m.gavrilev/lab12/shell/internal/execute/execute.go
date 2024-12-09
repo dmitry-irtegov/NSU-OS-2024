@@ -10,9 +10,11 @@ import (
 	"syscall"
 )
 
-type Exec struct{}
+type Exec struct {
+	ArrId []int
+}
 
-func (c Exec) ForkAndExec(cmd parc.Command, pipeRead *os.File, pipeWrite *os.File) {
+func (c *Exec) ForkAndExec(cmd parc.Command, pipeRead *os.File, pipeWrite *os.File) {
 
 	args := cmd.GetArgs()
 	infile := cmd.GetInfile()
@@ -94,6 +96,7 @@ func (c Exec) ForkAndExec(cmd parc.Command, pipeRead *os.File, pipeWrite *os.Fil
 		fmt.Println("error during ForkExec")
 		return
 	}
+	c.ArrId = append(c.ArrId, pid)
 
 	var ws syscall.WaitStatus
 	//fmt.Println(pid, &ws, syscall.WEXITED, syscall.WUNTRACED, syscall.WNOHANG, nil)
