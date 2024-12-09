@@ -38,7 +38,6 @@ int main() {
         while (getchar() != '\n');
         return 0;
     }
-    printf("%d %d", rd, NAME_MAX);
 
     if (rd > 0 && pattern[rd - 1] == '\n') {
         pattern[rd - 1] = '\0';  // Заменяем '\n' на '\0'
