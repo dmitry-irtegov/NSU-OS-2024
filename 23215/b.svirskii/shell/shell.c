@@ -5,10 +5,13 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "shell.h"
+#include <signal.h>
+#include <errno.h>
 
 char *infile, *outfile, *appfile;
 struct command cmds[MAXCMDS];
 char bkgrnd;
+extern int errno;
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +21,8 @@ int main(int argc, char *argv[])
     char prompt[50];      /* shell prompt */
     int child_pid;
 
-    /* PLACE SIGNAL CODE HERE */
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
 
     sprintf(prompt,"[%s] ", argv[0]);
 
@@ -39,14 +43,14 @@ int main(int argc, char *argv[])
     fprintf(stderr, "appfile: %s\n", appfile);
 }
 #endif
-        int background_gid = 0;
         for (i = 0; i < ncmds; i++) {
             child_pid = fork();
             if (child_pid == -1) {
                 fprintf(stderr, "fork() error\n");
                 exit(EXIT_FAILURE);
             } else if (child_pid == 0) {
-                int closed_in_fd = -1, closed_out_fd = -1;
+                int closed_in_fd = -1;
+                int closed_out_fd = -1;
                 if (i == 0 && infile) {
                     closed_in_fd = dup(0);
                     close(0);
@@ -71,9 +75,13 @@ int main(int argc, char *argv[])
                     } 
                 }
 
-                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
-                exit(EXIT_SUCCESS);
+                if (!bkgrnd) {
+                    signal(SIGINT, SIG_DFL);
+                    signal(SIGQUIT, SIG_DFL);
+                }
 
+                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
+                
                 if (closed_in_fd) {
                     close(0);
                     dup(closed_in_fd);
@@ -82,21 +90,15 @@ int main(int argc, char *argv[])
                     close(1);
                     dup(closed_out_fd);
                 }
+
+                exit(EXIT_SUCCESS);
             } else {
                 if (bkgrnd) {
-                    if (background_gid) {
-                        setpgid(child_pid, background_gid);
-                    } else {
-                        setpgid(child_pid, 0);
-                        background_gid = getpgid(child_pid);
-                    }
+                    setpgid(child_pid, 0);
                     printf("pid of background process: %d\n", child_pid);
-#ifdef DEBUG
-                    printf("pgid: %d\n", background_gid);
-#endif
                 } else {
                     int stat_lock;
-                    
+
                     if (waitpid(child_pid, &stat_lock, 0) == -1) {
                         fprintf(stderr, "waitpid() error\n");
                         exit(EXIT_FAILURE);
