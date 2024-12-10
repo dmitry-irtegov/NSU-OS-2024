@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
                 if (wpid == -1)
                 {
                     perror("waitpid");
-                    // exit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
 
                 if (WIFEXITED(status) && fg_job->status != 1)
