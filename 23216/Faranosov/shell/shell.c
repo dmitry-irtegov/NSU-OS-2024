@@ -571,7 +571,6 @@ void setbgjob(job* curJob) {
 void setfgjob(job* curJob) {
 	tcsetpgrp(terminalfd, curJob->gpid);
 
-	setsignal(SIGTTOU, SIG_DFL, "setfgjob");
 
 	if (curJob->state == STOPPED) {
 		kill((-1) * curJob->gpid, SIGCONT);
@@ -654,6 +653,7 @@ int main() {
 
 	setsignal(SIGINT, SIG_IGN, "mainIGN");
 	setsignal(SIGQUIT, SIG_IGN, "mainIGN");
+	setsignal(SIGTTIN, SIG_IGN, "mainIGN");
 	setsignal(SIGTTOU, SIG_IGN, "mainIGN");
 	setsignal(SIGTSTP, SIG_IGN, "mainIGN");
 
@@ -683,6 +683,7 @@ int main() {
 
 	setsignal(SIGINT, SIG_DFL, "mainDFL");
 	setsignal(SIGQUIT, SIG_DFL, "mainDFL");
+	setsignal(SIGTTIN, SIG_DFL, "mainDFL");
 	setsignal(SIGTTOU, SIG_DFL, "mainDFL");
 	setsignal(SIGTSTP, SIG_DFL, "mainDFL");
 
