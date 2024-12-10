@@ -247,6 +247,12 @@ void clear(job* curj) {
 	free(curj);
 }
 
+void clearAll() {
+	for (job* j = firstjob; j != NULL; j = j->nextjob) {
+		clear(j);
+	}
+}
+
 void deleteJob(job* curj) {
 	
 	if (curj->nextjob) {
@@ -428,6 +434,7 @@ void start_job(job* jobs) {
 		}
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[3]) == 0) {
+			clearAll();
 			exit(0);
 		}
 
@@ -454,7 +461,6 @@ void start_job(job* jobs) {
 
 		setsignal(SIGINT, SIG_DFL, "Son");
 		setsignal(SIGQUIT, SIG_DFL, "Son");
-		setsignal(SIGTTIN, SIG_DFL, "Son");
 		setsignal(SIGTTOU, SIG_DFL, "Son");
 		setsignal(SIGTSTP, SIG_DFL, "Son");
 
@@ -582,7 +588,16 @@ void printCurDir() {
 	for (int i = 0; i < 128; i++) curDir[i] = '\0';
 	getcwd(curDir, 128);
 
-	printf("%s>\n", curDir);
+	if (write(1, curDir, 128) == -1) {
+		perror("write error");
+		exit(1);
+	}
+
+	if (write(1, "> ", 2) == -1) {
+		perror("write error");
+		exit(1);
+	}
+
 }
 
 void printJob(job* j) {
@@ -622,6 +637,13 @@ int main() {
 	int ncmds;
 	terminalfd = 0;
 	job* jobToStart;
+	
+	if (isatty(terminalfd) == 0) {
+		perror("isatty error");
+		exit(1);
+	}
+
+
 
 	setpgid(getpid(), getpid());
 	tcsetpgrp(terminalfd, getpid());
@@ -632,7 +654,6 @@ int main() {
 
 	setsignal(SIGINT, SIG_IGN, "mainIGN");
 	setsignal(SIGQUIT, SIG_IGN, "mainIGN");
-	setsignal(SIGTTIN, SIG_IGN, "mainIGN");
 	setsignal(SIGTTOU, SIG_IGN, "mainIGN");
 	setsignal(SIGTSTP, SIG_IGN, "mainIGN");
 
@@ -662,7 +683,6 @@ int main() {
 
 	setsignal(SIGINT, SIG_DFL, "mainDFL");
 	setsignal(SIGQUIT, SIG_DFL, "mainDFL");
-	setsignal(SIGTTIN, SIG_DFL, "mainDFL");
 	setsignal(SIGTTOU, SIG_DFL, "mainDFL");
 	setsignal(SIGTSTP, SIG_DFL, "mainDFL");
 
