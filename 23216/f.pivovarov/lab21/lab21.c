@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int counter = 0;
+volatile sig_atomic_t counter = 0;
 
 void sigHandler(int sig) {
     switch (sig) { 
