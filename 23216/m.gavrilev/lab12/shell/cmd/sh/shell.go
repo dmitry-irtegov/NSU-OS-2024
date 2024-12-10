@@ -10,8 +10,8 @@ import (
 	"shell/constants"
 	"shell/internal/execute"
 	"shell/internal/jobs"
-	"shell/internal/parceline"
-	"shell/util"
+	pars "shell/internal/parseline"
+	"shell/internal/shio"
 	"strings"
 )
 
@@ -22,23 +22,24 @@ func main() {
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
-	var parser parceline.Command
+	var parser pars.Command
 	var executer execute.Exec
+	var jobmaster jobs.JobMaster
 
-	shell_terminal := os.Stdin
+	// TODO: shell_terminal := os.Stdin
 	// var last_pgid int
-out:
+mainloop:
 	for {
-		err := util.Prompt()
+		err := shio.Prompt()
 		if err != nil {
 			fmt.Println("prompt error", err)
 			return
 		}
-		line, err := util.ReadLine()
+		line, err := shio.ReadLine()
 		if err != nil {
 			if err == io.EOF {
-				fmt.Println()
-				break out
+				// fmt.Println("end of file")
+				break mainloop
 			}
 			fmt.Println("parser error", err)
 			return
@@ -50,13 +51,12 @@ out:
 		var write *os.File
 		for i := 0; i < len(cmds); i++ {
 			if strings.Compare(cmds[i].GetArgs()[0], ("exit")) == 0 {
-				jobs.Tcsetpgrp(int(shell_terminal.Fd()), 5000)
-				break out
+
+				break mainloop
 			}
-			fmt.Println(strings.Compare(cmds[i].GetArgs()[0], ("fg")))
-			if cmds[i].GetArgs()[0] == "fg" {
-				jobs.Tcsetpgrp(int(shell_terminal.Fd()), 5000)
-			}
+			// if cmds[i].GetArgs()[0] == "fg" {
+			// 	// TODO: jobs.Tcsetpgrp(int(shell_terminal.Fd()), 5000)
+			// }
 			if cmds[i].GetCmdFlag()&constants.OUTPIP != 0 {
 				readNext, write, err = os.Pipe()
 				if err != nil {
@@ -64,7 +64,7 @@ out:
 				}
 			}
 
-			executer.ForkAndExec(cmds[i], read, write)
+			executer.ForkAndExec(&cmds[i], &jobmaster, read, write)
 
 			if read != nil {
 				err = read.Close()

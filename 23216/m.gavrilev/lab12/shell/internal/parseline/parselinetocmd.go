@@ -1,8 +1,9 @@
-package parceline
+package parseline
 
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"shell/constants"
 )
@@ -47,22 +48,72 @@ func (cmd *Command) Clear() {
 	cmd.backgroundflag = false
 }
 
-func (cmd Command) blankSkip(line []byte, id int) int {
+func (cmd *Command) blankSkip(line []byte, id int) int {
 	for id+1 < len(line) && line[id] == ' ' {
 		id++
 	}
 	return id
 }
 
-func (cmd Command) delimId(line []byte, id int) int {
-	s := bytes.IndexAny(line[id:], " |&<>;")
-	if s == -1 {
-		return len(line) - 1
+// func (cmd *Command) delimId(line []byte, id int) int {
+// 	s := bytes.IndexAny(line[id:], " |&<>;")
+// 	if s == -1 {
+// 		return len(line) - 1
+// 	}
+// 	return id + s
+// }
+
+func (cmd *Command) argParser(line []byte, beginId int) (string, int) {
+	str := make([]byte, 0)
+	var nextId int = beginId
+	var quotestype byte = 0
+argParserLoop:
+	for ; quotestype != 0 || !strings.Contains(" |&<>;", string(line[beginId])); beginId++ {
+		if quotestype != 0 {
+			nextId = bytes.IndexAny(line[beginId:], ("\\" + string(quotestype)))
+			// if nextId == -1 {
+			// 	// недосягаемо, уже обработано при чтении файла
+			//  // все квотации точно закрыты
+			// 	return "", -1
+			// }
+			nextId += beginId
+			str = append(str, line[beginId:nextId]...)
+			// на nextid сейчас либо (\) либо текущий маркер квотации (', ")
+			beginId = nextId
+			if line[beginId] == '\\' {
+				beginId++
+				str = append(str, line[beginId])
+			} else if line[beginId] == quotestype {
+				quotestype = 0
+			}
+		} else {
+			nextId = bytes.IndexAny(line[beginId:], "\\ |&<>;'\"")
+			if nextId == -1 {
+				nextId = len(line) - 1
+				str = append(str, line[beginId:nextId]...)
+				beginId = nextId
+				break argParserLoop
+			}
+			nextId += beginId
+			str = append(str, line[beginId:nextId]...)
+			beginId = nextId
+			if line[beginId] == '\\' {
+				beginId++
+			} else if strings.Contains("'\"", string(line[beginId])) {
+				quotestype = line[beginId]
+			} else if strings.Contains(" |&<>;", string(line[beginId])) {
+				break argParserLoop
+			}
+
+		}
+		if beginId >= len(line)-1 {
+			break
+		}
 	}
-	return id + s
+	return string(str), beginId
 }
 
-func (cmd Command) Parceline(line []byte) []Command {
+func (cmd *Command) Parceline(line []byte) []Command {
 	var cmds []Command
 	var tmp Command
 	var aflg bool
@@ -97,12 +148,12 @@ func (cmd Command) Parceline(line []byte) []Command {
 		case '<':
 			i++
 			i = cmd.blankSkip(line, i)
-			s := cmd.delimId(line, i)
+			newline, s := cmd.argParser(line, i)
 			if i == s {
 				fmt.Println("syntax error near unexpected token `newline'")
 				return nil
 			}
-			tmp.infile = string(line[i:s])
+			tmp.infile = newline
 			i = s
 			i++
 
@@ -117,11 +168,11 @@ func (cmd Command) Parceline(line []byte) []Command {
 				fmt.Println("syntax error near unexpected token `>'")
 				return nil
 			}
-			s := cmd.delimId(line, i)
+			newline, s := cmd.argParser(line, i)
 			if aflg {
-				tmp.appfile = string(line[i:s])
+				tmp.appfile = newline
 			} else {
-				tmp.outfile = string(line[i:s])
+				tmp.outfile = newline
 			}
 			i = s
 			i++
@@ -136,8 +187,8 @@ func (cmd Command) Parceline(line []byte) []Command {
 			i++
 
 		default:
-			s := cmd.delimId(line, i)
-			tmp.cmdargs = append(tmp.cmdargs, string(line[i:s]))
+			newline, s := cmd.argParser(line, i)
+			tmp.cmdargs = append(tmp.cmdargs, newline)
 			i = s
 		}
 	}
