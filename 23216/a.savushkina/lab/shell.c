@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -14,50 +13,56 @@
 
 struct command cmds[MAXCMDS];
 
-job_t *jobs = NULL;
-job_t *done_bg_jobs = NULL;
+/* A process is a single process.  */
+typedef struct process
+{
+    struct process *next;
+    char **argv;
+    pid_t pid;
+    char completed;
+    char stopped;
+    int status;
+} process;
+
+/* A job is a pipeline of processes.  */
+typedef struct job
+{
+    struct job *next;          /* next active job */
+    int job_number;            /* unique job number */
+    char *command;             /* command line, used for messages */
+    process *first_process;    /* list of processes in this job */
+    pid_t pgid;                /* process group ID */
+    char notified;             /* true if user told about stopped job */
+    struct termios tmodes;     /* saved terminal modes */
+    int stdin, stdout, stderr; /* standard i/o channels */
+} job;
+
+typedef struct string_node
+{
+    char *str;
+    struct string_node *next;
+} string_node_t;
+
+job *first_job = NULL;
+job *done_bg_jobs = NULL;
 string_node_t *new_done_jobs = NULL;
 int next_job_number = 1;
+struct sigaction blocked_signals;
 
-int add_job(pid_t pgid, pid_t pid, int fg, int ncmds, struct command cmds[]);
+int add_job(pid_t pgid, pid_t *pids, int nprocs, int fg, int ncmds, struct command cmds[]);
 void remove_job(pid_t pgid);
 void update_job(pid_t pgid, int status);
-job_t *get_job_by_pgid(pid_t pgid);
-job_t *get_job_by_pid(pid_t pid);
-job_t *get_job_by_job_number(int job_number);
+job *get_job_by_pgid(pid_t pgid);
+job *get_job_by_pid(pid_t pid);
+job *get_job_by_job_number(int job_number);
 void list_jobs();
 void display_done_bg_jobs();
 void clear_done_bg_jobs();
-void bg_command(int job_number, struct sigaction action);
-void fg_command(int job_number, struct sigaction action);
-job_t *get_foreground_job();
-job_t *get_background_job_pid(pid_t pid);
+void bg_command(int job_number);
+void fg_command(int job_number);
+job *get_foreground_job();
+job *get_background_job();
 char *build_command_string(int ncmds, struct command cmds[]);
-
-void sigchld_handler()
-{
-    int status;
-    pid_t pid;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
-    {
-        job_t *job = get_job_by_pid(pid);
-        if (job != NULL)
-        {
-            if (job->fg == BACKGROUND)
-            {
-                char text[256];
-                sprintf(text, "Background job [%d] (%d) completed\n", job->job_number, pid);
-                string_node_t *node = malloc(sizeof(string_node_t));
-                node->str = strdup(text);
-                node->next = new_done_jobs;
-                new_done_jobs = node;
-                job->next = done_bg_jobs;
-                done_bg_jobs = job;
-                job->status = -1;
-            }
-        }
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -65,16 +70,6 @@ int main(int argc, char *argv[])
     if (setpgid(shell_pid, shell_pid) < 0)
     {
         perror("setpgid");
-        exit(EXIT_FAILURE);
-    }
-
-    struct sigaction sa;
-    sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) < 0)
-    {
-        perror("sigaction");
         exit(EXIT_FAILURE);
     }
 
@@ -100,16 +95,7 @@ int main(int argc, char *argv[])
     {
         if ((ncmds = parseline(line)) <= 0)
         {
-            string_node_t *current = new_done_jobs;
-            while (current != NULL)
-            {
-                printf("%s", current->str);
-                string_node_t *next = current->next;
-                free(current->str);
-                free(current);
-                current = next;
-            }
-            new_done_jobs = NULL;
+            // do_job_notification();
             continue;
         }
 
@@ -126,252 +112,271 @@ int main(int argc, char *argv[])
         pid_t pids[ncmds];
         pid_t pgid = -1;
 
-        for (int i = 0; i < ncmds; i++)
+        if (cmds[0].cmdargs[0] != NULL && strcmp(cmds[0].cmdargs[0], "exit") == 0)
         {
-            if (cmds[i].cmdargs[0] != NULL && strcmp(cmds[i].cmdargs[0], "exit") == 0)
-            {
-                job_t *job;
-                for (job = jobs; job != NULL; job = job->next)
+                struct job *job;
+                for (job = first_job; job != NULL; job = job->next)
                 {
                     kill(-job->pgid, SIGTERM);
                 }
-                job_t *current, *next;
-                for (current = jobs; current != NULL; current = next)
+                struct job *current, *next;
+                for (current = first_job; current != NULL; current = next)
                 {
                     next = current->next;
+                    free(current->command);
                     free(current);
                 }
-                jobs = NULL;
-                // clear_done_bg_jobs();
+                first_job = NULL;
                 exit(EXIT_SUCCESS);
-            }
-            if (strcmp(cmds[0].cmdargs[0], "fg") == 0)
+        }
+
+        {
+            for (int i = 0; i < ncmds; i++)
             {
-                int job_number = atoi(cmds[0].cmdargs[1]);
-                fg_command(job_number, blocked_signals);
-                continue;
-            }
-            if (strcmp(cmds[0].cmdargs[0], "bg") == 0)
-            {
-                int job_number = atoi(cmds[0].cmdargs[1]);
-                bg_command(job_number, blocked_signals);
-                continue;
-            }
-            if (strcmp(cmds[0].cmdargs[0], "jobs") == 0)
-            {
-                if (cmds[0].cmdargs[1] != NULL && strcmp(cmds[0].cmdargs[1], "-l") == 0)
+
+                pids[i] = fork();
+                if (pids[i] < 0)
                 {
-                    display_done_bg_jobs();
-                    continue;
+                    perror("fork");
+                    exit(EXIT_FAILURE);
+                }
+                else if (pids[i] == 0)
+                {
+                    if (i == 0)
+                    {
+                        if (setpgid(0, 0) < 0)
+                        {
+                            perror("setpgid");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    else
+                    {
+                        if (setpgid(0, pgid) < 0)
+                        {
+                            perror("setpgid");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+
+                    if (cmds[0].bgk == FOREGROUND)
+                    {
+                        if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
+                        {
+                            perror("tcsetpgrp");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (tcsetpgrp(STDOUT_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
+                        {
+                            perror("tcsetpgrp");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (tcsetpgrp(STDERR_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
+                        {
+                            perror("tcsetpgrp");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+
+                    blocked_signals.sa_handler = SIG_DFL;
+                    sigemptyset(&blocked_signals.sa_mask);
+                    blocked_signals.sa_flags = 0;
+                    sigaction(SIGINT, &blocked_signals, NULL);
+                    sigaction(SIGTSTP, &blocked_signals, NULL);
+                    sigaction(SIGQUIT, &blocked_signals, NULL);
+
+                    if (strcmp(cmds[0].cmdargs[0], "jobs") == 0)
+                    {
+                        // if (cmds[0].cmdargs[1] != NULL)
+                        // {
+                        //     if (strcmp(cmds[0].cmdargs[1], "-l") == 0)
+                        //         {
+                        //             do_job_notification();
+                        //         }
+                        //         else
+                        //         {
+                        //             fprintf(stderr, "Invalid option for jobs command\n");
+                        //         }
+                        // }
+                        // else{
+                        list_jobs();
+                        // }
+                        exit(EXIT_SUCCESS);
+                    }
+                    if (strcmp(cmds[0].cmdargs[0], "fg") == 0)
+                    {
+                        int job_number = atoi(cmds[0].cmdargs[1]);
+                        fg_command(job_number);
+                    }
+                    else if (strcmp(cmds[0].cmdargs[0], "bg") == 0)
+                    {
+                        int job_number = atoi(cmds[0].cmdargs[1]);
+                        bg_command(job_number);
+                    }
+                    else{
+
+                    if (cmds[i].bgk == BACKGROUND && cmds[i].infile == NULL)
+                    {
+                        int null_fd = open("/dev/null", O_RDONLY);
+                        if (null_fd != -1)
+                        {
+                            dup2(null_fd, 0);
+                            close(null_fd);
+                        }
+                    }
+                    if (cmds[i].infile != NULL)
+                    {
+                        int infile_fd = open(cmds[i].infile, O_RDONLY);
+                        if (infile_fd < 0)
+                        {
+                            perror("open infile failed");
+                            exit(EXIT_FAILURE);
+                        }
+                        dup2(infile_fd, 0);
+                        close(infile_fd);
+                    }
+
+                    if (cmds[i].outfile != NULL)
+                    {
+                        int outfile_fd = open(cmds[i].outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                        if (outfile_fd < 0)
+                        {
+                            perror("open outfile failed");
+                            exit(EXIT_FAILURE);
+                        }
+                        dup2(outfile_fd, 1);
+                        close(outfile_fd);
+                    }
+                    else if (cmds[i].appfile != NULL)
+                    {
+                        int appfile_fd = open(cmds[i].appfile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+                        if (appfile_fd < 0)
+                        {
+                            perror("open appfile failed");
+                            exit(EXIT_FAILURE);
+                        }
+                        dup2(appfile_fd, 1);
+                        close(appfile_fd);
+                    }
+                    if (cmds[i].cmdflag > 0)
+                    {
+                        if (i > 0)
+                        {
+                            dup2(pipes[i - 1][0], 0);
+                            close(pipes[i - 1][1]);
+                        }
+                        if (i < ncmds - 1)
+                        {
+                            dup2(pipes[i][1], 1);
+                            close(pipes[i][0]);
+                        }
+                    }
+
+                    execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
+                    perror("execvp failed");
+                    exit(EXIT_FAILURE);
+                    }
                 }
                 else
                 {
-                    list_jobs();
-                }
-                continue;
-            }
-
-            pids[i] = fork();
-            if (pids[i] < 0)
-            {
-                perror("fork");
-                exit(1);
-            }
-            else if (pids[i] == 0)
-            {
-                if (i == 0 || cmds[i].cmdflag == 0)
-                {
-                    if (setpgid(0, 0) < 0)
+                    if (pgid == -1)
                     {
-                        perror("setpgid");
-                        exit(EXIT_FAILURE);
+                        pgid = pids[i];
                     }
-                }
-                else
-                {
-                    if (setpgid(0, pgid) < 0)
-                    {
-                        perror("setpgid");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-
-                if (cmds[0].bgk == FOREGROUND)
-                {
-                    if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDOUT_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDERR_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-
-                blocked_signals.sa_handler = SIG_DFL;
-                sigemptyset(&blocked_signals.sa_mask);
-                blocked_signals.sa_flags = 0;
-                sigaction(SIGINT, &blocked_signals, NULL);
-                sigaction(SIGTSTP, &blocked_signals, NULL);
-                sigaction(SIGQUIT, &blocked_signals, NULL);
-
-                if (cmds[i].bgk == BACKGROUND && cmds[i].infile == NULL)
-                {
-                    int null_fd = open("/dev/null", O_RDONLY);
-                    if (null_fd != -1)
-                    {
-                        dup2(null_fd, 0);
-                        close(null_fd);
-                    }
-                }
-                if (cmds[i].infile != NULL)
-                {
-                    int infile_fd = open(cmds[i].infile, O_RDONLY);
-                    if (infile_fd < 0)
-                    {
-                        perror("open infile failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    dup2(infile_fd, 0);
-                    close(infile_fd);
-                }
-
-                if (cmds[i].outfile != NULL)
-                {
-                    int outfile_fd = open(cmds[i].outfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-                    if (outfile_fd < 0)
-                    {
-                        perror("open outfile failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    dup2(outfile_fd, 1);
-                    close(outfile_fd);
-                }
-                else if (cmds[i].appfile != NULL)
-                {
-                    int appfile_fd = open(cmds[i].appfile, O_WRONLY | O_CREAT | O_APPEND, 0644);
-                    if (appfile_fd < 0)
-                    {
-                        perror("open appfile failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    dup2(appfile_fd, 1);
-                    close(appfile_fd);
-                }
-                if (cmds[i].cmdflag > 0)
-                {
                     if (i > 0)
                     {
-                        dup2(pipes[i - 1][0], 0);
+                        close(pipes[i - 1][0]);
                         close(pipes[i - 1][1]);
                     }
-                    if (i < ncmds - 1)
-                    {
-                        dup2(pipes[i][1], 1);
-                        close(pipes[i][0]);
-                    }
+                    int num;
                 }
-
-                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
-                perror("execvp failed");
-                exit(EXIT_FAILURE);
+            }
+        }
+        if (cmds[0].bgk == FOREGROUND && !(strcmp(cmds[0].cmdargs[0], "bg") == 0))
+        {
+            int job_number;
+            if (strcmp(cmds[0].cmdargs[0], "fg") == 0)
+            {
+                job_number = atoi(cmds[0].cmdargs[1]);
+                job* job_fg = get_job_by_job_number(job_number);
+                if (job_fg){
+                    pgid = job_fg->pgid;
+                }
             }
             else
+                job_number = add_job(pgid, pids, ncmds, FOREGROUND, ncmds, cmds);
+            // Handle foreground job waiting
+            int status;
+            pid_t wpid;
+            do
             {
-                if (pgid == -1 || cmds[i].cmdflag == 0)
+                wpid = waitpid(-pgid, &status, WUNTRACED);
+                // printf("%d\n", wpid);
+                if (wpid == -1 && errno != ECHILD)
                 {
-                    pgid = pids[i];
+                    perror("waitpid");
+                    break;
                 }
-                if (i > 0)
+                if (wpid > 0)
                 {
-                    close(pipes[i - 1][0]);
-                    close(pipes[i - 1][1]);
+                    job *job_ptr = get_job_by_pid(wpid);
+                    if (job_ptr)
+                    {
+                        process *proc_ptr = job_ptr->first_process;
+                        while (proc_ptr)
+                        {
+                            if (proc_ptr->pid == wpid)
+                            {
+                                printf("\nlol %d  %d\n", proc_ptr->pid, wpid);
+                                // if (WI)
+                                if (WIFEXITED(status))
+                                {
+                                    proc_ptr->completed = 1;
+                                    proc_ptr->status = WEXITSTATUS(status);
+                                    printf("exit status = %d\n", proc_ptr->status);
+                                }
+                                else if (WIFSIGNALED(status))
+                                {
+                                    proc_ptr->completed = 1;
+                                    proc_ptr->status = WTERMSIG(status);
+                                    printf("terminated by signal %d\n", proc_ptr->status);
+                                }
+                                else if (WIFSTOPPED(status))
+                                {
+                                    update_job_stop(job_ptr->pgid);
+                                    update_job(job_ptr->pgid, WSTOPSIG(status));
+                                    printf(" [%d] stopped by signal %d\n", job_number, proc_ptr->status);
+                                }
+                                break;
+                            }
+                            proc_ptr = proc_ptr->next;
+                        }
+                    }
                 }
-                int num;
-                if (cmds[0].bgk == FOREGROUND)
-                {
-                    num = add_job(pgid, pids[i], FOREGROUND, ncmds, cmds);
-                }
-                else
-                {
-                    num = add_job(pgid, pids[i], BACKGROUND, ncmds, cmds);
-                    job_t *job = get_job_by_job_number(num);
-                    printf("[%d] %d\n", job->job_number, job->pid);
-                    
-                }
-                // if (cmds[i].cmdflag == 0 && cmds[i].bgk == FOREGROUND)
-                // {
-                //     int status;
-                //     job_t *job = get_job_by_job_number(num);
-                //     pid_t wpid;
-                //     // printf("[%d] %d\n", job->job_number, job->pid);
-                //     if (wpid = waitpid(pids[i], &status, WUNTRACED) < 0)
-                //     {
-                //         perror("waitpid in for");
-                //     }
-                //     if (WIFEXITED(status) && job->status != 1)
-                //     {
-                //         update_job(job->pid, -1);
-                //         remove_job(job->pid);
-                //         // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
-                //     }
-                //     else if (WIFSTOPPED(status))
-                //     {
-                //         char *str_signal = strsignal(WSTOPSIG(status));
-                //         fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", job->job_number, str_signal, WSTOPSIG(status));
-                //         update_job(job->pid, 1);
-                //         job->fg = BACKGROUND;
-                //     }
-                //     else
-                //     {
-                //         update_job(job->pid, -1);
-                //     }
-                // }
-            }
+            } while (!job_completed(first_job));
         }
-
-        job_t *fg_job = get_foreground_job();
-        if (fg_job != NULL)
+        else
         {
-            if (fg_job->fg == FOREGROUND){
-                int status;
-                pid_t wpid;
-
-                do
-                {
-                    pid_t wpid = waitpid(fg_job->pid, &status, WUNTRACED);
-
-                    if (wpid == -1)
-                    {
-                        continue;
-                    }
-
-                    if (WIFEXITED(status) && fg_job->status != 1)
-                    {
-                        fg_job->status = -1;
-                        // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
-                    }
-                    else if (WIFSTOPPED(status))
-                    {
-                        char *str_signal = strsignal(WSTOPSIG(status));
-                        fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", fg_job->job_number, str_signal, WSTOPSIG(status));
-                        update_job(fg_job->pgid, 1);
-                        fg_job->fg = BACKGROUND;
-                    }
-                } while (wpid != -1 && wpid != 0 && fg_job->fg == FOREGROUND);
-                if (fg_job->status != 1)
-                    remove_job(fg_job->pgid);
-                // next_job_number--;
+            int job_number;
+            if (!(strcmp(cmds[0].cmdargs[0], "bg") == 0) && !(strcmp(cmds[0].cmdargs[0], "fg") == 0)){
+                job_number = add_job(pgid, pids, ncmds, BACKGROUND, ncmds, cmds);
             }
+            else{
+                job_number = atoi(cmds[0].cmdargs[1]);
+                job* job_fg = get_job_by_job_number(job_number);
+                if (job_fg){
+                    pgid = job_fg->pgid;
+                }
+            }
+            printf("[%d] %d\n", job_number, pgid);
         }
 
+        if (job_completed(first_job) && !job_is_stopped(first_job))
+        {
+            remove_job(first_job->pgid);
+        }
+
+        // Clean up pipes and signals
         for (int i = 0; i < ncmds - 1; i++)
         {
             close(pipes[i][0]);
@@ -393,26 +398,142 @@ int main(int argc, char *argv[])
             perror("tcsetpgrp stdout");
             exit(EXIT_FAILURE);
         }
-        blocked_signals.sa_handler = SIG_IGN;
-        sigemptyset(&blocked_signals.sa_mask);
-        blocked_signals.sa_flags = 0;
-        sigaction(SIGINT, &blocked_signals, NULL);
-        sigaction(SIGTSTP, &blocked_signals, NULL);
-        sigaction(SIGQUIT, &blocked_signals, NULL);
+
+        // setpgid(0, shell_pid);
+        do_job_notification();
     }
 }
 
-int add_job(pid_t pgid, pid_t pid, int fg, int ncmds, struct command cmds[])
+void do_job_notification(void)
 {
-    job_t *new_job = malloc(sizeof(job_t));
+    job *j, *jlast, *jnext;
+    update_status();
+    jlast = NULL;
+    for (j = first_job; j; j = jnext)
+    {
+        jnext = j->next;
+        if (job_is_completed(j))
+        {
+            format_job_info(j, "completed");
+            if (jlast)
+                jlast->next = jnext;
+            else
+                first_job = jnext;
+            free_job(j);
+        }
+        else if (job_is_stopped(j) && !j->notified)
+        {
+            format_job_info(j, "stopped");
+            j->notified = 1;
+            jlast = j;
+        }
+        else
+        {
+            jlast = j;
+        }
+    }
+}
+
+void free_job(struct job *job)
+{
+    free_processes(job->first_process);
+    free(job);
+}
+
+void free_processes(struct process *process)
+{
+    struct process *temp;
+    while (process != NULL)
+    {
+        temp = process;
+        process = process->next;
+        free(temp);
+    }
+}
+
+int mark_process_status(pid_t pid, int status)
+{
+    job *j;
+    process *p;
+
+    if (pid > 0)
+    {
+        /* Update the record for the process.  */
+        for (j = first_job; j; j = j->next)
+            for (p = j->first_process; p; p = p->next)
+                if (p->pid == pid)
+                {
+                    p->status = status;
+                    p->completed = 1;
+                    return 0;
+                }
+        fprintf(stderr, "No child process %d.\n", pid);
+        return -1;
+    }
+    else if (pid == 0 || errno == ECHILD)
+        /* No processes ready to report.  */
+        return -1;
+    else
+    {
+        /* Other weird errors.  */
+        perror("waitpid");
+        return -1;
+    }
+}
+
+void format_job_info(job *j, const char *status)
+{
+    fprintf(stderr, "%ld (%s): %s\n", (long)j->pgid, status, j->command);
+}
+
+void update_status(void)
+{
+    int status;
+    pid_t pid;
+
+    do
+    {
+        pid = waitpid(-1, &status, WNOHANG);
+        if (pid == -1 && errno != ECHILD)
+        {
+            perror("waitpid");
+            break;
+        }
+    } while (!mark_process_status(pid, status));
+}
+
+int add_job(pid_t pgid, pid_t *pids, int nprocs, int fg, int ncmds, struct command cmds[])
+{
+    job *new_job = malloc(sizeof(job));
+    if (!new_job)
+    {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
     new_job->pgid = pgid;
-    new_job->pid = pid;
     new_job->job_number = next_job_number++;
-    new_job->status = 0;
-    new_job->fg = fg;
-    new_job->commands = build_command_string(ncmds, cmds);
-    new_job->next = jobs;
-    jobs = new_job;
+    new_job->command = build_command_string(ncmds, cmds);
+    new_job->notified = 0;
+    new_job->first_process = NULL;
+    new_job->next = first_job;
+    first_job = new_job;
+
+    for (int i = 0; i < nprocs; i++)
+    {
+        process *new_proc = malloc(sizeof(process));
+        if (!new_proc)
+        {
+            perror("malloc");
+            exit(EXIT_FAILURE);
+        }
+        new_proc->argv = cmds[i].cmdargs;
+        new_proc->pid = pids[i];
+        new_proc->completed = 0;
+        new_proc->stopped = 0;
+        new_proc->status = 0;
+        new_proc->next = new_job->first_process;
+        new_job->first_process = new_proc;
+    }
     return new_job->job_number;
 }
 
@@ -439,52 +560,122 @@ char *build_command_string(int ncmds, struct command cmds[])
     return commands;
 }
 
-void remove_job(pid_t pgid)
+void remove_job(pid_t pid)
 {
-    job_t *job = jobs;
-    job_t *prev = NULL;
-    while (job != NULL)
+    job *job_ptr = first_job;
+    job *prev_job = NULL;
+    while (job_ptr)
     {
-        if (job->pgid == pgid)
+        process *proc_ptr = job_ptr->first_process;
+        process *prev_proc = NULL;
+        while (proc_ptr)
         {
-            if (job->fg == BACKGROUND)
+            if (proc_ptr->pid == pid)
             {
-                job->next = done_bg_jobs;
-                done_bg_jobs = job;
+                if (prev_proc)
+                {
+                    prev_proc->next = proc_ptr->next;
+                }
+                else
+                {
+                    job_ptr->first_process = proc_ptr->next;
+                }
+                free(proc_ptr);
+                break;
+            }
+            prev_proc = proc_ptr;
+            proc_ptr = proc_ptr->next;
+        }
+        if (job_ptr->first_process == NULL)
+        {
+            // Job has no more processes, remove the job
+            if (prev_job)
+            {
+                prev_job->next = job_ptr->next;
             }
             else
             {
-                if (prev == NULL)
-                    jobs = job->next;
-                else
-                    prev->next = job->next;
-                free(job->commands);
-                free(job);
+                first_job = job_ptr->next;
             }
-            return;
+            free(job_ptr);
+            break;
         }
-        prev = job;
-        job = job->next;
+        prev_job = job_ptr;
+        job_ptr = job_ptr->next;
     }
 }
 
 void update_job(pid_t pgid, int status)
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    job *job_ptr = first_job;
+    while (job_ptr)
     {
-        if (job->pgid == pgid)
+        if (job_ptr->pgid == pgid)
         {
-            job->status = status;
-            return;
+            process *proc_ptr = job_ptr->first_process;
+            while (proc_ptr)
+            {
+                if (proc_ptr->pid == pgid)
+                {
+                    proc_ptr->status = status;
+                    break;
+                }
+                proc_ptr = proc_ptr->next;
+            }
+            break;
         }
+        job_ptr = job_ptr->next;
+    }
+}
+void update_job_start(pid_t pid)
+{
+    job *job_ptr = first_job;
+    while (job_ptr)
+    {
+        if (job_ptr->pgid == pid)
+        {
+            process *proc_ptr = job_ptr->first_process;
+            while (proc_ptr)
+            {
+                if (proc_ptr->pid == pid)
+                {
+                    proc_ptr->stopped = 0;
+                    break;
+                }
+                proc_ptr = proc_ptr->next;
+            }
+            break;
+        }
+        job_ptr = job_ptr->next;
+    }
+}
+void update_job_stop(pid_t pgid)
+{
+    job *job_ptr = first_job;
+    while (job_ptr)
+    {
+        if (job_ptr->pgid == pgid)
+        {
+            process *proc_ptr = job_ptr->first_process;
+            while (proc_ptr)
+            {
+                if (proc_ptr->pid == pgid)
+                {
+                    proc_ptr->stopped = 1;
+                    break;
+                }
+                proc_ptr = proc_ptr->next;
+            }
+            break;
+        }
+        job_ptr = job_ptr->next;
     }
 }
 
-job_t *get_job_by_pgid(pid_t pgid)
+job *get_job_by_pgid(pid_t pgid)
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    job *job;
+    for (job = first_job; job != NULL; job = job->next)
     {
         if (job->pgid == pgid)
             return job;
@@ -492,168 +683,170 @@ job_t *get_job_by_pgid(pid_t pgid)
     return NULL;
 }
 
-job_t *get_job_by_pid(pid_t pid)
+job *get_job_by_pid(pid_t pid)
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    job *job_ptr = first_job;
+    while (job_ptr)
     {
-        if (job->pid == pid)
-            return job;
+        process *proc_ptr = job_ptr->first_process;
+        while (proc_ptr)
+        {
+            if (proc_ptr->pid == pid)
+            {
+                return job_ptr;
+            }
+            proc_ptr = proc_ptr->next;
+        }
+        job_ptr = job_ptr->next;
     }
     return NULL;
 }
 
-job_t *get_job_by_job_number(int job_number)
+job *get_job_by_job_number(int job_number)
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    job *current = first_job;
+    while (current != NULL)
     {
-        if (job->job_number == job_number)
-            return job;
+        if (current->job_number == job_number)
+        {
+            return current;
+        }
+        current = current->next;
     }
     return NULL;
 }
 
 void list_jobs()
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    job *job_ptr = first_job;
+    if (job_ptr == NULL)
     {
-        printf("Job: number=%d, fg=%d, pgid=%d, commands=%s\n", job->job_number, job->fg, job->pgid, job->commands ? job->commands : "No command");
-    }
-    return;
-}
-
-void display_done_bg_jobs()
-{
-    job_t *job;
-    if (done_bg_jobs == NULL)
-    {
-        printf("No completed background jobs.\n");
+        printf("No jobs.\n");
         return;
     }
-    else
+    while (job_ptr != NULL)
     {
-        printf("Completed background jobs:\n");
-        for (job = done_bg_jobs; job != NULL; job = job->next)
+        printf("Job JOB_NUMBER: %d PGID: %d, Command: %s\n", job_ptr->job_number, job_ptr->pgid, job_ptr->command);
+        process *proc_ptr = job_ptr->first_process;
+        while (proc_ptr)
         {
-            printf("[%d] (%d) %s\n", job->job_number, job->pid, job->commands);
+            printf("\tProcess PID: %d, Status: %d\n", proc_ptr->pid, proc_ptr->status);
+            proc_ptr = proc_ptr->next;
         }
-        return;
+        job_ptr = job_ptr->next;
     }
 }
 
-void clear_done_bg_jobs()
+/* Find the active job with the indicated pgid.  */
+job *find_job(pid_t pgid)
 {
-    job_t *job, *next;
-    for (job = done_bg_jobs; job != NULL; job = next)
-    {
-        next = job->next;
-        free(job->commands);
-        free(job);
-    }
-    done_bg_jobs = NULL;
-}
+    job *j;
 
-job_t *get_foreground_job()
-{
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
-    {
-        if (job->fg == FOREGROUND)
-            return job;
-    }
+    for (j = first_job; j; j = j->next)
+        if (j->pgid == pgid)
+            return j;
     return NULL;
 }
 
-job_t *get_background_job_pid(pid_t pid)
+int job_completed(job *job_ptr)
 {
-    job_t *job;
-    for (job = jobs; job != NULL; job = job->next)
+    process *proc_ptr = job_ptr->first_process;
+    while (proc_ptr)
     {
-        if (job->fg == BACKGROUND && job->pid == pid)
-            return job;
+        if (!proc_ptr->completed && !proc_ptr->stopped)
+        {
+            return 0;
+        }
+        proc_ptr = proc_ptr->next;
     }
-    return NULL;
+    return 1;
 }
-void fg_command(int job_number, struct sigaction action)
+/* Return true if all processes in the job have stopped or completed.  */
+int job_is_stopped(job *j)
 {
-    job_t *job = get_job_by_job_number(job_number);
-    if (job == NULL)
+    process *p;
+
+    for (p = j->first_process; p; p = p->next)
+        if (!p->stopped)
+            return 0;
+    return 1;
+}
+
+/* Return true if all processes in the job have completed.  */
+int job_is_completed(job *j)
+{
+    process *p;
+
+    for (p = j->first_process; p; p = p->next)
+        if (!p->completed)
+            return 0;
+    return 1;
+}
+
+void fg_command(int job_number)
+{
+    job *job_ptr = get_job_by_job_number(job_number);
+    if (job_ptr == NULL)
     {
         printf("No such job\n");
         return;
     }
-    if (job->status == -1)
-    {
-        printf("Job is already completed\n");
-        return;
-    }
-    if (job->fg == FOREGROUND)
-    {
-        printf("Job is already in foreground\n");
-        return;
-    }
-    if (job->status == 1)
-    {
-        printf("Continuing job [%d]\n", job_number);
-        kill(-job->pgid, SIGCONT);
-    }
+    printf("Continuing job [%d]\n", job_number);
+    // if (setpgid(0, job_ptr->pgid) < 0) {
+    //     perror("setpgid");
+    //     return; // Avoid exiting the shell
+    // }
+    kill(-job_ptr->pgid, SIGCONT);
 
-    if (tcsetpgrp(STDIN_FILENO, job->pgid) < 0)
+    if (tcsetpgrp(STDIN_FILENO, job_ptr->pgid) < 0 ||
+        tcsetpgrp(STDOUT_FILENO, job_ptr->pgid) < 0 ||
+        tcsetpgrp(STDERR_FILENO, job_ptr->pgid) < 0)
     {
         perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); // Avoid exiting the shell
     }
-    if (tcsetpgrp(STDOUT_FILENO, job->pgid) < 0)
-    {
-        perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
-    }
-    if (tcsetpgrp(STDERR_FILENO, job->pgid) < 0)
-    {
-        perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
-    }
+    update_job_start(job_ptr->pgid);
+    update_job(job_ptr->pgid, 0);
+    printf("Job [%d] (%d) moved to foreground\n", job_number, job_ptr->pgid);
 
-    action.sa_handler = SIG_DFL;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    sigaction(SIGINT, &action, NULL);
-    sigaction(SIGTSTP, &action, NULL);
-    sigaction(SIGQUIT, &action, NULL);
-    printf("Job [%d] (%d) moved to foreground\n", job_number, job->pid);
-    job->fg = FOREGROUND;
-    update_job(job->pgid, 0);
+    // // Wait for the job to finish
+    // int status;
+    // pid_t wpid;
+    // do {
+    //     wpid = waitpid(-job_ptr->pgid, &status, 0);
+    //     if (wpid == -1 && errno != ECHILD) {
+    //         perror("waitpid");
+    //         break;
+    //     }
+    //     if (wpid > 0) {
+    //         // Handle the status
+    //         update_job(job_ptr->pgid, status);
+    //     }
+    // } while (!job_completed(job_ptr));
 }
-
-void bg_command(int job_number, struct sigaction action)
+void bg_command(int job_number)
 {
-    job_t *job = get_job_by_job_number(job_number);
-    if (job == NULL)
+    job *job_ptr = get_job_by_job_number(job_number);
+    if (job_ptr == NULL)
     {
         printf("No such job\n");
         return;
     }
-    if (job->status == -1)
-    {
-        printf("Job is already completed\n");
-        return;
-    }
-    if (job->status == 1)
-    {
-        printf("Continuing job [%d] (%d)\n", job_number, job->pid);
-        kill(-job->pgid, SIGCONT);
-    }
+    // if (job_ptr->status == -1) {
+    //     printf("Job is already completed\n");
+    //     return;
+    // }
+    printf("Continuing job [%d] (%d)\n", job_number, job_ptr->pgid);
+    // if (setpgid(0, job_ptr->pgid) < 0) {
+    //     perror("setpgid");
+    //     return;
+    // }
+    kill(-job_ptr->pgid, SIGCONT);
 
-    if (job->fg != BACKGROUND)
-        printf("Job [%d] (%d) moved to background\n", job_number, job->pid);
-    action.sa_handler = SIG_IGN;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    sigaction(SIGINT, &action, NULL);
-    sigaction(SIGTSTP, &action, NULL);
-    sigaction(SIGQUIT, &action, NULL);
-    job->fg = BACKGROUND;
-    update_job(job->pgid, 0);
+    // if (job_ptr->fg != BACKGROUND) {
+    printf("Job [%d] (%d) moved to background\n", job_number, job_ptr->pgid);
+    // }
+    // job_ptr->fg = BACKGROUND;
+    update_job_start(job_ptr->pgid);
+    update_job(job_ptr->pgid, 0);
 }
