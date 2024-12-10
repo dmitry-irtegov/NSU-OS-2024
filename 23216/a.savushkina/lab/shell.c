@@ -201,24 +201,24 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                if (cmds[0].bgk == FOREGROUND)
-                {
-                    if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0)  ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDOUT_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDERR_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
-                    {
-                        perror("tcsetpgrp");
-                        exit(EXIT_FAILURE);
-                    }
-                }
+                // if (cmds[0].bgk == FOREGROUND)
+                // {
+                //     if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0)  ? pgid : getpid()) < 0)
+                //     {
+                //         perror("tcsetpgrp");
+                //         exit(EXIT_FAILURE);
+                //     }
+                //     if (tcsetpgrp(STDOUT_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
+                //     {
+                //         perror("tcsetpgrp");
+                //         exit(EXIT_FAILURE);
+                //     }
+                //     if (tcsetpgrp(STDERR_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
+                //     {
+                //         perror("tcsetpgrp");
+                //         exit(EXIT_FAILURE);
+                //     }
+                // }
 
                 blocked_signals.sa_handler = SIG_DFL;
                 sigemptyset(&blocked_signals.sa_mask);
@@ -607,21 +607,21 @@ void fg_command(int job_number, struct sigaction action)
         kill(-job->pgid, SIGCONT);
     }
 
-    if (tcsetpgrp(STDIN_FILENO, job->pgid) < 0)
-    {
-        perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
-    }
-    if (tcsetpgrp(STDOUT_FILENO, job->pgid) < 0)
-    {
-        perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
-    }
-    if (tcsetpgrp(STDERR_FILENO, job->pgid) < 0)
-    {
-        perror("tcsetpgrp");
-        exit(EXIT_FAILURE);
-    }
+    // if (tcsetpgrp(STDIN_FILENO, job->pgid) < 0)
+    // {
+    //     perror("tcsetpgrp");
+    //     exit(EXIT_FAILURE);
+    // }
+    // if (tcsetpgrp(STDOUT_FILENO, job->pgid) < 0)
+    // {
+    //     perror("tcsetpgrp");
+    //     exit(EXIT_FAILURE);
+    // }
+    // if (tcsetpgrp(STDERR_FILENO, job->pgid) < 0)
+    // {
+    //     perror("tcsetpgrp");
+    //     exit(EXIT_FAILURE);
+    // }
 
     action.sa_handler = SIG_DFL;
     sigemptyset(&action.sa_mask);

@@ -12,9 +12,7 @@ int parseline(char *line)
     char *s;
     char aflg = 0;
     int rval;
-    char *quotes;
     static char delim[] = " \t|&<>;\"\'\n";
-    static char delim2[] = "\"";
     ncmds = 0;
     s = line;
 
