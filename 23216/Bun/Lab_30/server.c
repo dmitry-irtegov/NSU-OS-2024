@@ -37,6 +37,7 @@ int main() {
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("Failed to bind socket\n");
         close(server_fd);
+        unlink(SOCKET_PATH);
         exit(EXIT_FAILURE);
     }
 
@@ -44,6 +45,7 @@ int main() {
     if (listen(server_fd, 1) == -1) {
         perror("Failed to listen on socket\n");
         close(server_fd);
+        unlink(SOCKET_PATH);
         exit(EXIT_FAILURE);
     }
 
@@ -54,6 +56,7 @@ int main() {
     if (client_fd == -1) {
         perror("Failed to accept connection\n");
         close(server_fd);
+        unlink(SOCKET_PATH);
         exit(EXIT_FAILURE);
     }
 
@@ -72,6 +75,7 @@ int main() {
         perror("Failed to read data from client\n");
         close(client_fd);
         close(server_fd);
+        unlink(SOCKET_PATH);
         exit(EXIT_FAILURE);
     }
 
