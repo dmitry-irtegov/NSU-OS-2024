@@ -23,23 +23,6 @@ struct command
     char *appfile;
 };
 
-typedef struct job
-{
-    pid_t pgid;
-    pid_t pid;
-    int job_number;
-    int status; // 0: running, 1: stopped
-    int fg;     // 1: foreground, 0: background
-    char *commands;
-    struct job *next;
-} job_t;
-
-typedef struct string_node
-{
-    char *str;
-    struct string_node *next;
-} string_node_t;
-
 /*  cmdflag's  */
 #define OUTPIP 01
 #define INPIP 02
