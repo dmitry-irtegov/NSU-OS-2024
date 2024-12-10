@@ -12,16 +12,19 @@ int parseline(char *line)
     char *s;
     char aflg = 0;
     int rval;
-    static char delim[] = " \t|&<>;\n";
-
+    char *quotes;
+    static char delim[] = " \t|&<>;\"\'\n";
+    static char delim2[] = "\"";
     ncmds = 0;
     s = line;
 
     for (int i = 0; i < MAXCMDS; i++)
     {
         cmds[i].cmdargs[0] = NULL;
+        cmds[i].cmdargs[1] = NULL;
+        cmds[i].cmdargs[2] = NULL;
         cmds[i].cmdflag = 0;
-        cmds[i].bgk = 0;
+        cmds[i].bgk = 1;
         cmds[i].infile = NULL;
         cmds[i].outfile = NULL;
         cmds[i].appfile = NULL;
@@ -36,8 +39,25 @@ int parseline(char *line)
 
         switch (*s)
         {
+            
+        case '"':
+            s++; 
+            char *start = s; 
+            s = strpbrk(s, "\""); 
+            if (s) {
+                *s = '\0'; 
+                cmds[current_cmd].cmdargs[nargs++] = start; 
+                s++;
+            }
+            cmds[current_cmd].cmdargs[nargs] = NULL; 
+        
+
+            break;
+        
         case '&':
-            cmds[current_cmd].bgk = 1;
+            cmds[current_cmd].bgk = 0;
+            cmds[current_cmd].cmdargs[nargs] = NULL;
+            current_cmd++;
             *s++ = '\0';
             break;
         case '>':
@@ -80,6 +100,10 @@ int parseline(char *line)
             s = strpbrk(s, delim);
             if (s && isspace(*s))
                 *s++ = '\0';
+        else{
+            *s = '>';
+            *s++ = '\0';
+        }
             break;
         case '<':
             if (current_cmd >= MAXCMDS)
@@ -146,10 +170,13 @@ int parseline(char *line)
             {
                 cmds[current_cmd].cmdargs[0] = s;
                 nargs = 1;
+                ncmds++;
             }
             else if (nargs < MAXARGS - 1)
             {
-                cmds[current_cmd].cmdargs[nargs++] = s;
+                if (*s){
+                    cmds[current_cmd].cmdargs[nargs++] = s;
+                }
                 cmds[current_cmd].cmdargs[nargs] = NULL;
             }
             else
@@ -164,8 +191,8 @@ int parseline(char *line)
         }
     }
 
-    // Finalize the last command's arguments
-    if (cmds[current_cmd].cmdargs[0] != NULL)
+    // // Finalize the last command's arguments
+   if (cmds[current_cmd].cmdargs[0] != NULL)
     {
         if (nargs != 0)
             cmds[current_cmd].cmdargs[nargs] = NULL;
@@ -173,8 +200,14 @@ int parseline(char *line)
     }
     else
     {
-        // No command parsed
+        if (cmds[current_cmd - 1].cmdargs[0] != NULL){
+            if (nargs != 0)
+            cmds[current_cmd - 1].cmdargs[nargs] = NULL;
+        ncmds = current_cmd;
+        }
+        else{
         return -1;
+        }
     }
 
     for (int i = 0; i < ncmds; i++)
@@ -201,14 +234,14 @@ int parseline(char *line)
             }
         }
     }
-
     rval = ncmds;
     return rval;
 }
 
 static char *blankskip(register char *s)
 {
-    while (isspace(*s) && *s)
+    while (isspace(*s) && *s){
         ++s;
+    }
     return (s);
 }

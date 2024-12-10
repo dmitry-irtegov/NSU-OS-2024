@@ -3,7 +3,7 @@ TARGET = shell
 TEST_TARGET = parseline_test
 
 # Исходные файлы
-SRCS = shell.c parseline.c promptline.c
+SRCS = shell.c parseline.c promptline.c 
 TEST_SRCS = parseline.test.c parseline.c
 
 # Компилятор
