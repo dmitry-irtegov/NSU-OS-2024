@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #define SOCKET_NAME "sckt"
-#define BUFFER_SIZE 100
+#define BUFFER_SIZE 1
 #define MAX_CLIENTS 10
 #define BACKLOG_SIZE 20
 
@@ -85,8 +85,8 @@ int main() {
 
         for (int i = 1; i < nfds; i++) {
             if (fds[i].revents & POLLIN) {
-                char byte;
-                ssize_t bytes_read = read(fds[i].fd, &byte, 1);
+                char byte[BUFFER_SIZE];
+                ssize_t bytes_read = read(fds[i].fd, byte, BUFFER_SIZE);
                 
                 if (bytes_read <= 0) {
                     printf("\nClient disconnected (FD: %d)\n\n", fds[i].fd);
@@ -98,8 +98,10 @@ int main() {
                     continue;
                 }
 
-                byte = toupper(byte);
-                printf("FD %d: %c\n", fds[i].fd, byte);
+                for (int j = 0; j < bytes_read; j++) {
+                    byte[j] = toupper(byte[j]);
+                }
+                printf("FD %d: %.*s\n", fds[i].fd, (int)bytes_read, byte);
             }
         }
     }
