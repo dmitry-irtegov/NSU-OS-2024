@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #define SOCKET_NAME "sckt"
-#define BUFFER_SIZE 10
+#define BUFFER_SIZE 100
 #define MAX_CLIENTS 10
 #define BACKLOG_SIZE 20
 
@@ -22,7 +22,6 @@ int main() {
     struct sockaddr_un server_addr;
     struct pollfd fds[MAX_CLIENTS + 1];
     int nfds = 1;
-    char buffer[BUFFER_SIZE];
 
     server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_socket == -1) {
@@ -71,24 +70,26 @@ int main() {
             if (active_clients < MAX_CLIENTS) {
                 successful_connections++;
                 active_clients++;
-                printf("New client connected (total successful: %d)\n", successful_connections);
+                printf("\nNew client connected (FD: %d, ", client_socket);
+                printf("total successful: %d)\n\n", successful_connections);
+
 
                 fds[nfds].fd = client_socket;
                 fds[nfds].events = POLLIN;
                 nfds++;
             } else {
-                printf("Too many clients. Connection rejected.\n");
+                printf("\nToo many clients. Connection rejected.\n\n");
                 close(client_socket);
             }
         }
 
         for (int i = 1; i < nfds; i++) {
             if (fds[i].revents & POLLIN) {
-                uint32_t msg_size;
-                ssize_t bytes_read = read(fds[i].fd, &msg_size, sizeof(msg_size));
+                char byte;
+                ssize_t bytes_read = read(fds[i].fd, &byte, 1);
                 
-                if (bytes_read != sizeof(msg_size)) {
-                    printf("Client disconnected\n");
+                if (bytes_read <= 0) {
+                    printf("\nClient disconnected (FD: %d)\n\n", fds[i].fd);
                     close(fds[i].fd);
                     active_clients--;
                     memmove(&fds[i], &fds[i + 1], (nfds - i - 1) * sizeof(struct pollfd));
@@ -97,23 +98,8 @@ int main() {
                     continue;
                 }
 
-                size_t total_read = 0;
-                while (total_read < msg_size) {
-                    bytes_read = read(fds[i].fd, buffer,
-                        (msg_size - total_read < BUFFER_SIZE) ? 
-                        msg_size - total_read : BUFFER_SIZE);
-
-                    if (bytes_read <= 0) {
-                        break;
-                    }
-
-                    for (int j = 0; j < bytes_read; j++) {
-                        buffer[j] = toupper(buffer[j]);
-                    }
-                    write(1, buffer, bytes_read);
-
-                    total_read += bytes_read;
-                }
+                byte = toupper(byte);
+                printf("FD %d: %c\n", fds[i].fd, byte);
             }
         }
     }

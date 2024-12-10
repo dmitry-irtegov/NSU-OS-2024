@@ -32,13 +32,8 @@ int main(void) {
     }
 
     while (fgets(buffer, BUFFER_SIZE, stdin) != NULL) {
-        uint32_t msg_size = strlen(buffer);
-
-        if (write(client_socket, &msg_size, sizeof(msg_size)) != sizeof(msg_size)) {
-            perror("Failed to send message size");
-            break;
-        }
-
+        size_t msg_size = strlen(buffer);
+        
         for (size_t i = 0; i < msg_size; i++) {
             if (write(client_socket, &buffer[i], 1) != 1) {
                 perror("Failed to send message byte");
