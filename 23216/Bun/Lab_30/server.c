@@ -37,7 +37,7 @@ int main() {
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("Failed to bind socket\n");
         close(server_fd);
-        unlink(SOCKET_PATH);
+        
         exit(EXIT_FAILURE);
     }
 
