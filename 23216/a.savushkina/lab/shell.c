@@ -34,7 +34,7 @@ typedef struct job
     pid_t pgid;                /* process group ID */
     char notified;             /* true if user told about stopped job */
     struct termios tmodes;     /* saved terminal modes */
-    int stdin, stdout, stderr; /* standard i/o channels */
+    // int stdin, stdout, stderr; /* standard i/o channels */
 } job;
 
 typedef struct string_node
