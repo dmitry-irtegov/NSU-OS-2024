@@ -17,6 +17,11 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+
+    if (strlen(SOCKET_PATH) >= sizeof(addr.sun_path)) {
+        fprintf(stderr, "Socket path is very long.");
+        exit(EXIT_FAILURE);
+    }
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
