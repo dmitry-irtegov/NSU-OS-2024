@@ -82,13 +82,20 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 			if jm.Jobs.Back() == nil {
 				fmt.Println("fg: No such job: current")
 				return
+			} else if jm.Jobs.Back().Value.(tools.Job).Status == "Done" {
+				fmt.Println("fg: Job has terminated")
+			} else {
+				pid = jm.Jobs.Back().Value.(tools.Job).Pid
+				jm.Fg(pid)
 			}
-			pid = jm.Jobs.Back().Value.(tools.Job).Pid
-			jm.Fg(pid)
 		} else {
 			var flag bool
 			for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 				if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[1] {
+					if elem.Value.(tools.Job).Status == "Done" {
+						fmt.Println("fg: Job has terminated")
+						break
+					}
 					pid = elem.Value.(tools.Job).Pid
 					jm.Fg(pid)
 					flag = true
@@ -110,17 +117,25 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 			if jm.Jobs.Back() == nil {
 				fmt.Println("bg: No such job: current")
 				return
+			} else if jm.Jobs.Back().Value.(tools.Job).Status == "Done" {
+				fmt.Println("bg: Job has terminated")
+				return
 			} else if jm.Jobs.Back().Value.(tools.Job).Bkgrnd {
 				fmt.Println("bg: Job", jm.Jobs.Back().Value.(tools.Job).Id, "already in background")
 				return
+			} else {
+				pid = jm.Jobs.Back().Value.(tools.Job).Pid
+				jm.Bg(pid)
 			}
-			pid = jm.Jobs.Back().Value.(tools.Job).Pid
-			jm.Bg(pid)
 		} else {
 			for i := 1; i < len(cmd.Cmdargs); i++ {
 				var flag bool
 				for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 					if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[i] {
+						if elem.Value.(tools.Job).Status == "Done" {
+							fmt.Println("bg: Job has terminated")
+							return
+						}
 						if elem.Value.(tools.Job).Bkgrnd {
 							fmt.Println("bg: Job", cmd.Cmdargs[i], "already in background")
 							flag = true
