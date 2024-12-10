@@ -46,6 +46,17 @@ func (jm *JobManager) WaitForForeground(pid int, fgPid *int) {
 	}
 	jm.Update(pid, "Done")
 	*fgPid = 0
+
+	for i := 1; i <= jm.IdLastJob; i++ {
+		for e := jm.Jobs.Front(); e != nil; e = e.Next() {
+			if e.Value.(tools.Job).Id == i {
+				if e.Value.(tools.Job).Status == "Done" {
+					jm.Write(e.Value.(tools.Job).Pid)
+				}
+				break
+			}
+		}
+	}
 }
 
 func (jm *JobManager) Add(pid int, cmdargs []string, flag bool) {

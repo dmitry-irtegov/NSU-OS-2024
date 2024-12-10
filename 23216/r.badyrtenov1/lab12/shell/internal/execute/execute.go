@@ -84,6 +84,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 				return
 			} else if jm.Jobs.Back().Value.(tools.Job).Status == "Done" {
 				fmt.Println("fg: Job has terminated")
+				return
 			} else {
 				pid = jm.Jobs.Back().Value.(tools.Job).Pid
 				jm.Fg(pid)
@@ -94,7 +95,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 				if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[1] {
 					if elem.Value.(tools.Job).Status == "Done" {
 						fmt.Println("fg: Job has terminated")
-						break
+						return
 					}
 					pid = elem.Value.(tools.Job).Pid
 					jm.Fg(pid)
