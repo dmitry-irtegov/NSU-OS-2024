@@ -55,11 +55,6 @@ void sigchld_handler()
                 done_bg_jobs = job;
                 job->status = -1;
             }
-            else
-            {
-                job->status = -1;
-                // remove_job(job->pgid);
-            }
         }
     }
 }
@@ -309,6 +304,7 @@ int main(int argc, char *argv[])
                     num = add_job(pgid, pids[i], BACKGROUND, ncmds, cmds);
                     job_t *job = get_job_by_job_number(num);
                     printf("[%d] %d\n", job->job_number, job->pid);
+                    
                 }
                 // if (cmds[i].cmdflag == 0 && cmds[i].bgk == FOREGROUND)
                 // {
@@ -341,15 +337,10 @@ int main(int argc, char *argv[])
             }
         }
 
-        for (int i = 0; i < ncmds - 1; i++)
-        {
-            close(pipes[i][0]);
-            close(pipes[i][1]);
-        }
         job_t *fg_job = get_foreground_job();
         if (fg_job != NULL)
         {
-            {
+            if (fg_job->fg == FOREGROUND){
                 int status;
                 pid_t wpid;
 
@@ -359,7 +350,7 @@ int main(int argc, char *argv[])
 
                     if (wpid == -1)
                     {
-                        perror("waitpid");
+                        perror("waitpid failed");
                         exit(EXIT_FAILURE);
                     }
 
@@ -380,6 +371,12 @@ int main(int argc, char *argv[])
                     remove_job(fg_job->pgid);
                 // next_job_number--;
             }
+        }
+
+        for (int i = 0; i < ncmds - 1; i++)
+        {
+            close(pipes[i][0]);
+            close(pipes[i][1]);
         }
 
         if (tcsetpgrp(STDIN_FILENO, shell_pid) < 0)
