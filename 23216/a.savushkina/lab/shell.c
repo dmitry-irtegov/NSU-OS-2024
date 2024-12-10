@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 
                 if (cmds[0].bgk == FOREGROUND)
                 {
-                    if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0)  ? pgid : getpid()) < 0)
+                    if (tcsetpgrp(STDIN_FILENO, (pgid != -1 && cmds[i].cmdflag != 0) ? pgid : getpid()) < 0)
                     {
                         perror("tcsetpgrp");
                         exit(EXIT_FAILURE);
@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
                 int num;
                 if (cmds[0].bgk == FOREGROUND)
                 {
-                    num =  add_job(pgid, pids[i], FOREGROUND, ncmds, cmds);
+                    num = add_job(pgid, pids[i], FOREGROUND, ncmds, cmds);
                 }
                 else
                 {
@@ -310,32 +310,34 @@ int main(int argc, char *argv[])
                     job_t *job = get_job_by_job_number(num);
                     printf("[%d] %d\n", job->job_number, job->pid);
                 }
-                if (cmds[i].cmdflag == 0 && cmds[i].bgk == FOREGROUND)
-                {
-                    int status;
-                    job_t *job = get_job_by_job_number(num);
-                    pid_t wpid;
-                    // printf("[%d] %d\n", job->job_number, job->pid);
-                    if ( wpid = waitpid(pids[i], &status, WUNTRACED) < 0){
-                        perror("waitpid in for");
-                    }
-                    if (WIFEXITED(status) && job->status != 1)
-                    {
-                        update_job(job->pid, -1);
-                        remove_job(job->pid);
-                        // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
-                    }
-                    else if (WIFSTOPPED(status))
-                    {
-                        char *str_signal = strsignal(WSTOPSIG(status));
-                        fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", job->job_number, str_signal, WSTOPSIG(status));
-                        update_job(job->pid, 1);
-                        job->fg = BACKGROUND;
-                    }
-                    else{
-                        update_job(job->pid, -1);
-                    }
-                }
+                // if (cmds[i].cmdflag == 0 && cmds[i].bgk == FOREGROUND)
+                // {
+                //     int status;
+                //     job_t *job = get_job_by_job_number(num);
+                //     pid_t wpid;
+                //     // printf("[%d] %d\n", job->job_number, job->pid);
+                //     if (wpid = waitpid(pids[i], &status, WUNTRACED) < 0)
+                //     {
+                //         perror("waitpid in for");
+                //     }
+                //     if (WIFEXITED(status) && job->status != 1)
+                //     {
+                //         update_job(job->pid, -1);
+                //         remove_job(job->pid);
+                //         // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
+                //     }
+                //     else if (WIFSTOPPED(status))
+                //     {
+                //         char *str_signal = strsignal(WSTOPSIG(status));
+                //         fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", job->job_number, str_signal, WSTOPSIG(status));
+                //         update_job(job->pid, 1);
+                //         job->fg = BACKGROUND;
+                //     }
+                //     else
+                //     {
+                //         update_job(job->pid, -1);
+                //     }
+                // }
             }
         }
 
@@ -347,61 +349,60 @@ int main(int argc, char *argv[])
         job_t *fg_job = get_foreground_job();
         if (fg_job != NULL)
         {
-            if (fg_job->status != -1){
-            int status;
-            pid_t wpid;
-
-            do
             {
-                pid_t wpid = waitpid(fg_job->pid, &status, WUNTRACED);
+                int status;
+                pid_t wpid;
 
-                if (wpid == -1)
+                do
                 {
-                    perror("waitpid");
-                    exit(EXIT_FAILURE);
-                }
+                    pid_t wpid = waitpid(fg_job->pid, &status, WUNTRACED);
 
-                if (WIFEXITED(status) && fg_job->status != 1)
-                {
-                    fg_job->status = -1;
-                    // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
-                }
-                else if (WIFSTOPPED(status))
-                {
-                    char *str_signal = strsignal(WSTOPSIG(status));
-                    fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", fg_job->job_number, str_signal, WSTOPSIG(status));
-                    update_job(fg_job->pgid, 1);
-                    fg_job->fg = BACKGROUND;
-                }
-            } while (wpid != -1 && wpid != 0 && fg_job->fg == FOREGROUND);
-            if (fg_job->status != 1)
-                remove_job(fg_job->pgid);
-            // next_job_number--;
+                    if (wpid == -1)
+                    {
+                        perror("waitpid");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (WIFEXITED(status) && fg_job->status != 1)
+                    {
+                        fg_job->status = -1;
+                        // printf("Job [%d] exited with status %d\n", fg_job->job_number, WEXITSTATUS(status));
+                    }
+                    else if (WIFSTOPPED(status))
+                    {
+                        char *str_signal = strsignal(WSTOPSIG(status));
+                        fprintf(stderr, "\tJob [%d] stopped by signal %s (%d)\n", fg_job->job_number, str_signal, WSTOPSIG(status));
+                        update_job(fg_job->pgid, 1);
+                        fg_job->fg = BACKGROUND;
+                    }
+                } while (wpid != -1 && wpid != 0 && fg_job->fg == FOREGROUND);
+                if (fg_job->status != 1)
+                    remove_job(fg_job->pgid);
+                // next_job_number--;
             }
         }
 
-                            if (tcsetpgrp(STDIN_FILENO, shell_pid) < 0)
-                    {
-                        perror("tcsetpgrp stdin");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDERR_FILENO, shell_pid) < 0)
-                    {
-                        perror("tcsetpgrp stderr");
-                        exit(EXIT_FAILURE);
-                    }
-                    if (tcsetpgrp(STDOUT_FILENO, shell_pid) < 0)
-                    {
-                        perror("tcsetpgrp stdout");
-                        exit(EXIT_FAILURE);
-                    }
+        if (tcsetpgrp(STDIN_FILENO, shell_pid) < 0)
+        {
+            perror("tcsetpgrp stdin");
+            exit(EXIT_FAILURE);
+        }
+        if (tcsetpgrp(STDERR_FILENO, shell_pid) < 0)
+        {
+            perror("tcsetpgrp stderr");
+            exit(EXIT_FAILURE);
+        }
+        if (tcsetpgrp(STDOUT_FILENO, shell_pid) < 0)
+        {
+            perror("tcsetpgrp stdout");
+            exit(EXIT_FAILURE);
+        }
         blocked_signals.sa_handler = SIG_IGN;
         sigemptyset(&blocked_signals.sa_mask);
         blocked_signals.sa_flags = 0;
         sigaction(SIGINT, &blocked_signals, NULL);
         sigaction(SIGTSTP, &blocked_signals, NULL);
         sigaction(SIGQUIT, &blocked_signals, NULL);
-
     }
 }
 
@@ -587,7 +588,8 @@ void fg_command(int job_number, struct sigaction action)
         printf("No such job\n");
         return;
     }
-    if (job->status == -1){
+    if (job->status == -1)
+    {
         printf("Job is already completed\n");
         return;
     }
@@ -637,7 +639,8 @@ void bg_command(int job_number, struct sigaction action)
         printf("No such job\n");
         return;
     }
-    if (job->status == -1){
+    if (job->status == -1)
+    {
         printf("Job is already completed\n");
         return;
     }
