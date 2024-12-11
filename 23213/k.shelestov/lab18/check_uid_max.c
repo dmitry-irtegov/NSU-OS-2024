@@ -3,7 +3,7 @@
 #include <limits.h>
 
 int main() {
-    long max_uid = sysconf(_SC_MAXUID);
+    long max_uid = sysconf(_SC_MAXPID);
 
     if (max_uid == -1) {
         perror("sysconf");
