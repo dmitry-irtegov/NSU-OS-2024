@@ -11,7 +11,7 @@ int main() {
         return 1;
     }
 
-    long max_uid = fpathconf(fd, _PC_UID_MAX);  // Используем fpathconf
+    long max_uid = fpathconf(fd, UID_MAX);  // Используем fpathconf
 
     if (max_uid == -1) {
         perror("fpathconf");
