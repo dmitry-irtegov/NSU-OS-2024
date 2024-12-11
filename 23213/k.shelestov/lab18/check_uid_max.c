@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <limits.h>
 
 int main() {
@@ -9,7 +10,7 @@ int main() {
         return 1;
     }
 
-    printf("Максимальное значение UID: %ld\n", max_uid);
+    printf("Max UID: %ld\n", max_uid);
     return 0;
 }
 
