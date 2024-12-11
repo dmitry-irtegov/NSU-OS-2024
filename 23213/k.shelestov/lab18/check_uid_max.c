@@ -1,16 +1,26 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <limits.h>
-
 int main() {
-    long max_uid = sysconf(UID_MAX);
+    // Открываем файл, чтобы получить файловый дескриптор
+    int fd = open("/", O_RDONLY);  // Открываем корневой каталог
+
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+
+    long max_uid = fpathconf(fd, _PC_UID_MAX);  // Используем fpathconf
 
     if (max_uid == -1) {
-        perror("sysconf");
+        perror("fpathconf");
+        close(fd);  // Закрываем файловый дескриптор
         return 1;
     }
 
     printf("Max UID: %ld\n", max_uid);
+    close(fd);  // Закрываем файловый дескриптор
     return 0;
 }
 
