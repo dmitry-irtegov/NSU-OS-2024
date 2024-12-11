@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
-
+#include <sys/param.h>
+#include <param.h>
 int main() {
-    long max_uid = sysconf(_SC_UID_MAX);
+    long max_uid = sysconf(_SC_MAXUID);
 
     if (max_uid == -1) {
         perror("sysconf");
