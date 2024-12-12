@@ -406,6 +406,7 @@ void start_job(job* jobs) {
 	int status, pipes[2], infile, outfile, errfile, cntcmds, waitVal;
 	infile = cntcmds = outfile = 0;
 	if (jobs->conv->cntcommands == 1) {
+		printf("cnt commands == 1\n %s\n", jobs->proc->cmd[0]);
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
