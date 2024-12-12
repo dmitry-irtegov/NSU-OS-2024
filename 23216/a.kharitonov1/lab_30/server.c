@@ -46,7 +46,8 @@ int main(int argc, char** argv) {
         for(ssize_t i=0;i<msglen;i++){
             buf[i]=toupper(buf[i]);
         }
-        if (write(1,buf,msglen) == -1){
+        printf("%d\n",msglen);
+        if (write(1, buf, msglen) == -1){
             perror("problem in write");
             close(new);
             close(soc);

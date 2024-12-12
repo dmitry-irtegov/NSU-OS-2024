@@ -38,7 +38,8 @@ int main(int argc, char** argv){
         exit(EXIT_FAILURE);
     }
     puts("Use CTRL-D for the end");
-    while ((msglen = read(STDIN_FILENO, buf, buffer) > 0)) {
+    while ((msglen = read(0, buf, buffer) > 0)) {
+        printf("%d\n",msglen);
         if (write(soc, buf, msglen) <= 0) {
             perror("workWithConnection failed");
             close(soc);
