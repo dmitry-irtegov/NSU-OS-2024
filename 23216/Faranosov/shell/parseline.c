@@ -5,6 +5,7 @@
 static char* blankskip(register char*);
 
 int parseline(char* line) {
+	printf("start pars\n");
 	int nargs, ncmds, rval;
 	register char* s;
 	char aflg = 0;
@@ -27,6 +28,7 @@ int parseline(char* line) {
 	for (i = 0; i < MAXCMDS; i++) cmds[i].cmdflag = 0;
 
 	while (*s) {
+		printf("%s\n", s);
 		s = blankskip(s);
 		if (!*s) break;
 

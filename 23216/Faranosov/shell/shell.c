@@ -665,7 +665,10 @@ int main() {
 
 		promptline(line, 1024);
 		printf("%s\n", line);
-		if ((ncmds = parseline(line)) <= 0) continue;
+		if ((ncmds = parseline(line)) <= 0) {
+			printf("ncmds == %d\n", ncmds);
+			continue;
+		}
 		curcmd = 0;
 
 
