@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         unlink(argv[1]);
         exit(EXIT_FAILURE);
     }
-    while((msglen = read(fd[0], buf, buffer))>0){
+    while((msglen = read(new, buf, buffer))>0){
         for(ssize_t i=0;i<msglen;i++){
             buf[i]=toupper(buf[i]);
         }
