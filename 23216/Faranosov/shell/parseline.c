@@ -29,7 +29,6 @@ int parseline(char* line) {
 	for (i = 0; i < MAXCMDS; i++) cmds[i].cmdflag = 0;
 
 	while (*s) {
-		printf("%s\n", s);
 		s = blankskip(s);
 		if (!*s) break;
 

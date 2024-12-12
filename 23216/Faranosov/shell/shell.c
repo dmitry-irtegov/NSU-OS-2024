@@ -465,7 +465,7 @@ void start_job(job* jobs) {
 
 		setsignal(SIGINT, SIG_DFL, "Son");
 		setsignal(SIGQUIT, SIG_DFL, "Son");
-		setsignal(SIGTTOU, SIG_IGN, "Son");
+		setsignal(SIGTTOU, SIG_DFL, "Son");
 		setsignal(SIGTSTP, SIG_DFL, "Son");
 
 
@@ -664,17 +664,13 @@ int main() {
 
 
 		promptline(line, 1024);
-		printf("%s\n", line);
 		if ((ncmds = parseline(line)) <= 0) {
-			printf("ncmds == %d\n", ncmds);
 			continue;
 		}
 		curcmd = 0;
 
 
-		printf("Start link\n");
 		jobToStart = linkConsAndJobs();
-		printJobs();
 		clearPars();
 
 		checkJobs();
