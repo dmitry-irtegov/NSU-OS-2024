@@ -23,19 +23,12 @@ func (cmd *Command) Init() {
 	cmd.Outfile = ""
 	cmd.Appfile = ""
 	cmd.Bkgrnd = false
+	cmd.Cmdflag = 0
 }
 
-func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.File, tmpPipe *os.File, writePipe *os.File) {
+func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid *int, fgPid *int, readPipe **os.File, tmpPipe **os.File, writePipe **os.File) {
 	if len(cmd.Cmdargs) == 0 {
 		return
-	}
-
-	if cmd.Cmdflag == 2 {
-		var err error
-		tmpPipe, writePipe, err = os.Pipe()
-		if err != nil {
-			fmt.Println("Error creating pipe")
-		}
 	}
 
 	if cmd.Cmdargs[0] == "jobs" {
@@ -74,6 +67,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 		} else if len(cmd.Cmdargs) != 1 {
 			fmt.Println("cd: Too many arguments")
 		}
+		jm.WriteDoneJobs()
 		return
 	}
 	if cmd.Cmdargs[0] == "fg" {
@@ -81,35 +75,33 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 		if len(cmd.Cmdargs) == 1 {
 			if jm.Jobs.Back() == nil {
 				fmt.Println("fg: No such job: current")
-				return
 			} else if jm.Jobs.Back().Value.(tools.Job).Status == "Done" {
 				fmt.Println("fg: Job has terminated")
-				return
 			} else {
 				pid = jm.Jobs.Back().Value.(tools.Job).Pid
 				jm.Fg(pid)
+				jm.WaitForForeground(pid, fgPid)
 			}
 		} else {
 			var flag bool
 			for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 				if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[1] {
+					flag = true
 					if elem.Value.(tools.Job).Status == "Done" {
 						fmt.Println("fg: Job has terminated")
-						return
+					} else {
+						pid = elem.Value.(tools.Job).Pid
+						jm.Fg(pid)
+						jm.WaitForForeground(pid, fgPid)
 					}
-					pid = elem.Value.(tools.Job).Pid
-					jm.Fg(pid)
-					flag = true
 					break
 				}
 			}
 			if !flag {
 				fmt.Println("fg: No such job:", cmd.Cmdargs[1])
-				return
 			}
 		}
-
-		jm.WaitForForeground(pid, fgPid)
+		jm.WriteDoneJobs()
 		return
 	}
 	if cmd.Cmdargs[0] == "bg" {
@@ -117,62 +109,65 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 		if len(cmd.Cmdargs) == 1 {
 			if jm.Jobs.Back() == nil {
 				fmt.Println("bg: No such job: current")
-				return
 			} else if jm.Jobs.Back().Value.(tools.Job).Status == "Done" {
 				fmt.Println("bg: Job has terminated")
-				return
 			} else if jm.Jobs.Back().Value.(tools.Job).Bkgrnd {
 				fmt.Println("bg: Job", jm.Jobs.Back().Value.(tools.Job).Id, "already in background")
-				return
 			} else {
 				pid = jm.Jobs.Back().Value.(tools.Job).Pid
 				jm.Bg(pid)
+				jm.WaitForBackground(pid)
 			}
 		} else {
 			for i := 1; i < len(cmd.Cmdargs); i++ {
 				var flag bool
 				for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 					if strconv.Itoa(elem.Value.(tools.Job).Id) == cmd.Cmdargs[i] {
+						flag = true
 						if elem.Value.(tools.Job).Status == "Done" {
 							fmt.Println("bg: Job has terminated")
-							return
-						}
-						if elem.Value.(tools.Job).Bkgrnd {
+						} else if elem.Value.(tools.Job).Bkgrnd {
 							fmt.Println("bg: Job", cmd.Cmdargs[i], "already in background")
-							flag = true
-							return
+						} else {
+							pid = elem.Value.(tools.Job).Pid
+							jm.Bg(pid)
+							jm.WaitForBackground(pid)
 						}
-						pid = elem.Value.(tools.Job).Pid
-						jm.Bg(pid)
-						flag = true
 						break
 					}
 				}
 				if !flag {
 					fmt.Println("bg: No such job:", cmd.Cmdargs[i])
-					return
 				}
 			}
 		}
-
-		jm.WaitForBackground(pid)
+		jm.WriteDoneJobs()
 		return
 	}
 
 	binary, err := exec.LookPath(cmd.Cmdargs[0])
 	if err != nil {
 		fmt.Println("Command not found:", cmd.Cmdargs[0])
+		jm.WriteDoneJobs()
 		return
 	}
 
-	stdin := os.Stdin
-	if cmd.Cmdflag == 1 {
-		stdin = readPipe
+	if cmd.Cmdflag == 2 || cmd.Cmdflag == 3 {
+		var err error
+		*tmpPipe, *writePipe, err = os.Pipe()
+		if err != nil {
+			fmt.Println("Error creating Pipe")
+		}
+		*cmdPipe = append(*cmdPipe, cmd.Cmdargs...)
+		*cmdPipe = append(*cmdPipe, "|")
 	}
+
+	stdin := os.Stdin
 	if cmd.Infile != "" {
 		stdin, err = os.Open(cmd.Infile)
 		if err != nil {
 			fmt.Println("No such file or directory:", cmd.Infile)
+			jm.WriteDoneJobs()
 			return
 		}
 		defer func(stdin *os.File) {
@@ -182,26 +177,18 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 				return
 			}
 		}(stdin)
+	} else if cmd.Cmdflag == 1 || cmd.Cmdflag == 3 {
+		stdin = *readPipe
+		defer func(stdin *os.File) {
+			err := stdin.Close()
+			if err != nil {
+				fmt.Println("Error closing readPipe")
+				return
+			}
+		}(stdin)
 	}
 
 	stdout := os.Stdout
-	if cmd.Cmdflag == 2 {
-		stdout = writePipe
-	}
-	if cmd.Appfile != "" {
-		stdout, err = os.OpenFile(cmd.Appfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Println("Error opening append file")
-			return
-		}
-		defer func(stdout *os.File) {
-			err := stdout.Close()
-			if err != nil {
-				fmt.Println("Error closing append file")
-				return
-			}
-		}(stdout)
-	}
 	if cmd.Outfile != "" {
 		stdout, err = os.Create(cmd.Outfile)
 		if err != nil {
@@ -215,40 +202,67 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, fgPid *int, readPipe *os.Fi
 				return
 			}
 		}(stdout)
+	} else if cmd.Appfile != "" {
+		stdout, err = os.OpenFile(cmd.Appfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("Error opening append file")
+			return
+		}
+		defer func(stdout *os.File) {
+			err := stdout.Close()
+			if err != nil {
+				fmt.Println("Error closing append file")
+				return
+			}
+		}(stdout)
+	} else if cmd.Cmdflag == 2 || cmd.Cmdflag == 3 {
+		stdout = *writePipe
+		defer func(stdout *os.File) {
+			err := stdout.Close()
+			if err != nil {
+				fmt.Println("Error closing writePipe")
+				return
+			}
+		}(stdout)
 	}
 
 	pid, err := syscall.ForkExec(binary, cmd.Cmdargs, &syscall.ProcAttr{
 		Dir:   "",
 		Files: []uintptr{stdin.Fd(), stdout.Fd(), os.Stderr.Fd()},
 		Sys: &syscall.SysProcAttr{
-			Setpgid: cmd.Bkgrnd,
+			Setpgid: cmd.Bkgrnd || (cmd.Cmdflag != 0),
 		},
 	})
+	if cmd.Cmdflag != 0 && *groupPid == 0 {
+		*groupPid = pid
+	}
+
 	if err != nil {
 		fmt.Println("Error during ForkExec")
 		return
 	}
 
-	if readPipe != nil {
-		err = readPipe.Close()
-		if err != nil {
-			fmt.Println("Error closing readPipe")
+	switch cmd.Cmdflag {
+	case 0:
+		jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd)
+		if cmd.Bkgrnd {
+			jm.WaitForBackground(pid)
+		} else {
+			jm.WaitForForeground(pid, fgPid)
 		}
-	}
-	if writePipe != nil {
-		err = writePipe.Close()
-		if err != nil {
-			fmt.Println("Error closing writePipe")
+		jm.WriteDoneJobs()
+	case 1:
+		*cmdPipe = append(*cmdPipe, cmd.Cmdargs...)
+		jm.Add(*groupPid, *cmdPipe, cmd.Bkgrnd)
+		if cmd.Bkgrnd {
+			jm.WaitForBackground(*groupPid)
+		} else {
+			jm.WaitForForeground(*groupPid, fgPid)
 		}
+		*groupPid = 0
+		*cmdPipe = nil
+		jm.WriteDoneJobs()
+	default:
+		*readPipe = *tmpPipe
 	}
-	writePipe = nil
-	readPipe = tmpPipe
-	tmpPipe = nil
-
-	jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd)
-	if cmd.Bkgrnd {
-		jm.WaitForBackground(pid)
-		return
-	}
-	jm.WaitForForeground(pid, fgPid)
 }

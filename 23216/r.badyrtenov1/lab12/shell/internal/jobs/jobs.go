@@ -26,9 +26,9 @@ func (jm *JobManager) WaitForBackground(pid int) {
 		var ws syscall.WaitStatus
 		_, err := syscall.Wait4(pid, &ws, 0, nil)
 		if err != nil {
-		} else {
-			jm.Update(pid, "Done")
+			return
 		}
+		jm.Update(pid, "Done")
 	}()
 }
 
@@ -46,7 +46,9 @@ func (jm *JobManager) WaitForForeground(pid int, fgPid *int) {
 	}
 	jm.Update(pid, "Done")
 	*fgPid = 0
+}
 
+func (jm *JobManager) WriteDoneJobs() {
 	for i := 1; i <= jm.IdLastJob; i++ {
 		for e := jm.Jobs.Front(); e != nil; e = e.Next() {
 			if e.Value.(tools.Job).Id == i {

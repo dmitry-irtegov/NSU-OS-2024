@@ -9,11 +9,13 @@ import (
 )
 
 func main() {
+	var cmdPipe []string
+	var tmpPipe *os.File
+	var readPipe *os.File
+	var writePipe *os.File
 	var parser pars.Parser
 	var jm jobs.JobManager
-	var readPipe *os.File
-	var tmpPipe *os.File
-	var writePipe *os.File
+	var groupPid int
 	var fgPid int
 	signChan := make(chan os.Signal, 1)
 	jm.Init()
@@ -33,11 +35,12 @@ func main() {
 			fmt.Println("\nexit")
 			return
 		}
-
 		cmds := parser.Parserline(line)
-		for i := 0; i < len(cmds); i++ {
-			cmds[i].ForkAndExec(&jm, &fgPid, readPipe, tmpPipe, writePipe)
+		if len(cmds) == 0 {
+			jm.WriteDoneJobs()
 		}
-		tmpPipe = nil
+		for i := 0; i < len(cmds); i++ {
+			cmds[i].ForkAndExec(&jm, &cmdPipe, &groupPid, &fgPid, &readPipe, &tmpPipe, &writePipe)
+		}
 	}
 }
