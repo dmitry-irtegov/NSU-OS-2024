@@ -399,6 +399,7 @@ void setsignal(int sig, void (*func)(int), char* procName) {
 }
 
 void start_job(job* jobs) {
+	printf("Start_job\n");
 	jobs->state = RUNNING;
 
 	if (jobs == NULL) return;
@@ -667,6 +668,7 @@ int main() {
 
 
 		jobToStart = linkConsAndJobs();
+		printJobs();
 		clearPars();
 
 		checkJobs();
