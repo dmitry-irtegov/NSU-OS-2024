@@ -25,14 +25,14 @@ int main(int argc, char *argv[]) {
     }
     int file = open(argv[1], O_RDONLY);
     if (file == -1){
-        perror("problem in file open");
+        perror("problem in open");
         exit(EXIT_FAILURE);
     }
     file_table.cur = 0;
     file_table.cap = 20;
     file_table.elems = malloc(sizeof(elem_of_table_off_t) * 20);
     if(file_table.elems == NULL){
-        perror("problem malloc");
+        perror("problem in malloc");
         close(file);
         exit(EXIT_FAILURE);
     }
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
                     file_table.cap *= 2;
                     file_table.elems = realloc(file_table.elems, sizeof(elem_of_table_off_t) * file_table.cap);
                     if (file_table.elems == NULL) {
-                        perror("problem realloc");
+                        perror("problem in realloc");
                         close(file);
                         exit(EXIT_FAILURE);
                     }
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
             file_table.cap *= 2;
             file_table.elems = realloc(file_table.elems, sizeof(elem_of_table_off_t) * file_table.cap);
             if (file_table.elems == NULL) {
-                perror("problem realloc");
+                perror("problem in realloc");
                 close(file);
                 exit(EXIT_FAILURE);
             }
@@ -87,8 +87,8 @@ int main(int argc, char *argv[]) {
     }
     int num_of_line, res;
     char *string = NULL;
+    puts("Enter line number (end programm enter 0)");
     while (1) {
-        puts("Enter number of string (for end programm enter 0)");
         res = scanf("%d", &num_of_line);
         if (res != 1){
             perror("problem in scanf, you should type 1 int number");
