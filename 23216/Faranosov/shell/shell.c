@@ -461,12 +461,11 @@ void start_job(job* jobs) {
 
 		setsignal(SIGINT, SIG_DFL, "Son");
 		setsignal(SIGQUIT, SIG_DFL, "Son");
-		setsignal(SIGTTOU, SIG_DFL, "Son");
+		setsignal(SIGTTOU, SIG_IGN, "Son");
 		setsignal(SIGTSTP, SIG_DFL, "Son");
 
 
 		if (jobs->conv->flag != BKGRND) {
-			setsignal(SIGTTOU, SIG_IGN, "Son");
 			if (tcsetpgrp(0, getpid()) == -1) {
 				perror("S (start_job): tcsetpgrp error");
 				exit(1);
@@ -559,8 +558,6 @@ void start_job(job* jobs) {
 
 void setbgjob(job* curJob) {
 
-	setsignal(SIGTTOU, SIG_IGN, "setbgjob");
-
 	if (curJob->state == STOPPED) {
 		kill((-1) * curJob->gpid, SIGCONT);
 		curJob->state = RUNNING;
@@ -569,18 +566,20 @@ void setbgjob(job* curJob) {
 }
 
 void setfgjob(job* curJob) {
+	printf("gpid = %d\n", curJob->gpid);
 	tcsetpgrp(terminalfd, curJob->gpid);
 
 
 	if (curJob->state == STOPPED) {
+		printf("Send SIGCONT\n");
 		kill((-1) * curJob->gpid, SIGCONT);
 		curJob->state = RUNNING;
 		curJob->conv->flag = 0;
+		printf("Sent SIGCONT\n");
 	}
 
-
+	printf("Start waiting\n");
 	shellawaiting(curJob);
-
 }
 
 void printCurDir() {
