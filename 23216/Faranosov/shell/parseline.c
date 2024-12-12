@@ -5,7 +5,6 @@
 static char* blankskip(register char*);
 
 int parseline(char* line) {
-	printf("start pars\n");
 	int nargs, ncmds, rval;
 	register char* s;
 	char aflg = 0;

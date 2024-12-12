@@ -158,7 +158,6 @@ process* initProc(command* cmd) {
 }
 
 job* initJob(convs* conv) {
-	printf("start init job\n");
 	job* newjob = NULL;
 	newjob = malloc(sizeof(job));
 	if (newjob == NULL) {
@@ -401,7 +400,6 @@ void setsignal(int sig, void (*func)(int), char* procName) {
 }
 
 void start_job(job* jobs) {
-	printf("Start_job\n");
 	jobs->state = RUNNING;
 
 	if (jobs == NULL) return;
