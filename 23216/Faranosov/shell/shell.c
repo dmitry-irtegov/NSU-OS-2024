@@ -573,19 +573,15 @@ void setbgjob(job* curJob) {
 }
 
 void setfgjob(job* curJob) {
-	printf("gpid = %d\n", curJob->gpid);
 	tcsetpgrp(terminalfd, curJob->gpid);
 
 
 	if (curJob->state == STOPPED) {
-		printf("Send SIGCONT\n");
 		kill((-1) * curJob->gpid, SIGCONT);
 		curJob->state = RUNNING;
 		curJob->conv->flag = 0;
-		printf("Sent SIGCONT\n");
 	}
 
-	printf("Start waiting\n");
 	shellawaiting(curJob);
 }
 
@@ -668,14 +664,12 @@ int main() {
 
 		promptline(line, 1024);
 		if ((ncmds = parseline(line)) <= 0) {
-	
 			continue;
 		}
 		curcmd = 0;
 
 
 		jobToStart = linkConsAndJobs();
-		printJobs();
 		clearPars();
 
 		checkJobs();
