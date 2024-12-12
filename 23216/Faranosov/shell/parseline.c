@@ -4,7 +4,7 @@
 #include "shell.h"
 static char* blankskip(register char*);
 
-void addArg(int nargs, int rval, char *s, unsigned char curConv, int ncmds) {
+void addArg(int nargs, int rval, char *s, unsigned char curConv, int ncmds, char* delim) {
 	if (nargs == 0) {
 		rval++;
 		conv[curConv].cntcommands++;
@@ -13,7 +13,6 @@ void addArg(int nargs, int rval, char *s, unsigned char curConv, int ncmds) {
 	cmds[ncmds].cmdargs[nargs] = NULL;
 	s = strpbrk(s, delim);
 	if (isspace(*s)) *s++ = '\0';
-	break;
 }
 
 
@@ -24,7 +23,7 @@ int parseline(char* line) {
 	char aflg = 0;
 	register int i;
 	char isdbl = 0, whstr = 0;
-	static char delim[] = " \"2\t|&<>;\n";
+	char delim[] = " \"2\t|&<>;\n";
 	unsigned char curConv = 0;
 
 	/*init*/
@@ -140,7 +139,7 @@ int parseline(char* line) {
 				whstr = 1;
 			}
 			else {
-				addArg(nargs, rval, s, curConv, ncmds);
+				addArg(nargs, rval, s, curConv, ncmds, delim);
 			}
 			break;
 
@@ -153,7 +152,7 @@ int parseline(char* line) {
 			break;
 		default:
 			/*a command argument*/
-			addArg(nargs, rval, s, curConv, ncmds);
+			addArg(nargs, rval, s, curConv, ncmds, delim);
 			break;
 		}
 	}
