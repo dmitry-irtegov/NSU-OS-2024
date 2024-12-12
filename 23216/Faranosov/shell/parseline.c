@@ -4,6 +4,19 @@
 #include "shell.h"
 static char* blankskip(register char*);
 
+void addArg(int nargs, int rval, char *s, unsigned char curConv, int ncmds) {
+	if (nargs == 0) {
+		rval++;
+		conv[curConv].cntcommands++;
+	}
+	cmds[ncmds].cmdargs[nargs++] = s;
+	cmds[ncmds].cmdargs[nargs] = NULL;
+	s = strpbrk(s, delim);
+	if (isspace(*s)) *s++ = '\0';
+	break;
+}
+
+
 int parseline(char* line) {
 	printf("start pars\n");
 	int nargs, ncmds, rval;
@@ -126,7 +139,9 @@ int parseline(char* line) {
 				*s++ = '\0';
 				whstr = 1;
 			}
-			else s = strpbrk(s, delim);
+			else {
+				addArg(nargs, rval, s, curConv, ncmds);
+			}
 			break;
 
 		case '\"':
@@ -138,14 +153,7 @@ int parseline(char* line) {
 			break;
 		default:
 			/*a command argument*/
-			if (nargs == 0) {
-				rval++;
-				conv[curConv].cntcommands++;
-			}
-			cmds[ncmds].cmdargs[nargs++] = s;
-			cmds[ncmds].cmdargs[nargs] = NULL;
-			s = strpbrk(s, delim);
-			if (isspace(*s)) *s++ = '\0';
+			addArg(nargs, rval, s, curConv, ncmds);
 			break;
 		}
 	}
