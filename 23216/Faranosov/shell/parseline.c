@@ -38,6 +38,8 @@ int parseline(char* line) {
 			}
 			else {
 				conv[curConv].flag |= BKGRND;
+				ncmds++;
+				curConv++;
 			}
 			*s++ = '\0';
 			break;
