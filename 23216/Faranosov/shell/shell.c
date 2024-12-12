@@ -465,7 +465,7 @@ void start_job(job* jobs) {
 
 		setsignal(SIGINT, SIG_DFL, "Son");
 		setsignal(SIGQUIT, SIG_DFL, "Son");
-		setsignal(SIGTTOU, SIG_DFL, "Son");
+		setsignal(SIGTTOU, SIG_IGN, "Son");
 		setsignal(SIGTSTP, SIG_DFL, "Son");
 
 
@@ -665,12 +665,14 @@ int main() {
 
 		promptline(line, 1024);
 		if ((ncmds = parseline(line)) <= 0) {
+	
 			continue;
 		}
 		curcmd = 0;
 
 
 		jobToStart = linkConsAndJobs();
+		printJobs();
 		clearPars();
 
 		checkJobs();
