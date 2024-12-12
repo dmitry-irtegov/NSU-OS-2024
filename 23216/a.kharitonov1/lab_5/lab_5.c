@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
             }
         }
-        file_table.elems[file_table.cur].len = len;
-        file_table.elems[file_table.cur].off = off;
+        file_table.elems[file_table.cur].len = cur_len;
+        file_table.elems[file_table.cur].off = cur_off;
         file_table.cur++;
         cur_off += cur_len;
         cur_len = 0;
