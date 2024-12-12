@@ -12,7 +12,7 @@ int parseline(char* line) {
 	register int i;
 	char isdbl = 0, whstr = 0;
 	static char delim[] = " \"2\t|&<>;\n";
-	static char delimNoDigit[] = " \"2\t|&<>;\n";
+	static char delimNoDigit[] = " \"\t|&<>;\n";
 	unsigned char curConv = 0;
 
 	/*init*/
