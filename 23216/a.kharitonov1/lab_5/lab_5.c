@@ -1,105 +1,136 @@
-#include <sys/types.h>
 #include <unistd.h>
-#include <stdlib.h>
+#include <fcntl.h>
 #include <stdio.h>
-#include <ctype.h>
-#define   buffer   512
+#include <stdlib.h>
+#include <string.h>
+#define   buffer   128
 
-int main(){
-    int fd[2]; pid_t pid;
-    char buf[buffer];
-    ssize_t msglen;
-    if (pipe(fd) == -1) {
-        perror("problem in pipecreate");
+typedef struct elem_of_table_off_t {
+    off_t off;
+    off_t len;
+} elem_of_table_off_t;
+
+typedef struct table_for_file {
+    elem_of_table_off_t *elems;
+    int cur;
+    int cap;
+} table_for_file;
+
+int main(int argc, char *argv[]) {
+    table_for_file file_table;
+    file_table.elems = NULL;
+    if (argc != 2) {
+        perror("you have to give file name and nothing else");
         exit(EXIT_FAILURE);
     }
-    pid=fork();
-    switch(pid){
-        case -1:
-            perror("problem in fork");
-            exit(EXIT_FAILURE);
-        case 0:
-            if (close(fd[0]) == -1) {
-                perror("problem in pipeclose");
-                if (close(fd[1]) == -1) {
-                    perror("problem in pipeclose");
-                    exit(EXIT_FAILURE);
-                }
-                exit(EXIT_FAILURE);
-            }
-            while((msglen = read(0,buf,buffer)) >= 0){
-                if (msglen == 0){
-                    break;
-                }
-                if (buf[msglen-1] == '\n'){
-                    if(write(fd[1], buf, msglen)==-1){
-                        perror("problem in write");
-                        if (close(fd[1]) == -1) {
-                            perror("problem in pipeclose");
-                            exit(EXIT_FAILURE);
-                        }
-                        exit(EXIT_FAILURE);
-                    }
-                    break;
-                }
-                if(write(fd[1], buf, msglen)==-1){
-                    perror("problem in write");
-                    if (close(fd[1]) == -1) {
-                        perror("problem in pipeclose");
-                        exit(EXIT_FAILURE);
-                    }
-                    exit(EXIT_FAILURE);
-                }
-            }
-            if(msglen <0){
-                perror("problem in read from terminal");
-                if (close(fd[1]) == -1) {
-                    perror("problem in pipeclose");
-                    exit(EXIT_FAILURE);
-                }
-                exit(EXIT_FAILURE);
-            }
-            if (close(fd[1]) == -1) {
-                perror("problem in pipeclose");
-                exit(EXIT_FAILURE);
-            }
-            exit(EXIT_SUCCESS);
-        default:
-            
-            if (close(fd[1]) == -1) {
-                perror("problem in pipeclose");
-                if (close(fd[0]) == -1) {
-                    perror("problem in pipeclose");
-                    exit(EXIT_FAILURE);
-                }
-                exit(EXIT_FAILURE);
-            }
-            while((msglen = read(fd[0], buf, buffer))>0){
-                for(ssize_t i=0;i<msglen;i++){
-                    buf[i]=toupper(buf[i]);
-                }
-                if (write(1,buf,msglen) == -1){
-                    perror("problem in write");
-                    if (close(fd[0]) == -1) {
-                        perror("problem in pipeclose");
-                        exit(EXIT_FAILURE);
-                    }
-                    exit(EXIT_FAILURE);
-                }
-            }
-            if(msglen == -1){
-                perror("problem in read");
-                if (close(fd[0]) == -1) {
-                    perror("problem in pipeclose");
-                    exit(EXIT_FAILURE);
-                }
-                exit(EXIT_FAILURE);
-            }
-            
-            if (close(fd[0]) == -1) {
-                perror("problem in pipeclose");
-                exit(EXIT_FAILURE);
-            }
-            exit(EXIT_SUCCESS);
+    int file = open(argv[1], O_RDONLY);
+    if (file == -1){
+        perror("problem in file open");
+        exit(EXIT_FAILURE);
     }
+    file_table.cur = 0;
+    file_table.cap = 20;
+    file_table.elems = malloc(sizeof(elem_of_table_off_t) * 20);
+    if(file_table.elems == NULL){
+        perror("problem malloc");
+        close(file);
+        exit(EXIT_FAILURE);
+    }
+    char buf[buffer];
+    ssize_t read_len;
+    off_t cur_len = 0, cur_off = 0;
+    while((read_len = read(file,buf,buffer)) >= 0){
+        if (read_len == 0){
+            break;
+        }
+        for (ssize_t i = 0; i < read_len; i++) {
+            cur_len++;
+            if (buffer[i] == '\n') {
+                if (file_table.cap == file_table.cur) {
+                    file_table.cap *= 2;
+                    file_table.elems = realloc(file_table.elems, sizeof(elem_of_table_off_t) * file_table.cap);
+                    if (file_table.elems == NULL) {
+                        perror("problem realloc");
+                        close(file);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                file_table.elems[file_table.cur].len = len;
+                file_table.elems[file_table.cur].off = off;
+                file_table.cur++;
+                cur_off += cur_len;
+                cur_len = 0;
+            }
+        }
+    }
+    if(read_len < 0){
+        perror("problem in read");
+        free(file_table.elems);
+        close(file);
+        exit(EXIT_FAILURE);
+    }
+    if (cur_len != 0){
+        if (file_table.cap == file_table.cur) {
+            file_table.cap *= 2;
+            file_table.elems = realloc(file_table.elems, sizeof(elem_of_table_off_t) * file_table.cap);
+            if (file_table.elems == NULL) {
+                perror("problem realloc");
+                close(file);
+                exit(EXIT_FAILURE);
+            }
+        }
+        file_table.elems[file_table.cur].len = len;
+        file_table.elems[file_table.cur].off = off;
+        file_table.cur++;
+        cur_off += cur_len;
+        cur_len = 0;
+    }
+    int num_of_line, res;
+    char *string = NULL;
+    while (1) {
+        puts("Enter number of string (for end programm enter 0)");
+        res = scanf("%d", &num_of_line);
+        if (res != 1){
+            perror("problem in scanf, you should type 1 int number");
+            free(file_table.elems);
+            close(file);
+            exit(EXIT_FAILURE);
+        }
+        if (num_of_line < 0){
+            puts("wrong number");
+            continue;
+        }else if (num_of_line == 0){
+            break;
+        }else{
+            if (num_of_line > file_table.cur) {
+                puts("Num of line is too big");
+                continue;
+            }
+            char *string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
+            if (string == NULL) {
+                perror("problem calloc");
+                free(file_table.elems);
+                close(file);
+                exit(EXIT_FAILURE);
+            }
+            if (lseek(file, file_table.elems[num_of_line - 1].off, SEEK_SET) == -1) {
+                perror("problem lseek");
+                free(file_table.elems);
+                free(string);
+                close(file);
+                exit(EXIT_FAILURE);
+            }
+            if (read(file, string, file_table.elems[num_of_line - 1].len) == -1) {
+                perror("problem lseek");
+                free(file_table.elems);
+                free(string);
+                close(file);
+                exit(EXIT_FAILURE);
+            }
+            printf("%s",string);
+        }
+    }
+    free(file_table.elems);
+    close(file);
+    exit(EXIT_SUCCESS);
 }
