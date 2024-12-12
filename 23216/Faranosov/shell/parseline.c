@@ -12,6 +12,7 @@ int parseline(char* line) {
 	register int i;
 	char isdbl = 0, whstr = 0;
 	static char delim[] = " \"2\t|&<>;\n";
+	static char delimNoDigit[] = " \"2\t|&<>;\n";
 	unsigned char curConv = 0;
 
 	/*init*/
@@ -133,7 +134,7 @@ int parseline(char* line) {
 				}
 				cmds[ncmds].cmdargs[nargs++] = s;
 				cmds[ncmds].cmdargs[nargs] = NULL;
-				s = strpbrk(s, delim);
+				s = strpbrk(s, delimNoDigit);
 				if (isspace(*s)) *s++ = '\0';
 			}
 			break;
