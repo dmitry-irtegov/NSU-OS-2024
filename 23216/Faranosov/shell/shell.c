@@ -429,11 +429,13 @@ void start_job(job* jobs) {
 				}
 				setfgjob(findJob(value));
 			}
+			deleteJob(jobs);
 			return;
 		}
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[2]) == 0) {
 			setbgjob(findJob(atoi(jobs->proc->cmd->cmdargs[1])));
+			deleteJob(jobs);
 			return;
 		}
 
@@ -444,6 +446,7 @@ void start_job(job* jobs) {
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[4]) == 0) {
 			chdir(jobs->proc->cmd->cmdargs[1]);
+			deleteJob(jobs);
 			return;
 		}
 		
