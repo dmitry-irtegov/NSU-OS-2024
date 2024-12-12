@@ -158,6 +158,7 @@ process* initProc(command* cmd) {
 }
 
 job* initJob(convs* conv) {
+	printf("start init job\n");
 	job* newjob = NULL;
 	newjob = malloc(sizeof(job));
 	if (newjob == NULL) {
@@ -195,6 +196,7 @@ job* linkConsAndJobs() {
 			lastjob = curJob;
 		}
 		else {
+			printf("curJob != NULL\n");
 			curJob->nextjob = initJob(&conv[i]);
 			curJob->nextjob->prevjob = curJob;
 			curJob = curJob->nextjob;
@@ -662,11 +664,12 @@ int main() {
 
 
 		promptline(line, 1024);
+		printf("%s\n", line);
 		if ((ncmds = parseline(line)) <= 0) continue;
 		curcmd = 0;
 
 
-
+		printf("Start link\n");
 		jobToStart = linkConsAndJobs();
 		printJobs();
 		clearPars();
