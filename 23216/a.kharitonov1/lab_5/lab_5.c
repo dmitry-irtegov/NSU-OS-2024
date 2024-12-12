@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
         }
         for (ssize_t i = 0; i < read_len; i++) {
             cur_len++;
-            if (buffer[i] == '\n') {
+            if (buf[i] == '\n') {
                 if (file_table.cap == file_table.cur) {
                     file_table.cap *= 2;
                     file_table.elems = realloc(file_table.elems, sizeof(elem_of_table_off_t) * file_table.cap);
@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
                         exit(EXIT_FAILURE);
                     }
                 }
-                file_table.elems[file_table.cur].len = len;
-                file_table.elems[file_table.cur].off = off;
+                file_table.elems[file_table.cur].len = cur_len;
+                file_table.elems[file_table.cur].off = cur_off;
                 file_table.cur++;
                 cur_off += cur_len;
                 cur_len = 0;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
                 puts("Num of line is too big");
                 continue;
             }
-            char *string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
+            string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
             if (string == NULL) {
                 perror("problem calloc");
                 free(file_table.elems);
@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
             }
             printf("%s",string);
         }
+        free(string);
     }
     free(file_table.elems);
     close(file);
