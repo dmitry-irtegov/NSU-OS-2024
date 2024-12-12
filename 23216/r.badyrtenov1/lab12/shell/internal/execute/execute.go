@@ -231,15 +231,16 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 		Files: []uintptr{stdin.Fd(), stdout.Fd(), os.Stderr.Fd()},
 		Sys: &syscall.SysProcAttr{
 			Setpgid: cmd.Bkgrnd || (cmd.Cmdflag != 0),
+			Pgid:    *groupPid,
 		},
 	})
-	if cmd.Cmdflag != 0 && *groupPid == 0 {
-		*groupPid = pid
-	}
-
 	if err != nil {
 		fmt.Println("Error during ForkExec")
 		return
+	}
+
+	if cmd.Cmdflag != 0 && *groupPid == 0 {
+		*groupPid = pid
 	}
 
 	switch cmd.Cmdflag {
