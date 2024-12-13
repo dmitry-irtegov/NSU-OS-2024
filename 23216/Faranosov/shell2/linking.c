@@ -102,6 +102,7 @@ convs* copyconv(convs* old) {
 	newConv->cntcommands = old->cntcommands;
 	newConv->in.file = newConv->out.file = newConv->err.file = NULL;
 	if (old->in.file) {
+		printf("%s\n", old->in.file);
 		newConv->in.file = malloc(sizeof(char) * (strlen(old->in.file) + 1));
 		if (newConv->in.file == NULL) {
 			printf("malloc (copyconv->in) error");
@@ -113,6 +114,7 @@ convs* copyconv(convs* old) {
 	else newConv->in.file = NULL;
 
 	if (old->out.file) {
+		printf("%s\n", old->out.file);
 		newConv->out.file = malloc(sizeof(char) * (strlen(old->out.file) + 1));
 		if (newConv->out.file == NULL) {
 			printf("malloc (copyconv->out) error");
