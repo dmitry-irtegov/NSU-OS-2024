@@ -169,6 +169,7 @@ int start_job(job* jobs) {
 					curJ = curJ->prevjob;
 				}
 				if (curJ != NULL) {
+					printf("set fg job gpid == %d\n", curJ->gpid);
 					setfgjob(curJ);
 				}
 			}
@@ -193,6 +194,7 @@ int start_job(job* jobs) {
 					curJ = curJ->prevjob;
 				}
 				if (curJ != NULL) {
+					printf("set bg job gpid == %d\n", curJ->gpid);
 					setbgjob(curJ);
 				}
 			}
