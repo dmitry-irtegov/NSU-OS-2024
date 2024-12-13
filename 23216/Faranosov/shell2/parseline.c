@@ -10,8 +10,7 @@ int parseline(char* line) {
 	char aflg = 0;
 	register int i;
 	char isdbl = 0, whstr = 0;
-	static char delim[] = " \"2\t|&<>;\n";
-	static char delimNoDigit[] = " \"\t|&<>;\n";
+	static char delim[] = " \"\t|&<>;\n";
 	unsigned char curConv = 0;
 
 	/*init*/
@@ -44,6 +43,9 @@ int parseline(char* line) {
 			*s++ = '\0';
 			break;
 		case '>':
+			if ((s - 1) && *(s - 1) == '2') {
+				whstr = 1;
+			}
 
 			if (*(s + 1) == '>') {
 				++aflg;
@@ -121,23 +123,6 @@ int parseline(char* line) {
 			++ncmds;
 			curConv++;
 			nargs = 0;
-			break;
-
-		case '2':
-			if (*(s + 1) && *(s + 1) == '>') {
-				*s++ = '\0';
-				whstr = 1;
-			}
-			else {
-				if (nargs == 0) {
-					rval++;
-					conv[curConv].cntcommands++;
-				}
-				cmds[ncmds].cmdargs[nargs++] = s;
-				cmds[ncmds].cmdargs[nargs] = NULL;
-				s = strpbrk(s, delimNoDigit);
-				if (isspace(*s)) *s++ = '\0';
-			}
 			break;
 
 		case '\"':
