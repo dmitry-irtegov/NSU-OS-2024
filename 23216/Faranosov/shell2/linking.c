@@ -78,7 +78,8 @@ command* copycmd(command* cmd) {
 		}
 		newCom->cmdargs[i] = NULL;
 		char* str = malloc(sizeof(char) * (strlen(cmd->cmdargs[i]) + 1));
-		strcpy(str, cmd->cmdargs[i]);
+		if (cmd->cmdargs[i]) strcpy(str, cmd->cmdargs[i]);
+		else str = NULL;
 		newCom->cmdargs[i] = str;
 		if (newCom->cmdargs[i] == NULL) {
 			printf("malloc (newCom->cmdargs[%d]) error\n", i);
