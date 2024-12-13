@@ -372,7 +372,7 @@ int main() {
 	tcsetpgrp(terminalfd, getpid());
 
 	if (printCurDir() == -1) {
-		exit();
+		myexit();
 	}
 
 	/* PLACE SIGNAL CODE HERE */

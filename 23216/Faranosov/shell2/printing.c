@@ -38,6 +38,7 @@ int printCurDir() {
 		return -1;
 	}
 
+	return 0;
 }
 
 void printJob(job* j) {
