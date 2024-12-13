@@ -142,7 +142,7 @@ void start_proc(process* proc, int infile, int outfile) {
 }
 
 int setsignal(int sig, void (*func)(int), char* procName) {
-	if (signal(sig, func) == SIG_ERR) {
+	if (sigset(sig, func) == SIG_ERR) {
 		printf("%s\n", procName);
 		perror("setsig error");
 		return -1;
