@@ -47,6 +47,7 @@ int setfd(streams* stream, char fdtocls) {
 		}
 		else {
 			fd = open(stream->file, O_WRONLY | O_CREAT | O_TRUNC, 0660);
+			printf("%s\n", stream->file);
 			if (fd == -1) {
 				perror("open out/err file error");
 				return -1;

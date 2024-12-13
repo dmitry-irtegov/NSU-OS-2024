@@ -292,7 +292,6 @@ int start_job(job* jobs) {
 			if (infile != 0) {
 				if (close(infile) == -1) {
 					perror("S: close (infile) error");
-					printf("\n");
 					exit(1);
 				}
 				infile = 0;
@@ -300,7 +299,6 @@ int start_job(job* jobs) {
 			if (outfile != 0) {
 				if (close(outfile) == -1) {
 					perror("S: close (outfile) error");
-					printf("\n");
 					exit(1);
 				}
 				outfile = 0;
