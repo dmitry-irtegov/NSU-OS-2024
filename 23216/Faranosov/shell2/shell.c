@@ -157,7 +157,6 @@ void start_job(job* jobs) {
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
 				job* curJ = lastjob;
-				printf("%s\n", curJ->proc->cmd->cmdargs[0]);
 				while (curJ != NULL && curJ->state != 1) {
 					curJ = curJ->prevjob;
 				}
@@ -302,6 +301,9 @@ void start_job(job* jobs) {
 		jobs->state = 0;
 		if (jobs->conv->flag == 0) {
 			shellawaiting(jobs);
+		}
+		else {
+			printf("%d Running in bg\n", jobs->gpid);
 		}
 		return;
 	}
