@@ -43,6 +43,7 @@ int checkJobs() {
 	pid_t getted_id;
 	int status;
 	char shouldCont = 1;
+	job* fj = NULL;
 	do
 	{
 		getted_id = waitpid(-1, &status, WNOHANG | WUNTRACED);
@@ -58,7 +59,8 @@ int checkJobs() {
 			perror("wait (checkJobs) error");
 			return -1;
 		default:
-			handling_status(findJob(getted_id), status);
+			fj = findJob(getted_id);
+			handling_status(fj, status);
 			break;
 		}
 
@@ -69,6 +71,7 @@ int checkJobs() {
 
 int shellawaiting(job* forgjob) {
 	int status;
+	job* fj = NULL;
 	pid_t idToWait = forgjob->gpid, getted_id;
 	for (;;) {
 		getted_id = waitpid(-1, &status, WUNTRACED);
@@ -89,8 +92,8 @@ int shellawaiting(job* forgjob) {
 
 				return 0;
 			}
-
-			handling_status(findJob(getted_id), status);
+			fj = findJob(getted_id);
+			handling_status(fj, status);
 			break;
 		}
 	}
@@ -175,7 +178,9 @@ int start_job(job* jobs) {
 					printf("atoi error");
 					return -1;
 				}
-				setfgjob(findJob(value));
+				job* fj = findJob(value);
+				if (fj == NULL) return -1;
+				setfgjob(fj);
 			}
 			deleteJob(jobs);
 			return 0;
@@ -197,7 +202,9 @@ int start_job(job* jobs) {
 					printf("atoi error");
 					return -1;
 				}
-				setbgjob(findJob(value)); 
+				job* fj = findJob(value);
+				if (fj == NULL) return -1;
+				setbgjob(fj); 
 			}
 			
 			deleteJob(jobs);
