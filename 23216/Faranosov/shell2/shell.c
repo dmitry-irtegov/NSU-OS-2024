@@ -35,7 +35,7 @@ void clear(job* curj);
 void clearAll();
 void deleteJob(job* curj);
 void handling_status(job* curJob, int status);
-void printCurDir();
+int printCurDir();
 void printJob(job* j);
 void printJobs();
 
