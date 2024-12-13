@@ -157,6 +157,7 @@ void start_job(job* jobs) {
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
 				job* curJ = lastjob;
+				printf("%s\n", curJ->proc->cmd->cmdargs[0]);
 				while (curJ != NULL && curJ->state != 1) {
 					curJ = curJ->prevjob;
 				}
