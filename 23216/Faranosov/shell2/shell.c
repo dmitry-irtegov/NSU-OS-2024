@@ -349,13 +349,18 @@ void setfgjob(job* curJob) {
 	shellawaiting(curJob);
 }
 
+void myexit() {
+	clearAll();
+	exit(1);
+}
 
 int main() {
 	char line[1024];
 	int ncmds;
 	terminalfd = 0;
 	job* jobToStart;
-	
+	firstjob = NULL;
+
 	if (isatty(terminalfd) == 0) {
 		perror("isatty error");
 		exit(1);
@@ -366,7 +371,9 @@ int main() {
 	setpgid(getpid(), getpid());
 	tcsetpgrp(terminalfd, getpid());
 
-	printCurDir();
+	if (printCurDir() == -1) {
+		exit();
+	}
 
 	/* PLACE SIGNAL CODE HERE */
 
@@ -382,7 +389,9 @@ int main() {
 		promptline(line, 1024);
 		if ((ncmds = parseline(line)) <= 0) {
 			checkJobs();
-			printCurDir();
+			if (printCurDir() == -1) {
+				myexit();
+			}
 			continue;
 		}
 		curcmd = 0;
@@ -400,7 +409,9 @@ int main() {
 			start_job(j);
 		}
 
-		printCurDir();
+		if (printCurDir() == -1) {
+			myexit();
+		}
 	}
 
 	setsignal(SIGINT, SIG_DFL, "mainDFL");

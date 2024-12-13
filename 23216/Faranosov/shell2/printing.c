@@ -24,18 +24,18 @@ extern char curDir[128];
 extern char* specCommands[];
 
 
-void printCurDir() {
+int printCurDir() {
 	for (int i = 0; i < 128; i++) curDir[i] = '\0';
 	getcwd(curDir, 128);
 
 	if (write(1, curDir, 128) == -1) {
 		perror("write error");
-		exit(1);
+		return -1;
 	}
 
 	if (write(1, "> ", 2) == -1) {
 		perror("write error");
-		exit(1);
+		return -1;
 	}
 
 }
