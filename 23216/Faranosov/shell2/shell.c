@@ -116,6 +116,7 @@ void start_proc(process* proc, int infile, int outfile) {
 			}
 		}
 		if (outfile != 0) {
+			printf("outfile == %d\n", outfile);
 			if (dup2(outfile, 1) == -1) {
 				perror("SS: dup2 (out) error");
 				exit(1);
