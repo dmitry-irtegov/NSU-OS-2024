@@ -151,9 +151,9 @@ int setsignal(int sig, void (*func)(int), char* procName) {
 }
 
 int start_job(job* jobs) {
-	jobs->state = RUNNING;
+	if (jobs == NULL) return 0;
 
-	if (jobs == NULL) return;
+	jobs->state = RUNNING;
 	pid_t sid;
 	int status, pipes[2], infile, outfile, errfile, cntcmds, waitVal;
 	infile = cntcmds = outfile = 0;
