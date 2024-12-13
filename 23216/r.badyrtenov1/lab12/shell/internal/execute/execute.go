@@ -79,8 +79,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 				fmt.Println("fg: Job has terminated")
 			} else {
 				pid = jm.Jobs.Back().Value.(tools.Job).Pid
-				jm.Fg(pid)
-				jm.WaitForForeground(pid, fgPid)
+				jm.Fg(pid, fgPid)
 			}
 		} else {
 			var flag bool
@@ -91,8 +90,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 						fmt.Println("fg: Job has terminated")
 					} else {
 						pid = elem.Value.(tools.Job).Pid
-						jm.Fg(pid)
-						jm.WaitForForeground(pid, fgPid)
+						jm.Fg(pid, fgPid)
 					}
 					break
 				}
@@ -116,7 +114,6 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 			} else {
 				pid = jm.Jobs.Back().Value.(tools.Job).Pid
 				jm.Bg(pid)
-				jm.WaitForBackground(pid)
 			}
 		} else {
 			for i := 1; i < len(cmd.Cmdargs); i++ {
@@ -131,7 +128,6 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 						} else {
 							pid = elem.Value.(tools.Job).Pid
 							jm.Bg(pid)
-							jm.WaitForBackground(pid)
 						}
 						break
 					}
@@ -245,7 +241,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 
 	switch cmd.Cmdflag {
 	case 0:
-		jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd)
+		jm.Add(pid, cmd.Cmdargs, cmd.Bkgrnd, false)
 		if cmd.Bkgrnd {
 			jm.WaitForBackground(pid)
 		} else {
@@ -254,7 +250,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 		jm.WriteDoneJobs()
 	case 1:
 		*cmdPipe = append(*cmdPipe, cmd.Cmdargs...)
-		jm.Add(*groupPid, *cmdPipe, cmd.Bkgrnd)
+		jm.Add(*groupPid, *cmdPipe, cmd.Bkgrnd, true)
 		if cmd.Bkgrnd {
 			jm.WaitForBackground(*groupPid)
 		} else {

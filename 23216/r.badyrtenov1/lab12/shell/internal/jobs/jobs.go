@@ -24,9 +24,14 @@ func (jm *JobManager) Init() {
 func (jm *JobManager) WaitForBackground(pid int) {
 	go func() {
 		var ws syscall.WaitStatus
-		_, err := syscall.Wait4(pid, &ws, 0, nil)
-		if err != nil {
-			return
+		for {
+			_, err := syscall.Wait4(jm.PgId(pid), &ws, syscall.WUNTRACED, nil)
+			if ws.Stopped() {
+				return
+			}
+			if err != nil {
+				break
+			}
 		}
 		jm.Update(pid, "Done")
 	}()
@@ -35,14 +40,16 @@ func (jm *JobManager) WaitForBackground(pid int) {
 func (jm *JobManager) WaitForForeground(pid int, fgPid *int) {
 	var ws syscall.WaitStatus
 	*fgPid = pid
-	_, err := syscall.Wait4(pid, &ws, syscall.WUNTRACED, nil)
-	if err != nil {
-		return
-	}
-	if ws.Stopped() || ws.Signaled() {
-		for *fgPid != 0 {
+	for {
+		_, err := syscall.Wait4(jm.PgId(pid), &ws, syscall.WUNTRACED, nil)
+		if ws.Stopped() || ws.Signaled() {
+			for *fgPid != 0 {
+			}
+			return
 		}
-		return
+		if err != nil {
+			break
+		}
 	}
 	jm.Update(pid, "Done")
 	*fgPid = 0
@@ -61,12 +68,12 @@ func (jm *JobManager) WriteDoneJobs() {
 	}
 }
 
-func (jm *JobManager) Add(pid int, cmdargs []string, flag bool) {
+func (jm *JobManager) Add(pid int, cmdargs []string, flag bool, pipeFlag bool) {
 	jm.jobsMutex.Lock()
 	defer jm.jobsMutex.Unlock()
 	jm.IdLastJob++
 	if jm.Jobs.Front() == nil {
-		jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob})
+		jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob, PipeFlag: pipeFlag})
 		if flag {
 			fmt.Printf("[%d] %d\n", jm.IdLastJob, pid)
 		}
@@ -75,20 +82,20 @@ func (jm *JobManager) Add(pid int, cmdargs []string, flag bool) {
 			job := e.Value.(tools.Job)
 			if flag {
 				if job.Status == "Stopped" {
-					jm.Jobs.InsertBefore(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob}, e)
+					jm.Jobs.InsertBefore(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob, PipeFlag: pipeFlag}, e)
 					fmt.Printf("[%d] %d\n", jm.IdLastJob, pid)
 					break
 				} else if e.Next() == nil {
-					jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob})
+					jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob, PipeFlag: pipeFlag})
 					fmt.Printf("[%d] %d\n", jm.IdLastJob, pid)
 					break
 				}
 			} else {
 				if job.Bkgrnd || job.Status == "Stopped" {
-					jm.Jobs.InsertBefore(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob}, e)
+					jm.Jobs.InsertBefore(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob, PipeFlag: pipeFlag}, e)
 					break
 				} else if e.Next() == nil {
-					jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob})
+					jm.Jobs.PushBack(tools.Job{Pid: pid, Status: "Running", Cmdargs: cmdargs, Bkgrnd: flag, Id: jm.IdLastJob, PipeFlag: pipeFlag})
 					break
 				}
 			}
@@ -97,8 +104,28 @@ func (jm *JobManager) Add(pid int, cmdargs []string, flag bool) {
 	if cmdargs[0] == "cat" && flag {
 		jm.jobsMutex.Unlock()
 		jm.Update(pid, "Running")
+		pgId := jm.PgId(pid)
 		jm.jobsMutex.Lock()
+		err := syscall.Kill(pgId, syscall.SIGSTOP)
+		if err != nil {
+			fmt.Println("Error stopping process")
+		}
 	}
+}
+
+func (jm *JobManager) PgId(pid int) int {
+	jm.jobsMutex.Lock()
+	defer jm.jobsMutex.Unlock()
+	for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
+		job := elem.Value.(tools.Job)
+		if pid == job.Pid {
+			if job.PipeFlag {
+				return -pid
+			}
+			break
+		}
+	}
+	return pid
 }
 
 func (jm *JobManager) Write(pid int) {
@@ -152,41 +179,56 @@ func (jm *JobManager) Bg(pid int) {
 			fmt.Printf("[%d]%s    %s &\n", job.Id, stat, strings.Join(job.Cmdargs, " "))
 			jm.jobsMutex.Unlock()
 			jm.Update(pid, "Running")
+			pgId := jm.PgId(pid)
 			jm.jobsMutex.Lock()
 			if job.Cmdargs[0] == "cat" {
-				err := syscall.Kill(pid, syscall.SIGSTOP)
+				err := syscall.Kill(pgId, syscall.SIGSTOP)
 				if err != nil {
 					fmt.Println("Error stopping process")
 				}
 				return
 			}
-			err := syscall.Kill(pid, syscall.SIGCONT)
+			err := syscall.Kill(pgId, syscall.SIGCONT)
 			if err != nil {
-				fmt.Println("Error continuing job", pid)
+				fmt.Println("Error continuing job")
 				return
 			}
+			jm.jobsMutex.Unlock()
+			jm.WaitForBackground(pid)
+			jm.jobsMutex.Lock()
 			break
 		}
 	}
 }
 
-func (jm *JobManager) Fg(pid int) {
+func (jm *JobManager) Fg(pid int, fgPid *int) {
+	signal.Ignore(syscall.SIGTTOU)
+	defer signal.Reset(syscall.SIGTTOU)
 	jm.jobsMutex.Lock()
 	defer jm.jobsMutex.Unlock()
 	for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 		job := elem.Value.(tools.Job)
 		if job.Pid == pid {
+			bkgrndFlag := job.Bkgrnd
 			job.Bkgrnd = false
 			elem.Value = job
 			jm.jobsMutex.Unlock()
 			jm.Update(pid, "Running")
+			pgId := jm.PgId(pid)
 			jm.jobsMutex.Lock()
 			fmt.Println(strings.Join(job.Cmdargs, " "))
-			err := syscall.Kill(pid, syscall.SIGCONT)
+			err := syscall.Kill(pgId, syscall.SIGCONT)
 			if err != nil {
-				fmt.Println("Error continuing job", pid)
+				fmt.Println("Error continuing job")
 				return
 			}
+			if bkgrndFlag {
+				tools.Tcsetpgrp(os.Stdin.Fd(), pgId)
+			}
+			jm.jobsMutex.Unlock()
+			jm.WaitForForeground(pid, fgPid)
+			jm.jobsMutex.Lock()
+			tools.Tcsetpgrp(os.Stdin.Fd(), syscall.Getpgrp())
 			break
 		}
 	}
@@ -198,7 +240,7 @@ func (jm *JobManager) Update(pid int, status string) {
 	for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 		job := elem.Value.(tools.Job)
 		if pid == job.Pid {
-			if job.Bkgrnd && status == "Running" && job.Cmdargs[0] == "cat" {
+			if job.Cmdargs[0] == "cat" && job.Bkgrnd && status == "Running" {
 				job.Status = "Stopped"
 			} else {
 				job.Status = status
@@ -233,7 +275,7 @@ func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPid *int) {
 				if *fgPid > 0 {
 					jm.Update(*fgPid, "Done")
 					jm.Write(*fgPid)
-					err := syscall.Kill(*fgPid, syscall.SIGINT)
+					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGINT)
 					if err != nil {
 					}
 					*fgPid = 0
@@ -248,7 +290,7 @@ func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPid *int) {
 				if *fgPid > 0 {
 					jm.Update(*fgPid, "Stopped")
 					jm.Write(*fgPid)
-					err := syscall.Kill(*fgPid, syscall.SIGSTOP)
+					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGSTOP)
 					if err != nil {
 						fmt.Println("Error stopping process")
 					}
