@@ -8,7 +8,7 @@
 #define buffer 512
 
 void signalHandler(){
-    perror("lost connection with sercer");
+    write(2,"lost connection with sercer", strlen("lost connection with sercer"));
     _exit(EXIT_FAILURE);
 }
 

@@ -7,6 +7,11 @@
 #include <stdlib.h>
 #define buffer 512
 
+void closeUnlinkOnFail(int soc, char* argv){
+    close(soc);
+    unlink(argv);
+    exit(EXIT_FAILURE);
+}
 int main(int argc, char** argv) {
     if (argc < 2) {
         perror("you have to give a 1 socket name");
@@ -30,17 +35,13 @@ int main(int argc, char** argv) {
     }
     if (listen(soc, 1) == -1) {
         perror("problem in listen");
-        close(soc);
-        unlink(argv[1]);
-        exit(EXIT_FAILURE);
+        closeUnlinkOnFail(soc, argv[1]);
     }
     puts("Wait for connection");
     int new = accept(soc, NULL, NULL);
     if (new == -1) {
         perror("problem in accept");
-        close(soc);
-        unlink(argv[1]);
-        exit(EXIT_FAILURE);
+        closeUnlinkOnFail(soc, argv[1]);
     }
     while((msglen = read(new, buf, buffer))>0){
         for(ssize_t i=0;i<msglen;i++){
@@ -49,17 +50,13 @@ int main(int argc, char** argv) {
         if (write(1, buf, msglen) == -1){
             perror("problem in write");
             close(new);
-            close(soc);
-            unlink(argv[1]);
-            exit(EXIT_FAILURE);
+            closeUnlinkOnFail(soc, argv[1]);
         }
     }
     if(msglen == -1){
         perror("problem in read");
         close(new);
-        close(soc);
-        unlink(argv[1]);
-        exit(EXIT_FAILURE);
+        closeUnlinkOnFail(soc, argv[1]);
     }    
     close(new);
     close(soc);
