@@ -8,7 +8,7 @@ void clearLine(char* line) {
 	for (int i = 0; i < 1024; i++) line[i] = '\0';
 }
 
-void promptline(char* line, int sizeline) {
+int promptline(char* line, int sizeline) {
 	int n = 0, gettedcnt = 0;
 	clearLine(line);
 	while (1) {
@@ -16,7 +16,7 @@ void promptline(char* line, int sizeline) {
 
 		if (gettedcnt == -1) {
 			perror("read error");
-			exit(1);
+			return -1;
 		}
 		n += gettedcnt;
 
@@ -35,4 +35,6 @@ void promptline(char* line, int sizeline) {
 		}
 		else break;
 	}
+
+	return;
 }

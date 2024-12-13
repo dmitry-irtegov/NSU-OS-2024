@@ -395,13 +395,18 @@ int main() {
 	for (;;) {
 
 
-		promptline(line, 1024);
-		if ((ncmds = parseline(line)) <= 0) {
+		if (promptline(line, 1024) == -1) {
+			myexit();
+		}
+		if ((ncmds = parseline(line)) == 0) {
 			checkJobs();
 			if (printCurDir() == -1) {
 				myexit();
 			}
 			continue;
+		}
+		else if (ncmds == -1) {
+			myexit();
 		}
 		curcmd = 0;
 
