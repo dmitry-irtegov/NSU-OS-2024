@@ -43,5 +43,5 @@ extern struct convs conv[];
 
 
 int parseline(char*);
-void promptline(char*, int);
+int promptline(char*, int);
 void clearPars();

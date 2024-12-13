@@ -36,5 +36,5 @@ int promptline(char* line, int sizeline) {
 		else break;
 	}
 
-	return;
+	return 0;
 }
