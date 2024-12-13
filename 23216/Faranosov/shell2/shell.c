@@ -22,8 +22,8 @@ char curDir[128];
 
 char* specCommands[] = { "jobs", "fg", "bg", "exit", "cd"};
 
-void setbgjob(job* curJob);
-void setfgjob(job* curJob);
+int setbgjob(job* curJob);
+int setfgjob(job* curJob);
 int setfd(streams* stream, char fdtocls);
 command* copycmd(command* cmd);
 convs* copyconv(convs* old);
@@ -87,7 +87,7 @@ int shellawaiting(job* forgjob) {
 					return -1;
 				}
 
-				return;
+				return 0;
 			}
 
 			handling_status(findJob(getted_id), status);
@@ -147,6 +147,7 @@ int setsignal(int sig, void (*func)(int), char* procName) {
 		perror("setsig error");
 		return -1;
 	}
+	return 0;
 }
 
 int start_job(job* jobs) {
@@ -200,7 +201,7 @@ int start_job(job* jobs) {
 			}
 			
 			deleteJob(jobs);
-			return;
+			return 0;
 		}
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[3]) == 0) {
@@ -350,6 +351,8 @@ int setbgjob(job* curJob) {
 		curJob->state = RUNNING;
 		curJob->conv->flag = BKGRND;
 	}
+
+	return 0;
 }
 
 int setfgjob(job* curJob) {
