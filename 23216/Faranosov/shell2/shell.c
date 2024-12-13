@@ -241,6 +241,9 @@ void start_job(job* jobs) {
 
 		if (jobs->conv->err.flags & ISEXIST) {
 			errfile = setfd(&jobs->conv->err, 2);
+			if (errfile == -1) {
+				exit(1);
+			}
 			if (dup2(errfile, 2) == -1) {
 				perror("S (start_job): dup2 (err) error");
 				exit(1);
@@ -256,10 +259,16 @@ void start_job(job* jobs) {
 		for (process* p = jobs->proc; p; p = p->nextproc) {
 			if (p == jobs->proc && jobs->conv->in.flags & ISEXIST) {
 				infile = setfd(&jobs->conv->in, 0);
+				if (infile == -1) {
+					exit(1);
+				}
 			}
 
 			if (!p->nextproc && jobs->conv->out.flags & ISEXIST) {
 				outfile = setfd(&jobs->conv->out, 1);
+				if (outfile == -1) {
+					exit(1);
+				}
 			}
 
 			if (p->nextproc) {

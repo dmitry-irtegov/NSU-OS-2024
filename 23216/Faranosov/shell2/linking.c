@@ -23,6 +23,8 @@ extern char curDir[128];
 
 extern char* specCommands[];
 
+extern void clear(job* curj);
+
 int setfd(streams* stream, char fdtocls) {
 	int fd = 0;
 	switch (fdtocls) {
@@ -30,7 +32,7 @@ int setfd(streams* stream, char fdtocls) {
 		fd = open(stream->file, O_RDONLY);
 		if (fd == -1) {
 			perror("open infile error");
-			exit(1);
+			return -1;
 		}
 		return fd;
 	case 1:
@@ -39,7 +41,7 @@ int setfd(streams* stream, char fdtocls) {
 			fd = open(stream->file, O_WRONLY | O_APPEND | O_CREAT, 0660);
 			if (fd == -1) {
 				perror("open out/err fileAppend error");
-				exit(1);
+				return -1;
 			}
 			return fd;
 		}
@@ -47,14 +49,14 @@ int setfd(streams* stream, char fdtocls) {
 			fd = open(stream->file, O_WRONLY | O_CREAT, 0660);
 			if (fd == -1) {
 				perror("open out/err file error");
-				exit(1);
+				return -1;
 			}
 			return fd;
 		}
 		break;
 	default:
 		printf("HOW???");
-		exit(1);
+		return -1;
 	}
 }
 
@@ -63,7 +65,7 @@ command* copycmd(command* cmd) {
 	newCom = malloc(sizeof(command));
 	if (newCom == NULL) {
 		printf("malloc (copycmd) error\n");
-		exit(1);
+		return NULL;
 	}
 
 	newCom->cmdflag = cmd->cmdflag;
@@ -80,7 +82,7 @@ command* copycmd(command* cmd) {
 		newCom->cmdargs[i] = str;
 		if (newCom->cmdargs[i] == NULL) {
 			printf("malloc (newCom->cmdargs[%d]) error\n", i);
-			exit(1);
+			return NULL;
 		}
 	}
 
@@ -92,7 +94,7 @@ convs* copyconv(convs* old) {
 	newConv = malloc(sizeof(convs));
 	if (newConv == NULL) {
 		printf("malloc (copyconv) error");
-		exit(1);
+		return NULL;
 	}
 
 	newConv->flag = old->flag;
@@ -102,7 +104,8 @@ convs* copyconv(convs* old) {
 		newConv->in.file = malloc(sizeof(char) * (strlen(old->in.file) + 1));
 		if (newConv->in.file == NULL) {
 			printf("malloc (copyconv->in) error");
-			exit(1);
+			free(newConv);
+			return NULL;
 		}
 		strcpy(newConv->in.file, old->in.file);
 	}
@@ -112,7 +115,8 @@ convs* copyconv(convs* old) {
 		newConv->out.file = malloc(sizeof(char) * (strlen(old->out.file) + 1));
 		if (newConv->out.file == NULL) {
 			printf("malloc (copyconv->out) error");
-			exit(1);
+			free(newConv);
+			return NULL;
 		}
 		strcpy(newConv->out.file, old->out.file);
 	}
@@ -122,7 +126,8 @@ convs* copyconv(convs* old) {
 		newConv->err.file = malloc(sizeof(char) * (strlen(old->err.file) + 1));
 		if (newConv->err.file == NULL) {
 			printf("malloc (copyconv->err) error");
-			exit(1);
+			free(newConv);
+			return NULL;
 		}
 		strcpy(newConv->err.file, old->err.file);
 	}
@@ -139,9 +144,13 @@ process* initProc(command* cmd) {
 	newProc = malloc(sizeof(process));
 	if (newProc == NULL) {
 		printf("malloc (initProc) error");
-		exit(1);
+		return NULL;
 	}
 	newProc->cmd = copycmd(cmd);
+	if (newProc->cmd == NULL) {
+		free(newProc);
+		return NULL;
+	}
 	newProc->nextproc = NULL;
 	return newProc;
 }
@@ -151,21 +160,33 @@ job* initJob(convs* conv) {
 	newjob = malloc(sizeof(job));
 	if (newjob == NULL) {
 		printf("malloc initJob error");
-		exit(1);
+		return NULL;
 	}
 	newjob->state = LINKED;
 	newjob->gpid = 0;
 	newjob->conv = copyconv(conv);
+	if (newjob->conv == NULL) {
+		clear(newjob);
+		return NULL;
+	}
 	newjob->nextjob = NULL;
 	newjob->prevjob = NULL;
 	process* curProc = NULL;
 	for (int i = 0; i < conv->cntcommands; i++) {
 		if (i == 0) {
 			curProc = initProc(&cmds[curcmd]);
+			if (curProc == NULL) {
+				clear(newjob);
+				return NULL;
+			}
 			newjob->proc = curProc;
 		}
 		else {
 			curProc->nextproc = initProc(&cmds[curcmd + i]);
+			if (curProc->nextproc == NULL) {
+				clear(newjob);
+				return NULL;
+			}
 			curProc = curProc->nextproc;
 		}
 	}
@@ -179,12 +200,18 @@ job* linkConsAndJobs() {
 	for (int i = 0; i < MAXCONV && conv[i].cntcommands > 0; i++) {
 		if (curJob == NULL) {
 			curJob = initJob(&conv[i]);
+			if (curJob == NULL) {
+				continue;
+			}
 			curJob->prevjob = NULL;
 			firstjob = curJob;
 			lastjob = curJob;
 		}
 		else {
 			curJob->nextjob = initJob(&conv[i]);
+			if (curJob->nextjob == NULL) {
+				continue;
+			}
 			curJob->nextjob->prevjob = curJob;
 			curJob = curJob->nextjob;
 			lastjob = curJob;

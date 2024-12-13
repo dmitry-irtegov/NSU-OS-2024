@@ -33,6 +33,7 @@ job* findJob(pid_t gpid) {
 }
 
 void clear(job* curj) {
+	if (curj == NULL) return;
 	process* proc = curj->proc, * temp;
 	while (proc) {
 		temp = proc->nextproc;
@@ -40,7 +41,7 @@ void clear(job* curj) {
 		free(proc);
 		proc = temp;
 	}
-	free(curj->conv);
+	if (curj->conv != NULL) free(curj->conv);
 	free(curj);
 }
 
