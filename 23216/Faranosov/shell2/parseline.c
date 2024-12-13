@@ -39,8 +39,10 @@ int parseline(char* line) {
 				conv[curConv].flag |= BKGRND;
 				ncmds++;
 				curConv++;
+				nargs = 0;
 			}
 			*s++ = '\0';
+			s = blankskip(s);
 			break;
 		case '>':
 			if ((s - 1) && *(s - 1) == '2') {
