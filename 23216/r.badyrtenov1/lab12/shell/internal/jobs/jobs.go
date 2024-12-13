@@ -228,7 +228,7 @@ func (jm *JobManager) Fg(pid int, fgPid *int) {
 			jm.jobsMutex.Unlock()
 			jm.WaitForForeground(pid, fgPid)
 			jm.jobsMutex.Lock()
-			tools.Tcsetpgrp(os.Stdin.Fd(), syscall.Getpgrp())
+			tools.Tcsetpgrp(os.Stdin.Fd(), os.Getpid())
 			break
 		}
 	}
