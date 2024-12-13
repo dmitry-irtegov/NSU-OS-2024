@@ -39,7 +39,7 @@ int printCurDir();
 void printJob(job* j);
 void printJobs();
 
-void checkJobs() {
+int checkJobs() {
 	pid_t getted_id;
 	int status;
 	char shouldCont = 1;
@@ -56,16 +56,18 @@ void checkJobs() {
 				break;
 			}
 			perror("wait (checkJobs) error");
-			exit(1);
+			return -1;
 		default:
 			handling_status(findJob(getted_id), status);
 			break;
 		}
 
 	} while (shouldCont);
+
+	return 0;
 }
 
-void shellawaiting(job* forgjob) {
+int shellawaiting(job* forgjob) {
 	int status;
 	pid_t idToWait = forgjob->gpid, getted_id;
 	for (;;) {
@@ -74,7 +76,7 @@ void shellawaiting(job* forgjob) {
 		case -1:
 
 			perror("wait (shallawaiting) error");
-			exit(1);
+			return -1;
 
 		default:
 			if (getted_id == idToWait) {
@@ -82,7 +84,7 @@ void shellawaiting(job* forgjob) {
 
 				if (tcsetpgrp(terminalfd, getpid()) == -1) {
 					perror("tcsetpgrp (shallawaiting) error");
-					exit(1);
+					return -1;
 				}
 
 				return;
@@ -92,6 +94,8 @@ void shellawaiting(job* forgjob) {
 			break;
 		}
 	}
+
+	return 0;
 }
 
 void start_proc(process* proc, int infile, int outfile) {
@@ -137,15 +141,15 @@ void start_proc(process* proc, int infile, int outfile) {
 
 }
 
-void setsignal(int sig, void (*func)(int), char* procName) {
+int setsignal(int sig, void (*func)(int), char* procName) {
 	if (signal(sig, func) == SIG_ERR) {
 		printf("%s\n", procName);
 		perror("setsig error");
-		exit(1);
+		return -1;
 	}
 }
 
-void start_job(job* jobs) {
+int start_job(job* jobs) {
 	jobs->state = RUNNING;
 
 	if (jobs == NULL) return;
@@ -168,12 +172,12 @@ void start_job(job* jobs) {
 				int value = atoi(jobs->proc->cmd->cmdargs[1]);
 				if (value == 0) {
 					printf("atoi error");
-					exit(1);
+					return -1;
 				}
 				setfgjob(findJob(value));
 			}
 			deleteJob(jobs);
-			return;
+			return 0;
 		}
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[2]) == 0) {
@@ -190,7 +194,7 @@ void start_job(job* jobs) {
 				int value = atoi(jobs->proc->cmd->cmdargs[1]);
 				if (value == 0) {
 					printf("atoi error");
-					exit(1);
+					return -1;
 				}
 				setbgjob(findJob(value)); 
 			}
@@ -207,7 +211,7 @@ void start_job(job* jobs) {
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[4]) == 0) {
 			chdir(jobs->proc->cmd->cmdargs[1]);
 			deleteJob(jobs);
-			return;
+			return 0;
 		}
 		
 	}
@@ -215,7 +219,7 @@ void start_job(job* jobs) {
 	switch (sid = fork()) {
 	case -1:
 		perror("fork error");
-		exit(1);
+		return -1;
 	case 0:
 
 
@@ -226,10 +230,10 @@ void start_job(job* jobs) {
 
 
 
-		setsignal(SIGINT, SIG_DFL, "Son");
-		setsignal(SIGQUIT, SIG_DFL, "Son");
-		setsignal(SIGTTOU, SIG_IGN, "Son");
-		setsignal(SIGTSTP, SIG_DFL, "Son");
+		if (setsignal(SIGINT, SIG_DFL, "Son") == -1) exit(1);
+		if (setsignal(SIGQUIT, SIG_DFL, "Son") == -1) exit(1);
+		if (setsignal(SIGTTOU, SIG_IGN, "Son") == -1) exit(1);
+		if (setsignal(SIGTSTP, SIG_DFL, "Son") == -1) exit(1);
 
 
 		if (jobs->conv->flag != BKGRND) {
@@ -326,36 +330,45 @@ void start_job(job* jobs) {
 		jobs->gpid = sid;
 		jobs->state = 0;
 		if (jobs->conv->flag == 0) {
-			shellawaiting(jobs);
+			if (shellawaiting(jobs) == -1) return -1;
 		}
 		else {
 			printf("gpid = %d Running in bg\n", jobs->gpid);
 		}
-		return;
+		return 0;
 	}
 }
 
-void setbgjob(job* curJob) {
+int setbgjob(job* curJob) {
 	printf("gpid = %d Running in bg\n", curJob->gpid);
 
 	if (curJob->state == STOPPED) {
-		kill((-1) * curJob->gpid, SIGCONT);
+		if (kill((-1) * curJob->gpid, SIGCONT) == -1) {
+			perror("kill setbg");
+			return -1;
+		}
 		curJob->state = RUNNING;
 		curJob->conv->flag = BKGRND;
 	}
 }
 
-void setfgjob(job* curJob) {
-	tcsetpgrp(terminalfd, curJob->gpid);
+int setfgjob(job* curJob) {
+	if (tcsetpgrp(terminalfd, curJob->gpid) == -1) {
+		perror("setfgjob tcsetpgrp");
+		return -1;
+	}
 
 
 	if (curJob->state == STOPPED) {
-		kill((-1) * curJob->gpid, SIGCONT);
+		if (kill((-1) * curJob->gpid, SIGCONT) == -1) {
+			perror("kill setfg");
+			return -1;
+		}
 		curJob->state = RUNNING;
 		curJob->conv->flag = 0;
 	}
 
-	shellawaiting(curJob);
+	return shellawaiting(curJob);
 }
 
 void myexit() {
@@ -377,8 +390,14 @@ int main() {
 
 
 
-	setpgid(getpid(), getpid());
-	tcsetpgrp(terminalfd, getpid());
+	if (setpgid(getpid(), getpid()) == -1) {
+		perror("setpgid main");
+		exit(1);
+	}
+	if (tcsetpgrp(terminalfd, getpid()) == -1) {
+		perror("tcsetpgrp main");
+		exit(1);
+	}
 
 	if (printCurDir() == -1) {
 		myexit();
@@ -386,11 +405,11 @@ int main() {
 
 	/* PLACE SIGNAL CODE HERE */
 
-	setsignal(SIGINT, SIG_IGN, "mainIGN");
-	setsignal(SIGQUIT, SIG_IGN, "mainIGN");
-	setsignal(SIGTTIN, SIG_IGN, "mainIGN");
-	setsignal(SIGTTOU, SIG_IGN, "mainIGN");
-	setsignal(SIGTSTP, SIG_IGN, "mainIGN");
+	if (setsignal(SIGINT, SIG_IGN, "mainIGN") == -1) myexit();
+	if (setsignal(SIGQUIT, SIG_IGN, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTTIN, SIG_IGN, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTTOU, SIG_IGN, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTSTP, SIG_IGN, "mainIGN") == -1) myexit();
 
 	for (;;) {
 
@@ -414,13 +433,13 @@ int main() {
 		jobToStart = linkConsAndJobs();
 		clearPars();
 
-		checkJobs();
+		if (checkJobs() == -1) myexit();
 		
 
 		
 		curcmd = 0;
 		for (job* j = jobToStart; j; j = j->nextjob) {
-			start_job(j);
+			if (start_job(j) == -1) myexit();
 		}
 
 		if (printCurDir() == -1) {
@@ -428,11 +447,11 @@ int main() {
 		}
 	}
 
-	setsignal(SIGINT, SIG_DFL, "mainDFL");
-	setsignal(SIGQUIT, SIG_DFL, "mainDFL");
-	setsignal(SIGTTIN, SIG_DFL, "mainDFL");
-	setsignal(SIGTTOU, SIG_DFL, "mainDFL");
-	setsignal(SIGTSTP, SIG_DFL, "mainDFL");
+	if (setsignal(SIGINT, SIG_DFL, "mainIGN") == -1) myexit();
+	if (setsignal(SIGQUIT, SIG_DFL, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTTIN, SIG_DFL, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTTOU, SIG_DFL, "mainIGN") == -1) myexit();
+	if (setsignal(SIGTSTP, SIG_DFL, "mainIGN") == -1) myexit();;
 
 
 	/* PLACE SIGNAL CODE HERE */
