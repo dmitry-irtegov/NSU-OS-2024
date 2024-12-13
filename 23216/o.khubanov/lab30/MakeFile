@@ -1,0 +1,11 @@
+all: server client
+
+server: server.c
+	gcc -Wall -Wextra server.c -o server -lsocket
+
+client: client.c
+	gcc -Wall -Wextra client.c -o client -lsocket
+
+clean:
+	rm -f server client
+
