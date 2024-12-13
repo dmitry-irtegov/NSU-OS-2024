@@ -5,6 +5,12 @@
 
 int main() {
     struct termios oldt, newt;
+    
+     // Проверяем, что STDIN связан с терминалом
+    if (!isatty(STDIN_FILENO)) {
+        fprintf(stderr, "Error: STDIN is not a terminal\n");
+        exit(EXIT_FAILURE);
+    }
 
     // Сохраняем текущие настройки терминала
     if (tcgetattr(STDIN_FILENO, &oldt) != 0) {
