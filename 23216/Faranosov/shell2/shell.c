@@ -273,7 +273,7 @@ int start_job(job* jobs) {
 
 			if (!p->nextproc && jobs->conv->out.flags & ISEXIST) {
 				outfile = setfd(&jobs->conv->out, 1);
-				printf("#s = %d\n", jobs->conv->out.file, outfile);
+				printf("%s = %d\n", jobs->conv->out.file, outfile);
 				if (outfile == -1) {
 					exit(1);
 				}
