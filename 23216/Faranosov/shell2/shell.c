@@ -265,7 +265,7 @@ int start_job(job* jobs) {
 		for (process* p = jobs->proc; p; p = p->nextproc) {
 			if (p == jobs->proc && jobs->conv->in.flags & ISEXIST) {
 				infile = setfd(&jobs->conv->in, 0);
-				printf("%d\n", infile);
+				printf("%s = %d\n", jobs->conv->in.file, infile);
 				if (infile == -1) {
 					exit(1);
 				}
@@ -273,7 +273,7 @@ int start_job(job* jobs) {
 
 			if (!p->nextproc && jobs->conv->out.flags & ISEXIST) {
 				outfile = setfd(&jobs->conv->out, 1);
-				printf("%d\n", outfile);
+				printf("#s = %d\n", jobs->conv->out.file, outfile);
 				if (outfile == -1) {
 					exit(1);
 				}
