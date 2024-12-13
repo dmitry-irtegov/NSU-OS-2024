@@ -64,7 +64,7 @@ void printJobs() {
 	printf("\n");
 	int cnt = 0;
 	for (job* j = firstjob; j; j = j->nextjob) {
-		if (j->state != 3) {
+		if (j->state != 3 && j->gpid != 0) {
 			cnt++;
 			printJob(j);
 		}
