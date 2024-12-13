@@ -177,7 +177,24 @@ void start_job(job* jobs) {
 		}
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[2]) == 0) {
-			setbgjob(findJob(atoi(jobs->proc->cmd->cmdargs[1])));
+			if (jobs->proc->cmd->cmdargs[1] == NULL) {
+				job* curJ = lastjob;
+				while (curJ != NULL && curJ->state != 1) {
+					curJ = curJ->prevjob;
+				}
+				if (curJ != NULL) {
+					setbgjob(curJ);
+				}
+			}
+			else {
+				int value = atoi(jobs->proc->cmd->cmdargs[1]);
+				if (value == 0) {
+					printf("atoi error");
+					exit(1);
+				}
+				setbgjob(findJob(value)); 
+			}
+			
 			deleteJob(jobs);
 			return;
 		}
@@ -303,13 +320,14 @@ void start_job(job* jobs) {
 			shellawaiting(jobs);
 		}
 		else {
-			printf("%d Running in bg\n", jobs->gpid);
+			printf("gpid = %d Running in bg\n", jobs->gpid);
 		}
 		return;
 	}
 }
 
 void setbgjob(job* curJob) {
+	printf("gpid = %d Running in bg\n", curJob->gpid);
 
 	if (curJob->state == STOPPED) {
 		kill((-1) * curJob->gpid, SIGCONT);
