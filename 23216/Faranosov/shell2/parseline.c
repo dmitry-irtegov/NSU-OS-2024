@@ -84,6 +84,7 @@ int parseline(char* line) {
 					}
 				}
 			}
+			s++;
 			s = strpbrk(s, delim);
 			if (isspace(*s)) *s++ = '\0';
 			isdbl = 0;
