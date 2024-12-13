@@ -363,6 +363,8 @@ int main() {
 
 		promptline(line, 1024);
 		if ((ncmds = parseline(line)) <= 0) {
+			checkJobs();
+			printCurDir();
 			continue;
 		}
 		curcmd = 0;
