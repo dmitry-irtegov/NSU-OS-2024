@@ -39,7 +39,7 @@ void addLine(off_t cur_len, off_t cur_off){
     file_table.cur++;
 }
 
-int makeTable(){
+void makeTable(){
     file_table.cur = 0;
     file_table.cap = 20;
     file_table.elems = malloc(sizeof(elem_of_table_off_t) * 20);
