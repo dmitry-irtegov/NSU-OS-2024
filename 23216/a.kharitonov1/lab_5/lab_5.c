@@ -82,7 +82,7 @@ void listenUser(){
     while (1) {
         res = scanf("%d", &num_of_line);
         if (res != 1){
-            perror("problem in scanf, you should type 1 int number");
+            write(2,"problem in scanf, you should type int number\n", strlen("problem in scanf, you should type int number\n"));
             freeAndCloseOnFail();
         }
         if (num_of_line < 0){
