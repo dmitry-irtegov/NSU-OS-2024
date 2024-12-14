@@ -66,7 +66,7 @@ int makeTable(){
     }
     if(read_len < 0){
         perror("problem in read");
-        freeAndCloseOnFail()
+        freeAndCloseOnFail();
     }
     if (cur_len != 0){
         addLine(cur_len, cur_off);
@@ -83,7 +83,7 @@ void listenUser(){
         res = scanf("%d", &num_of_line);
         if (res != 1){
             perror("problem in scanf, you should type 1 int number");
-            freeAndCloseOnFail()
+            freeAndCloseOnFail();
         }
         if (num_of_line < 0){
             puts("wrong number");
@@ -98,17 +98,17 @@ void listenUser(){
             string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
             if (string == NULL) {
                 perror("problem in calloc");
-                freeAndCloseOnFail()
+                freeAndCloseOnFail();
             }
             if (lseek(file, file_table.elems[num_of_line - 1].off, SEEK_SET) == -1) {
                 perror("problem in lseek");
                 free(string);
-                freeAndCloseOnFail()
+                freeAndCloseOnFail();
             }
             if (read(file, string, file_table.elems[num_of_line - 1].len) == -1) {
                 perror("problem in read");
                 free(string);
-                freeAndCloseOnFail()
+                freeAndCloseOnFail();
             }
             printf("%s",string);
         }
