@@ -119,7 +119,7 @@ void listenUser(){
 int main(int argc, char *argv[]) {
     file_table.elems = NULL;
     if (argc != 2) {
-        perror("you have to give file name and nothing else");
+        write(2,"you have to give file name and nothing else", strlen("you have to give file name and nothing else"));
         exit(EXIT_FAILURE);
     }
     file = open(argv[1], O_RDONLY);
