@@ -14,7 +14,7 @@ void signalHandler(){
 
 int main(int argc, char** argv){
     if (argc < 2) {
-        perror("you have to give a 1 socket name");
+        write(2,"you have to give a 1 socket name", strlen("you have to give a 1 socket name"));
         exit(EXIT_FAILURE);
     }
     if (signal(SIGPIPE, signalHandler) == SIG_ERR) {

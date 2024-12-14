@@ -14,7 +14,7 @@ void closeUnlinkOnFail(int soc, char* argv){
 }
 int main(int argc, char** argv) {
     if (argc < 2) {
-        perror("you have to give a 1 socket name");
+        write(2,"you have to give a 1 socket name", strlen("you have to give a 1 socket name"));
         exit(EXIT_FAILURE);
     }
     char buf[buffer];
@@ -22,7 +22,8 @@ int main(int argc, char** argv) {
     struct sockaddr_un addr;
     int soc = socket(AF_UNIX, SOCK_STREAM, 0);
     if (soc == -1){
-        return -1;
+        perror("problem in socket");
+        exit(EXIT_FAILURE);
     }
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
@@ -34,13 +35,13 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
     if (listen(soc, 1) == -1) {
-        perror("problem in listen");
+        write(2,"problem in listen", strlen("problem in listen"));
         closeUnlinkOnFail(soc, argv[1]);
     }
     puts("Wait for connection");
     int new = accept(soc, NULL, NULL);
     if (new == -1) {
-        perror("problem in accept");
+        write(2,"problem in accept", strlen("problem in accept"));
         closeUnlinkOnFail(soc, argv[1]);
     }
     while((msglen = read(new, buf, buffer))>0){
