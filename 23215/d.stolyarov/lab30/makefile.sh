@@ -1,2 +1,2 @@
-gcc sr30.c -o serv -lsocket -Wall -Wextra
-gcc cl30.c -o cli -lsocket -Wall -Wextra
+gcc sr30.c -o s.out -lsocket -Wall
+gcc cl30.c -o c.out -lsocket -Wall

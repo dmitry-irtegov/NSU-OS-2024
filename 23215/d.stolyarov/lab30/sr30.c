@@ -4,19 +4,23 @@
 #include <sys/un.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 int main(int argc, char *argv[]) {
 
     if (argc < 2){
         perror("missing socket name");
         exit(1);
     } 
+    if(strlen(argv[1]) > 107){
+        perror("Too long socket name");
+        exit(2);
+    }
     char *socket_name = argv[1];
     struct sockaddr_un addr;
     int fd,cl,rc;
-
     if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
         perror("socket error");
-        exit(2);
+        exit(3);
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -26,32 +30,35 @@ int main(int argc, char *argv[]) {
 
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         perror("bind error");
-        exit(3);
-    }
-
-    if (listen(fd, 1) == -1) {
-        perror("listen error");
         exit(4);
     }
 
-    if ( (cl = accept(fd, NULL, NULL)) == -1) {
-        perror("accept error");
+    if (listen(fd, 1) == -1) {
+        unlink(socket_name);
+        perror("listen error");
         exit(5);
+    }
+
+    if ( (cl = accept(fd, NULL, NULL)) == -1) {
+        unlink(socket_name);
+        perror("accept error");
+        exit(6);
     }
     char c[2] = {0};
     while ( (rc=read(cl, c, 1)) > 0) {
         c[0] = toupper(c[0]);
         if(write(1, c, 1) == -1){
-            close(cl);
+            unlink(socket_name);
             perror("write error");
             exit(7);
         }
     }
+    close(cl);
+    unlink(socket_name);
     if(rc == -1){
         perror("read error");
-        exit(4);
+        exit(8);
     }
 
-    close(cl);
     return 0;
 }
