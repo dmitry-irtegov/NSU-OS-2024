@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <sys/wait.h>
@@ -7,11 +8,15 @@
 #include "shell.h"
 #include <signal.h>
 #include <errno.h>
+#include "jobs.h"
+#include <string.h>
 
+extern int errno;
+
+int foreground_pgid = -1;
 char *infile, *outfile, *appfile;
 struct command cmds[MAXCMDS];
 char bkgrnd;
-extern int errno;
 
 int main(int argc, char *argv[])
 {
@@ -23,12 +28,17 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, SIG_IGN);
     signal(SIGQUIT, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
 
     sprintf(prompt,"[%s] ", argv[0]);
 
     while (promptline(prompt, line, sizeof(line)) > 0) {    /* until eof  */
-        if ((ncmds = parseline(line)) <= 0)
+        if ((ncmds = parseline(line)) <= 0) {
+            check_jobs_states_updates();
             continue;   /* read next line */
+        }
 #ifdef DEBUG
 {
     for (int i = 0; i < ncmds; i++) {
@@ -44,74 +54,80 @@ int main(int argc, char *argv[])
 }
 #endif
         for (i = 0; i < ncmds; i++) {
+            if (strcmp("jobs", cmds[i].cmdargs[0]) == 0) {
+                print_jobs();
+                continue;
+            }
             child_pid = fork();
             if (child_pid == -1) {
-                fprintf(stderr, "fork() error\n");
+                perror("fork() failed");
                 exit(EXIT_FAILURE);
             } else if (child_pid == 0) {
-                int closed_in_fd = -1;
-                int closed_out_fd = -1;
+                signal(SIGINT, SIG_DFL);
+                signal(SIGQUIT, SIG_DFL);
+                signal(SIGTTOU, SIG_DFL);
+                signal(SIGTTIN, SIG_DFL);
+                signal(SIGTSTP, SIG_DFL);
+                signal(SIGCHLD, SIG_DFL);
+
                 if (i == 0 && infile) {
-                    closed_in_fd = dup(0);
                     close(0);
                     if (open(infile, O_RDONLY) == -1) {
-                        fprintf(stderr, "open() error\n");
+                        perror("open() input file failed");
                         exit(EXIT_FAILURE);
                     }
                 }
                 if (i == ncmds - 1 && outfile) {
-                    closed_out_fd = dup(1);
                     close(1);
                     if (open(outfile, O_WRONLY | O_TRUNC) == -1) {
-                        fprintf(stderr, "open() error\n");
+                        perror("open() output file failed");
                         exit(EXIT_FAILURE);
                     }
                 } else if (i == ncmds - 1 && appfile) {
-                    closed_out_fd = dup(1);
                     close(1);
                     if (open(appfile, O_WRONLY | O_APPEND) == -1) {
-                        fprintf(stderr, "open() error\n");
+                        perror("open() append file failed");
                         exit(EXIT_FAILURE);
                     } 
                 }
 
-                if (!bkgrnd) {
-                    signal(SIGINT, SIG_DFL);
-                    signal(SIGQUIT, SIG_DFL);
-                }
-
-                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
-                
-                if (closed_in_fd) {
+                if (execvp(cmds[i].cmdargs[0], cmds[i].cmdargs) == -1) {
+                    perror(cmds[i].cmdargs[0]);
                     close(0);
-                    dup(closed_in_fd);
-                }
-                if (closed_out_fd) {
                     close(1);
-                    dup(closed_out_fd);
+                    exit(EXIT_FAILURE);
                 }
-
+                close(0);
+                close(1);
                 exit(EXIT_SUCCESS);
             } else {
+                setpgid(child_pid, 0);
                 if (bkgrnd) {
-                    setpgid(child_pid, 0);
-                    printf("pid of background process: %d\n", child_pid);
+                    create_job(child_pid, RUNNING);
                 } else {
-                    int stat_lock;
+                    tcsetpgrp(0, getpgid(child_pid));
+                    foreground_pgid = getpgid(child_pid);
+                    int stat;
 
-                    if (waitpid(child_pid, &stat_lock, 0) == -1) {
-                        fprintf(stderr, "waitpid() error\n");
+                    if (waitpid(child_pid, &stat, WUNTRACED) == -1) {
+                        perror("waitpid() failed");
                         exit(EXIT_FAILURE);
                     }
 
-                    if (WEXITSTATUS(stat_lock)) {
-                        fprintf(stderr, "process exit with code: %d\n",
-                                WEXITSTATUS(stat_lock));
+                    if (WIFSTOPPED(stat)) {
+                        create_job(child_pid, STOPPED); 
                     }
+
+                    tcsetpgrp(0, getpgrp());
+                    foreground_pgid = -1;
+#ifdef DEBUG
+                    printf("tcgetpgrp(): %d\nshell pgid: %d\n",
+                            tcgetpgrp(0), getpgrp());
+#endif
                 }
             }
         }
-
+        check_jobs_states_updates();
     }  /* close while */
 }
 

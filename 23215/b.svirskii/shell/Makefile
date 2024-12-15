@@ -1,7 +1,9 @@
 CFLAGS=-Wall
+SHELL_NAME=shell
+SOURCES=shell.c parseline.c promptline.c jobs.c
 
 main:
-	gcc $(CFLAGS) shell.c parseline.c promptline.c -o shell
+	gcc $(CFLAGS) $(SOURCES) -o $(SHELL_NAME)
 
 debug:
-	gcc $(CFLAGS) shell.c parseline.c promptline.c -o shell -DDEBUG	
+	gcc $(CFLAGS) $(SOURCES) -o $(SHELL_NAME) -DDEBUG	
