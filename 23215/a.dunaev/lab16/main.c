@@ -10,8 +10,8 @@ char response;
 // Function to restore terminal settings on exit
 void restore_terminal() {
     if (tcsetattr(STDIN_FILENO, TCSANOW, &old)) {
-    	perror("Bad parameters or error in I/O");
-    	exit(1);	
+        perror("Bad parameters or error in I/O");
+        exit(1);        
     }
 }
 
@@ -33,20 +33,20 @@ void handle(int sig) {
 }
 
 int main() {
-	printf("Enter a single character: ");
+        printf("Enter a single character: ");
     fflush(stdout);
 
     // Set up signal handling
     signal(SIGCONT, handle);
 
     // Ensure terminal settings are restored on exit
-    atexit(restore_terminal);
+//    atexit(restore_terminal);
 
     // Initial terminal setup
     handle(SIGCONT);
    
     // Restore terminal settings before exiting
-    restore_terminal();
+//    restore_terminal();
 
     printf("\nYou entered: %c\n", response);
 
