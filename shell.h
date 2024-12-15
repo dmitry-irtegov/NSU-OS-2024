@@ -31,6 +31,8 @@ int to_fg(int job_id);
 int after_fg(int job_id);
 int to_bg(int job_id);
 void print_jobs();
+void pr_job(pid_t pid);
+void clear_j();
 pid_t get_g_int(int job_id);
 pid_t get_g_ch(char job_id);
 #endif /* SHELL_H */

@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 #include "shell.h"
 static char* blankskip(register char*);
 
 
 int parseline(char* line) {
+
     int nargs, ncmds;
     register char* s;
     char aflg = 0;
@@ -108,18 +110,18 @@ int parseline(char* line) {
             break;
 
         default:
-            /* A command argument */
-            if (strcmp(s, "jobs") == 0) {  // Special case for "jobs"
-                print_jobs();
-                return 0;  // No further parsing needed
-            }
+
             if (nargs == 0) /* Next command */
                 rval = ncmds + 1;
+
             cmds[ncmds].cmdargs[nargs++] = s;
             cmds[ncmds].cmdargs[nargs] = (char*)NULL;
+
             s = strpbrk(s, delim);
+            fprintf(stderr, "%c", *s);
             if (isspace(*s))
                 *s++ = '\0';
+
             break;
         }
     }

@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 #include <termios.h>
 
 unsigned int count = 0;
@@ -31,18 +33,36 @@ void init_jobs() {
 	jobs = (job*)malloc(sizeof(job) * cup);
 }
 
+void look_exs() {
+	for (int i = 1; i <= count; i++) if (jobs[i].status != 'f') exs++;
+}
+
+void count_to_ne_f() {
+	while (jobs[count].status == 'f') count--;
+}
+
+char* getstat(char s) {
+	switch (s){
+		case 'r': return "Running"; 
+		case 's': return "Stopped";
+		case 'f': return "Finished";
+		default: return "Unknown";
+	}
+}
+
 void print_jobs() {
+	count_to_ne_f();
+	look_exs();
 	printf("Job List:\n");
 	printf("ID\tPID\tStatus\t\tName\n");
 	printf("---------------------------------------------------\n");
 
 	for (int i = 1; i <= count; i++) {
 		char* status_desc;
-
+		if (jobs[i].status == 'f') continue;
 		switch (jobs[i].status) {
 		case 'r': status_desc = "Running"; break;
 		case 's': status_desc = "Stopped"; break;
-		case 'f': status_desc = "Finished"; break;
 		default:  status_desc = "Unknown"; break;
 		}
 
@@ -53,8 +73,33 @@ void print_jobs() {
 			i, priority, jobs[i].pid, status_desc, jobs[i].name);
 	}
 
-	if (count == 0) {
+	if (!exs) {
 		printf("No jobs available.\n");
+	}
+}
+
+
+
+void print_job(char* i) {
+	
+	if (isdigit(i[0]) && atoi(i) <= count && (jobs[atoi(i)].status != 'f')) {
+		// Указываем статус: +, - или пустой для текущего задания
+		int ind = atoi(i);
+		char priority = (ind == plus) ? '+' : (ind == minus) ? '-' : ' ';
+
+		printf("[%d]%c\t%d\t%-10s\t%s\n",
+			ind, priority, jobs[ind].pid, getstat(jobs[ind].status), jobs[ind].name);
+	}
+	else if (i[0] == '+') {
+		printf("[%d]%c\t%d\t%-10s\t%s\n",
+			plus, '+', jobs[plus].pid, getstat(jobs[plus].status), jobs[plus].name);
+	}
+	else if (i[0] == '-') {
+		printf("[%d]%c\t%d\t%-10s\t%s\n",
+			minus, '-', jobs[minus].pid, getstat(jobs[minus].status), jobs[minus].name);
+	}
+	else {
+		printf("jobs: %s: No such jobs.\n", i);
 	}
 }
 
@@ -83,7 +128,7 @@ void reorder_priorities() {
 	}
 
 	// Если задание на переднем плане (`fr`) завершено
-	if (fr != -1 && jobs[fr].status == 'f') {
+	if (fr != 0 && jobs[fr].status == 'f') {
 		fr = 0; // Сбрасываем индекс переднего плана
 	}
 }
@@ -118,11 +163,22 @@ int add_job(char* name, pid_t pid, int frnt) {
 	return count;
 }
 
+void clear_jobs() {
+	free(jobs);
+	init_jobs();
+	count = 0;
+	cup = 20;
+	plus = 0;
+	minus = 0;
+	fr = 0;
+	exs = 0;
+}
+
 void upd_job() {
 	int status;
 	for (int i = 1; i <= count; i++) {
 		if (jobs[i].status == 'f') continue;
-		pid_t result = waitpid(jobs[i].pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+		pid_t result = waitpid(jobs[i].pid, &status, WNOHANG /* | WUNTRACED | WCONTINUED*/);
 
 		if (result == 0) {
 			continue;
@@ -150,29 +206,23 @@ void upd_job() {
 			}
 		}
 		else {
-			perror("waitpid");
+			if (errno == ECHILD) {
+			}
+			else {
+				perror("waitpid");
+				fprintf(stderr, "- [%d]", i);
+			}
 		}
 	}
 
-	if (!exs){
+	if (!exs) {
 		clear_jobs();
 		init_jobs();
 	}
 }
 
-void clear_jobs() {
-	free(jobs);
-	init_jobs();
-	count = 0;
-	cup = 20;
-	plus = 0;
-	minus = 0;
-	fr = 0;
-	exs = 0;
-}
 
 int to_fg(int job_id) {
-	print_jobs();
 	upd_job();
 	fr = job_id;
 	printf("((%d))", job_id);
@@ -182,16 +232,15 @@ int to_fg(int job_id) {
 		return -1;
 	}
 
-	fprintf(stderr, "hereeeee");
-
 
 	// Ожидание завершения процесса
-	siginfo_t info;
-	pid_t code = waitid(P_PID, jobs[job_id].pid, &info, WEXITED);
+	int status;
+	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
 	}
-	fprintf(stderr, "hereeeeerrrrr");
+	jobs[job_id].status = WIFSTOPPED(status) ? 's' : 'f';
+
 
 	upd_job();
 
@@ -203,8 +252,9 @@ int to_fg(int job_id) {
 		perror("Unable to set process to fg");
 		return -1;
 	}
-	reorder_priorities();
 
+	fr = 0;
+	reorder_priorities();
 	return 0;
 }
 
@@ -234,6 +284,14 @@ pid_t get_g_int(int job_id) {
 	}
 }
 
+void pr_job(pid_t pid) {
+	int i;
+	for (i = count; i > 0 && (jobs[i].status == 'f' || jobs[i].pid != pid); i--);
+	char str[20];
+	sprintf(str, "%d", i);
+	if (i) print_job(str);
+}
+
 pid_t get_g_ch(char job_id) {
 	switch (job_id) {
 	case '-':
@@ -245,4 +303,8 @@ pid_t get_g_ch(char job_id) {
 	default:
 		return -1;
 	}
+}
+
+void clear_j() {
+	free(jobs);
 }
