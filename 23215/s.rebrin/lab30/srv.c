@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
     unlink(socket_path);
   }
 
+  unlink(socket_path);
   if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
     perror("bind error");
     exit(-1);
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
 
   if (listen(fd, 1) == -1) {
     perror("listen error");
+    unlink(socket_path);
     exit(-1);
   }
 
@@ -53,11 +55,13 @@ int main(int argc, char *argv[]) {
     }
     if (rc == -1) {
       perror("read");
+      unlink(socket_path);
       exit(-1);
     }
     else if (rc == 0) {
       printf("EOF\n");
       close(cl);
+      unlink(socket_path);
       exit(0);
     }
   }
