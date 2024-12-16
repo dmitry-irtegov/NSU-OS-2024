@@ -5,7 +5,6 @@
 #include <signal.h>
 
 struct termios original_terminal_attributes;
-char  amountOfCupsInSigHandler;
 
 void sigcont_handler(int signum) {
         if(tcsetattr(0, TCSANOW, &original_terminal_attributes) == -1) {
@@ -36,8 +35,8 @@ int main() {
     }
 
     printf("How many team trophies does Harry Kane have?\n");
-    char amount_of_cups = fgetc(stdin);
-    switch (amount_of_cups) {
+    char amountOfCups = fgetc(stdin);
+    switch (amountOfCups) {
         case '0':
             printf("\nCorrect, he doesn't have any team cups.\n");
             break;
