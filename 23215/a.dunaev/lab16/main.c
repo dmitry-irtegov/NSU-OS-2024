@@ -17,10 +17,10 @@ void restore_terminal() {
 
 void handle(int sig) {
     // Set terminal to non-canonical mode
-    if (tcgetattr(STDIN_FILENO, &old)) {
-        perror("Bad parameters");
-        exit(1);
-    }
+    //if (tcgetattr(STDIN_FILENO, &old)) {
+    //    perror("Bad parameters");
+    //    exit(1);
+    //}
     new = old;
     new.c_lflag &= ~ICANON;
     new.c_cc[VMIN] = 1;
@@ -33,14 +33,18 @@ void handle(int sig) {
 }
 
 int main() {
-        printf("Enter a single character: ");
+    if (tcgetattr(STDIN_FILENO, &old)) {
+        perror("bad Param");
+        exit(1);
+    }
+    printf("Enter a single character: ");
     fflush(stdout);
 
     // Set up signal handling
     signal(SIGCONT, handle);
 
     // Ensure terminal settings are restored on exit
-//    atexit(restore_terminal);
+    atexit(restore_terminal);
 
     // Initial terminal setup
     handle(SIGCONT);
