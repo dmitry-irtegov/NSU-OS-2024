@@ -24,6 +24,10 @@ Job* parse_job(char* line) {
         return NULL;
     } else if (line[0] == '%') {
         if (line[1] == '\0') {
+            if (get_first_job() == NULL) {
+                fprintf(stderr, "no available jobs");
+                return NULL;
+            }
             return get_first_job();
         }
         int job_number = atoi(line + 1);

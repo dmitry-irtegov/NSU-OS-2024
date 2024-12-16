@@ -31,3 +31,5 @@ void turn_to_background(Job* job);
 void turn_to_foreground(Job* job);
 void stop_job(Job* job);
 Job* get_first_job();
+__attribute__((destructor))
+void destroy_jobs();

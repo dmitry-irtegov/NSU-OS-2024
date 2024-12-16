@@ -237,3 +237,11 @@ void stop_job(Job* job) {
 Job* get_first_job() {
     return first_job;
 }
+
+void destroy_jobs() {
+    Job* curr_job = first_job;
+    while (curr_job) {
+        curr_job = delete_job(curr_job);
+    }
+    first_job = NULL;
+}
