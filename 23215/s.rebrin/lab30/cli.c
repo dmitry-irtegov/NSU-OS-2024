@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-//char *socket_path = "./socket";
-char* socket_path = "\0hidden";
+char *socket_path = "./socket";
+//char* socket_path = "\0hidden";
 
 int main(int argc, char* argv[]) {
     struct sockaddr_un addr;

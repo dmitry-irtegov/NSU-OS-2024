@@ -5,9 +5,10 @@
 #include <sys/un.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
-//char *socket_path = "./socket";
-char *socket_path = "\0hidden";
+char *socket_path = "./socket";
+//char *socket_path = "\0hidden";
 
 int main(int argc, char *argv[]) {
   struct sockaddr_un addr;
@@ -41,10 +42,9 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
-  while (1) {
     if ((cl = accept(fd, NULL, NULL)) == -1) {
-      perror("accept error");
-      continue;
+        perror("accept error");
+        continue;
     }
 
     while ((rc=read(cl,buf,sizeof(buf))) > 0) {
@@ -54,17 +54,16 @@ int main(int argc, char *argv[]) {
         write(1, buf, rc);
     }
     if (rc == -1) {
-      perror("read");
-      unlink(socket_path);
-      exit(-1);
+        perror("read");
+        unlink(socket_path);
+        exit(-1);
     }
     else if (rc == 0) {
-      printf("EOF\n");
-      close(cl);
-      unlink(socket_path);
-      exit(0);
+        printf("EOF\n");
+        close(cl);
+        unlink(socket_path);
+        exit(0);
     }
-  }
 
 
   return 0;
