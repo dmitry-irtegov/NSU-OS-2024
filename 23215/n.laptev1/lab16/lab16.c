@@ -8,11 +8,6 @@ struct termios original_terminal_attributes;
 char  amountOfCupsInSigHandler;
 
 void sigcont_handler(int signum) {
-   struct sigaction sa;
-   sa.sa_handler = sigcont_handler;
-   sa.sa_flags = SA_RESTART;
-   sigaction(SIGCONT, &sa, NULL);
-
         if(tcsetattr(0, TCSANOW, &original_terminal_attributes) == -1) {
            perror("tcsetattr failed in sigcont_handler");
            exit(EXIT_FAILURE);
