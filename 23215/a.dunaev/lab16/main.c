@@ -29,7 +29,6 @@ void handle(int sig) {
         perror("Bad parameters or error in I/O");
         exit(1);
     }
-    read(STDIN_FILENO, &response, 1);
 }
 
 int main() {
@@ -48,7 +47,9 @@ int main() {
 
     // Initial terminal setup
     handle(SIGCONT);
-   
+    while (response == 0){
+    	read(STDIN_FILENO, &response, 1);
+   	}
     // Restore terminal settings before exiting
 //    restore_terminal();
 
