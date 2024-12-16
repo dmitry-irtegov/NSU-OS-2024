@@ -14,10 +14,6 @@ void sigcont_handler(int signum) {
 }
 
 int main() {
-    struct sigaction sa;
-    sa.sa_handler = sigcont_handler;
-    sa.sa_flags = SA_RESTART;
-    sigaction(SIGCONT, &sa, NULL);
     struct termios terminal_attributes;
 
     if (tcgetattr(0, &terminal_attributes) == -1) {
@@ -29,6 +25,11 @@ int main() {
     original_terminal_attributes.c_lflag &= ~(ICANON);
     original_terminal_attributes.c_cc[VMIN] = 1;
 
+    struct sigaction sa;
+    sa.sa_handler = sigcont_handler;
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGCONT, &sa, NULL);
+    
     if (tcsetattr(0, TCSANOW, &original_terminal_attributes) == -1) {
         perror("tcsetattr for new terminal attributes failed.");
         exit(EXIT_FAILURE);
