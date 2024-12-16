@@ -3,14 +3,9 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
-typedef struct Job_t {
-    int number;
-    pid_t pid;
-    JobState state;
-    struct Job_t* prev, *next;
-    char is_state_changed;
-} Job;
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
 
 static Job* first_job = NULL;
 
@@ -34,6 +29,11 @@ void update_job_state(Job* job) {
     fprintf(stderr, "(dev) %d - start updating state\n", job->number);
 #endif
     if (job->state == DONE) {
+        return;
+    }
+    if (job->is_foreground) {
+        job->is_state_changed = 0;
+        job->state = DONE;
         return;
     }
     JobState prev_state = job->state;
@@ -65,9 +65,11 @@ void update_job_state(Job* job) {
 
 
 void print_job(Job* job) {
+    if (job->is_foreground) return;
     job->is_state_changed = 0;
     fprintf(stderr, 
-            "[%d] %8s %7d\n", job->number, state_to_str(job->state), job->pid);  
+            "[%d] %8s %7d %s\n", job->number, state_to_str(job->state),
+                job->pid, job->name);  
 }
 
 Job* delete_job(Job* job) {
@@ -84,6 +86,7 @@ Job* delete_job(Job* job) {
     if (job->next) {
         job->next->prev = job->prev;
     }
+    free(job->name);
     free(job);
 #ifdef DEBUG
     fprintf(stderr, "(dev) end\n");
@@ -96,7 +99,7 @@ void print_jobs() {
     while (curr_job != NULL) {
         update_job_state(curr_job);
         print_job(curr_job);
-        if (curr_job->state == DONE) {
+        if (curr_job->state == DONE ) {
             curr_job = delete_job(curr_job);
         } else {
             curr_job = curr_job->next;
@@ -104,7 +107,7 @@ void print_jobs() {
     }
 }
 
-void create_job(pid_t pid, JobState state) {
+void create_job(pid_t pid, JobState state, char* name) {
     int job_number = 1;
     Job* new_job = (Job*) calloc(1, sizeof(Job));
     
@@ -130,6 +133,10 @@ void create_job(pid_t pid, JobState state) {
         curr_job->prev = new_job;
     }
 
+    int len = strlen(name);
+    new_job->name = (char*) malloc(sizeof(char) * len);
+    memcpy(new_job->name, name, len);
+    
     new_job->number = job_number;
     new_job->pid = pid;
     new_job->state = state;
@@ -155,4 +162,78 @@ void check_jobs_states_updates() {
 #ifdef DEBUG
     fprintf(stderr, "(dev) end\n");
 #endif
+}
+
+Job* get_job(JobID id_type, int id) {
+    if (first_job == NULL) {
+        fprintf(stderr, "no available jobs\n");
+        return NULL;
+    }
+
+    Job* job = first_job;
+
+    while (job) {
+        if (id_type == NUMBER && job->number == id)
+            break;
+        if (id_type == PID && job->pid == id)
+            break;
+        job = job->next;
+    }
+
+    if (job == NULL) {
+        fprintf(stderr, "invalid job number\n");
+        return NULL;
+    }
+    return job;
+}
+
+void turn_to_foreground(Job* job) {
+#ifdef DEBUG
+    fprintf(stderr, "(dev) %d turned to fg\n", job->number);
+#endif
+    if (job == NULL) {
+        return;
+    }
+
+    if (tcsetpgrp(0, getpgid(job->pid)) == -1) {
+        perror("tcsetpgrp() fail");
+        exit(EXIT_FAILURE);
+    }
+
+    if (kill(job->pid, SIGCONT) == -1) {
+        perror("kill() failed");
+        exit(EXIT_FAILURE);
+    }
+    job->state = RUNNING;
+    job->is_foreground = 1;
+}
+
+void turn_to_background(Job* job) {
+#ifdef DEBUG
+    fprintf(stderr, "(dev) %d turned to bg\n", job->number);
+#endif
+    if (job == NULL) {
+        return;
+    }
+
+    if (tcsetpgrp(0, getpgrp()) == -1) {
+        perror("tcsetpgrp() failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (kill(job->pid, SIGCONT) == -1) {
+        perror("kill() failed");
+        exit(EXIT_FAILURE);
+    }
+    job->state = RUNNING;
+    job->is_foreground = 0;
+}
+
+void stop_job(Job* job) {
+    job->state = STOPPED;
+    job->is_foreground = 0;
+}
+
+Job* get_first_job() {
+    return first_job;
 }

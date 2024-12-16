@@ -10,16 +10,47 @@
 #include <errno.h>
 #include "jobs.h"
 #include <string.h>
+#include <stdlib.h>
 
 extern int errno;
 
-int foreground_pgid = -1;
 char *infile, *outfile, *appfile;
 struct command cmds[MAXCMDS];
 char bkgrnd;
 
+Job* parse_job(char* line) {
+    if (line == NULL) {
+        fprintf(stderr, "can't identify job\n");
+        return NULL;
+    } else if (line[0] == '%') {
+        if (line[1] == '\0') {
+            return get_first_job();
+        }
+        int job_number = atoi(line + 1);
+        if (job_number < 1) {
+            fprintf(stderr, "invalid job number\n");
+            return NULL;
+        }
+        return get_job(NUMBER, job_number);
+    } else {
+        int pid = atoi(line);
+        if (pid < 1) {
+            fprintf(stderr, "invalid job pid\n");
+            return NULL;
+        }
+        return get_job(PID, pid);
+    }
+}
 int main(int argc, char *argv[])
 {
+    if (!isatty(0)) {
+        fprintf(stderr, "stdin doesn't associated with terminal\n");
+        exit(EXIT_FAILURE);
+    }
+    if (!isatty(1)) {
+        fprintf(stderr, "stdout doesn't associated with terminal\n");
+        exit(EXIT_FAILURE);
+    }
     register int i;
     char line[1024];      /*  allow large command lines  */
     int ncmds;
@@ -56,6 +87,32 @@ int main(int argc, char *argv[])
         for (i = 0; i < ncmds; i++) {
             if (strcmp("jobs", cmds[i].cmdargs[0]) == 0) {
                 print_jobs();
+                continue;
+            }
+            if (strcmp("fg", cmds[i].cmdargs[0]) == 0) {
+                Job* job = parse_job(cmds[i].cmdargs[1]);   
+                if (job == NULL) continue;
+                turn_to_foreground(job);
+                int stat;
+                if (waitpid(job->pid, &stat, WUNTRACED) == -1) {
+                    perror("waitpid() failed");
+                    exit(EXIT_FAILURE);
+                }
+
+                if (tcsetpgrp(0, getpgrp()) == -1) {
+                    perror("tcsetpgrp() failed");
+                    exit(EXIT_FAILURE);
+                }
+
+                if (WIFSTOPPED(stat)) {
+                    stop_job(job);
+                }
+
+                continue;
+            }
+            if (strcmp("bg", cmds[i].cmdargs[0]) == 0) {
+                Job* job = parse_job(cmds[i].cmdargs[1]);   
+                turn_to_background(job);
                 continue;
             }
             child_pid = fork();
@@ -103,10 +160,9 @@ int main(int argc, char *argv[])
             } else {
                 setpgid(child_pid, 0);
                 if (bkgrnd) {
-                    create_job(child_pid, RUNNING);
+                    create_job(child_pid, RUNNING, line);
                 } else {
                     tcsetpgrp(0, getpgid(child_pid));
-                    foreground_pgid = getpgid(child_pid);
                     int stat;
 
                     if (waitpid(child_pid, &stat, WUNTRACED) == -1) {
@@ -115,11 +171,10 @@ int main(int argc, char *argv[])
                     }
 
                     if (WIFSTOPPED(stat)) {
-                        create_job(child_pid, STOPPED); 
+                        create_job(child_pid, STOPPED, line); 
                     }
 
                     tcsetpgrp(0, getpgrp());
-                    foreground_pgid = -1;
 #ifdef DEBUG
                     printf("tcgetpgrp(): %d\nshell pgid: %d\n",
                             tcgetpgrp(0), getpgrp());
