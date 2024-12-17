@@ -14,7 +14,6 @@ int main() {
     int client_sock;
     struct sockaddr_un server_addr;
     char buffer[BUFFER_SIZE];
-    char console_input[BUFFER_SIZE];
     char socket_path[BUFFER_SIZE];
 
     // Получаем текущего пользователя
@@ -40,7 +39,7 @@ int main() {
 
     // Подключаемся к серверу
     if (connect(client_sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_un)) == -1) {
-        perror("Connect failed");
+        perror("Не удалось подключиться: сервер не активен");
         close(client_sock);
         exit(EXIT_FAILURE);
     }
