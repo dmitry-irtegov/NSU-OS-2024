@@ -31,7 +31,7 @@ void sigINT(int sig) {
 void sigSTOP(int sig) {
 	signal(SIGTSTP, sigSTOP);
 	if (front) {
-		printf("%d\n", front);
+		pr_job(front);
 		front = 0;
 		bkgrnd = 0;
 	}
@@ -39,7 +39,6 @@ void sigSTOP(int sig) {
 
 void sigCHLD(int sig) {
 	signal(SIGCHLD, sigCHLD);
-	printf("someone finished");
 	upd_job();
 }
 
@@ -66,6 +65,8 @@ int main(int argc, char* argv[]) {
 	getcwd(cwd, sizeof(cwd));
 	snprintf(prompt, sizeof(prompt), "%s: %s> ", argv[0], cwd);
 
+	set_default_termios();
+
 
 	while ((line = readline(prompt)) != NULL) { /* Until EOF */
 		size_t len = strlen(line);
@@ -87,11 +88,26 @@ int main(int argc, char* argv[]) {
 		}
 #endif
 
-
 		for (i = 0; i < ncmds; i++) {
 			pid_t pid;
 			if (strcmp(cmds[i].cmdargs[0], "jobs") == 0) {  // Special case for "jobs"
 				print_jobs();
+				continue;  // No further parsing needed
+			}
+
+			if (strcmp(cmds[i].cmdargs[0], "fg") == 0) {  // Special case for "jobs"
+				if (cmds[i].cmdargs[1] == NULL) {
+
+					front = pid;
+					printf("ok");
+					if (to_fg(0) == -1) {
+						fprintf(stderr, "Failed to move job to foreground\n");
+					}
+					front = 0;
+				}
+				else {
+					to_fg(get_job_id(strtol(cmds[i].cmdargs[1], NULL, 10)));
+				}
 				continue;  // No further parsing needed
 			}
 
@@ -112,7 +128,7 @@ int main(int argc, char* argv[]) {
 			}
 
 			if (strcmp(cmds[i].cmdargs[0], "quit") == 0 || strcmp(cmds[i].cmdargs[0], "q") == 0) {
-				clear_j();
+				clear_jobs();
 				exit(0);
 			}
 
@@ -237,7 +253,6 @@ int main(int argc, char* argv[]) {
 					int jb = add_job(cmds[i].cmdargs[0], pid, !bkgrnd);
 					upd_job();
 					reorder_priorities();
-					waitpid(pid, NULL, WNOHANG | WUNTRACED | WCONTINUED);
 					if (!bkgrnd) {
 						front = pid;
 						if (to_fg(jb) == -1) {

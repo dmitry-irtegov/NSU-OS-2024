@@ -21,9 +21,8 @@ extern char bkgrnd;
 
 /* Function declarations */
 int parseline(char* line);
-int promptline(char* prompt, char* line, int sizline);
 
-int init_jobs();
+void init_jobs();
 void reorder_priorities();
 int add_job(char* name, pid_t pid, int frnt);
 void upd_job();
@@ -32,7 +31,10 @@ int after_fg(int job_id);
 int to_bg(int job_id);
 void print_jobs();
 void pr_job(pid_t pid);
-void clear_j();
+void clear_jobs();
 pid_t get_g_int(int job_id);
 pid_t get_g_ch(char job_id);
+int get_job_id(pid_t p);
+void sigCHLD(int sig);
+void set_default_termios();
 #endif /* SHELL_H */

@@ -10,12 +10,13 @@
 #include <ctype.h>
 #include <errno.h>
 #include <termios.h>
+#include <signal.h>
+#include "shell.h"
 
 unsigned int count = 0;
 unsigned int cup = 20;
 unsigned int plus = 0;
 unsigned int minus = 0;
-unsigned int fr = 0;
 unsigned int exs = 0;
 
 typedef struct {
@@ -28,6 +29,7 @@ typedef struct {
 
 job* jobs;
 struct termios shell_term;
+struct termios saved_term;
 
 void init_jobs() {
 	jobs = (job*)malloc(sizeof(job) * cup);
@@ -38,20 +40,27 @@ void look_exs() {
 }
 
 void count_to_ne_f() {
-	while (jobs[count].status == 'f') count--;
+	while (count && jobs[count].status == 'f') count--;
+}
+
+int get_job_id(pid_t p) {
+	for (int i = 0;i <= count;i++) {
+		if (jobs[count].pid == p) return count;
+	}
+	return -1;
 }
 
 char* getstat(char s) {
-	switch (s){
-		case 'r': return "Running"; 
-		case 's': return "Stopped";
-		case 'f': return "Finished";
-		default: return "Unknown";
+	switch (s) {
+	case 'r': return "Running";
+	case 's': return "Stopped";
+	case 'f': return "Finished";
+	default: return "Unknown";
 	}
 }
 
 void print_jobs() {
-	count_to_ne_f();
+	upd_job();
 	look_exs();
 	printf("Job List:\n");
 	printf("ID\tPID\tStatus\t\tName\n");
@@ -78,10 +87,23 @@ void print_jobs() {
 	}
 }
 
+void apply_termios_settings() {
+	if (tcsetattr(STDIN_FILENO, TCSANOW, &saved_term) == -1) {
+		perror("Ошибка применения настроек терминала");
+		exit(EXIT_FAILURE);
+	}
+}
 
+void set_default_termios() {
+	tcgetattr(STDIN_FILENO, &saved_term);
+}
+
+void return_termios(struct termios* term) {
+	memcpy(term, &saved_term, sizeof(struct termios));
+}
 
 void print_job(char* i) {
-	
+
 	if (isdigit(i[0]) && atoi(i) <= count && (jobs[atoi(i)].status != 'f')) {
 		// Указываем статус: +, - или пустой для текущего задания
 		int ind = atoi(i);
@@ -103,41 +125,55 @@ void print_job(char* i) {
 	}
 }
 
-void reorder_priorities() {
-	// Проверка, если текущее задание завершилось
-	if (jobs[plus].status == 'f') {
-		// Предыдущее задание становится текущим
-		plus = minus;
+void reorder_priorities(int last) {
 
-		// Ищем следующее незавершенное задание для обновления minus
-		int m = minus;
-		for (int i = 1; i <= count; i++) {
-			if (i != plus && jobs[i].status != 'f') {
-				minus = i;
-				break;
+	if (!count || !exs) {
+		clear_jobs();
+		init_jobs();
+		return;
+	}
+
+	if (!last) {
+		if (jobs[plus].status == 'f') {
+			if (jobs[minus].status == 'f') {
+				plus = count;
+				minus = count - 1;
+				while (minus && jobs[minus].status == 'f') minus--;
+			}
+			else {
+				plus = minus;
+				if (count != 1) minus = count;
+				else minus = 0;
+			}
+		}
+		else if (jobs[minus].status == 'f') {
+			if (plus == count) {
+				minus = count - 1;
+				while (minus && jobs[minus].status == 'f') minus--;
+			}
+			else {
+				minus = count;
 			}
 		}
 	}
-	else if (jobs[minus].status == 'f') {
-		for (int i = 1; i <= count; i++) {
-			if (i != plus && jobs[i].status != 'f') {
-				minus = i;
-				break;
+	else {
+		if (last <= count && jobs[last].status != 'f') return;
+		else {
+			plus = last;
+			if (plus == count) {
+				minus = count - 1;
+				while (minus && jobs[minus].status == 'f') minus--;
+			}
+			else {
+				minus = count;
 			}
 		}
-	}
-
-	// Если задание на переднем плане (`fr`) завершено
-	if (fr != 0 && jobs[fr].status == 'f') {
-		fr = 0; // Сбрасываем индекс переднего плана
 	}
 }
 
 
 int add_job(char* name, pid_t pid, int frnt) {
-	if (count + 1 == 0) {
-		return 0;
-	}
+	upd_job();
 
 	exs++;
 	if (count >= cup) {
@@ -149,9 +185,10 @@ int add_job(char* name, pid_t pid, int frnt) {
 	strcpy(jobs[count].name, name);
 	jobs[count].pid = pid;
 	jobs[count].status = 'r';  // Запущен
+	return_termios(&jobs[count].term);
 
 	if (frnt) {
-		reorder_priorities();
+		reorder_priorities(count);
 		minus = plus;
 		plus = count;
 	}
@@ -165,12 +202,10 @@ int add_job(char* name, pid_t pid, int frnt) {
 
 void clear_jobs() {
 	free(jobs);
-	init_jobs();
 	count = 0;
 	cup = 20;
 	plus = 0;
 	minus = 0;
-	fr = 0;
 	exs = 0;
 }
 
@@ -206,43 +241,45 @@ void upd_job() {
 			}
 		}
 		else {
-			if (errno == ECHILD) {
-			}
-			else {
+			if (errno != ECHILD) {
 				perror("waitpid");
 				fprintf(stderr, "- [%d]", i);
 			}
 		}
 	}
 
-	if (!exs) {
-		clear_jobs();
-		init_jobs();
-	}
+	count_to_ne_f();
+
+	reorder_priorities(0);
+
 }
 
 
-int to_fg(int job_id) {
+int to_fg(int job_id_h) {
 	upd_job();
-	fr = job_id;
-	printf("((%d))", job_id);
+	int job_id;
 
-	if (job_id > count || jobs[job_id].status == 'f') {
-		perror("shell: no such job");
+	if (job_id_h < 0 || job_id_h > count || jobs[job_id_h].status == 'f') {
+		fprintf(stderr, "shell: no such job");
 		return -1;
 	}
 
+	if (job_id_h) job_id = job_id_h;
+	else job_id = plus;
+
+	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
 
 	// Ожидание завершения процесса
 	int status;
+	signal(SIGCHLD, SIG_DFL);
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
 	}
 	jobs[job_id].status = WIFSTOPPED(status) ? 's' : 'f';
 
-
 	upd_job();
+	signal(SIGCHLD, sigCHLD);
 
 	if (tcgetattr(0, &jobs[job_id].term) == -1) {
 		perror("error");
@@ -253,8 +290,6 @@ int to_fg(int job_id) {
 		return -1;
 	}
 
-	fr = 0;
-	reorder_priorities();
 	return 0;
 }
 
@@ -270,8 +305,6 @@ int to_bg(int job_id) {
 		kill(jobs[job_id].pid, SIGCONT);
 	}
 
-	reorder_priorities();
-
 	return 0;
 }
 
@@ -285,6 +318,7 @@ pid_t get_g_int(int job_id) {
 }
 
 void pr_job(pid_t pid) {
+	upd_job();
 	int i;
 	for (i = count; i > 0 && (jobs[i].status == 'f' || jobs[i].pid != pid); i--);
 	char str[20];
@@ -303,8 +337,4 @@ pid_t get_g_ch(char job_id) {
 	default:
 		return -1;
 	}
-}
-
-void clear_j() {
-	free(jobs);
 }
