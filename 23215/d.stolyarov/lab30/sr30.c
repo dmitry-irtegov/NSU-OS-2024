@@ -44,10 +44,12 @@ int main(int argc, char *argv[]) {
         perror("accept error");
         exit(6);
     }
-    char c[2] = {0};
-    while ( (rc=read(cl, c, 1)) > 0) {
-        c[0] = toupper(c[0]);
-        if(write(1, c, 1) == -1){
+    char buf[100];
+    while ( (rc=read(cl, buf, 100)) > 0) {
+        for(int i = 0; i < rc; i++){
+            buf[i] = toupper(buf[i]);
+        }
+        if(write(1, buf, rc) == -1){
             unlink(socket_name);
             perror("write error");
             exit(7);
