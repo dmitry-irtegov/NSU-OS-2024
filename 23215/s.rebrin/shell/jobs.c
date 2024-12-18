@@ -13,11 +13,12 @@
 #include <signal.h>
 #include "shell.h"
 
-unsigned int count = 0;
-unsigned int cup = 20;
-unsigned int plus = 0;
-unsigned int minus = 0;
-unsigned int exs = 0;
+unsigned int count = 0;//Количество всех джоб
+unsigned int cup = 20;//Для вектора
+unsigned int plus = 0;//индекс для +
+unsigned int minus = 0;//-
+unsigned int exs = 0; //количество незавершенных
+pid_t shell_id;
 
 typedef struct {
 	char name[100];
@@ -28,17 +29,24 @@ typedef struct {
 } job;
 
 job* jobs;
-struct termios shell_term;
-struct termios saved_term;
+struct termios shell_term;//Терм шелла
+struct termios saved_term;//Образец терма
+
+void set_shell_id(pid_t t) {
+	shell_id = t;
+}
 
 void init_jobs() {
 	jobs = (job*)malloc(sizeof(job) * cup);
 }
 
+//Проверить все рабочие джобы
 void look_exs() {
+	exs = 0;
 	for (int i = 1; i <= count; i++) if (jobs[i].status != 'f') exs++;
 }
 
+//Снизить count до последней не завершенной
 void count_to_ne_f() {
 	while (count && jobs[count].status == 'f') count--;
 }
@@ -50,6 +58,7 @@ int get_job_id(pid_t p) {
 	return -1;
 }
 
+//Статус для вывода
 char* getstat(char s) {
 	switch (s) {
 	case 'r': return "Running";
@@ -59,9 +68,9 @@ char* getstat(char s) {
 	}
 }
 
+//Распечатать все джобы
 void print_jobs() {
 	upd_job();
-	look_exs();
 	printf("Job List:\n");
 	printf("ID\tPID\tStatus\t\tName\n");
 	printf("---------------------------------------------------\n");
@@ -75,7 +84,7 @@ void print_jobs() {
 		default:  status_desc = "Unknown"; break;
 		}
 
-		// ��������� ������: +, - ��� ������ ��� �������� �������
+		// Указываем статус: +, - или пустой для текущего задания
 		char priority = (i == plus) ? '+' : (i == minus) ? '-' : ' ';
 
 		printf("[%d]%c\t%d\t%-10s\t%s\n",
@@ -87,25 +96,22 @@ void print_jobs() {
 	}
 }
 
-void apply_termios_settings() {
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &saved_term) == -1) {
-		perror("������ ���������� �������� ���������");
-		exit(EXIT_FAILURE);
-	}
-}
-
+//Настроить saved_term
 void set_default_termios() {
 	tcgetattr(STDIN_FILENO, &saved_term);
+	tcgetattr(STDIN_FILENO, &shell_term);
 }
 
+//Сбросить терм через saved_term
 void return_termios(struct termios* term) {
 	memcpy(term, &saved_term, sizeof(struct termios));
 }
 
+//распечатать одну джобу
 void print_job(char* i) {
 
 	if (isdigit(i[0]) && atoi(i) <= count && (jobs[atoi(i)].status != 'f')) {
-		// ��������� ������: +, - ��� ������ ��� �������� �������
+		// Указываем статус: +, - или пустой для текущего задания
 		int ind = atoi(i);
 		char priority = (ind == plus) ? '+' : (ind == minus) ? '-' : ' ';
 
@@ -125,6 +131,8 @@ void print_job(char* i) {
 	}
 }
 
+//Распределить + и -
+//По умолчанию jobs[count]  -  + или -
 void reorder_priorities(int last) {
 
 	if (!count || !exs) {
@@ -171,7 +179,7 @@ void reorder_priorities(int last) {
 	}
 }
 
-
+//Добавить джобу
 int add_job(char* name, pid_t pid, int frnt) {
 	upd_job();
 
@@ -184,7 +192,7 @@ int add_job(char* name, pid_t pid, int frnt) {
 	count++;
 	strcpy(jobs[count].name, name);
 	jobs[count].pid = pid;
-	jobs[count].status = 'r';  // �������
+	jobs[count].status = 'r';  // Запущен
 	return_termios(&jobs[count].term);
 
 	if (frnt) {
@@ -200,6 +208,7 @@ int add_job(char* name, pid_t pid, int frnt) {
 	return count;
 }
 
+//Все сбросить
 void clear_jobs() {
 	free(jobs);
 	count = 0;
@@ -209,6 +218,7 @@ void clear_jobs() {
 	exs = 0;
 }
 
+//Обновить все джобы
 void upd_job() {
 	int status;
 	for (int i = 1; i <= count; i++) {
@@ -223,20 +233,20 @@ void upd_job() {
 
 			if (WIFEXITED(status)) {
 				exs--;
-				jobs[i].status = 'f'; // ��������
+				jobs[i].status = 'f'; // завершён
 				printf("[%d]%c (%s) finished, exit: %d\n", i, stat, jobs[i].name, WEXITSTATUS(status));
 			}
 			else if (WIFSTOPPED(status)) {
-				jobs[i].status = 's'; // ����������
+				jobs[i].status = 's'; // остановлен
 				printf("[%d]%c (%s) stopped signal %d\n", i, stat, jobs[i].name, WSTOPSIG(status));
 			}
 			else if (WIFCONTINUED(status)) {
-				jobs[i].status = 'r'; // �����������
+				jobs[i].status = 'r'; // возобновлен
 				printf("[%d]%c (%s) resumed\n", i, stat, jobs[i].name);
 			}
 			else if (WIFSIGNALED(status)) {
 				exs--;
-				jobs[i].status = 'f'; // �������� ��������
+				jobs[i].status = 'f'; // завершён сигналом
 				printf("[%d]%c (%s) killed by signal %d\n", i, stat, jobs[i].name, WTERMSIG(status));
 			}
 		}
@@ -250,11 +260,13 @@ void upd_job() {
 
 	count_to_ne_f();
 
+	look_exs();
+
 	reorder_priorities(0);
 
 }
 
-
+//Вывести в fg
 int to_fg(int job_id_h) {
 	upd_job();
 	int job_id;
@@ -269,9 +281,18 @@ int to_fg(int job_id_h) {
 
 	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
 
-	// �������� ���������� ��������
+	// Ожидание завершения процесса
 	int status;
-	signal(SIGCHLD, SIG_DFL);
+	signal(SIGCHLD, SIG_DFL);//Игнорируем всех детей пока
+
+	/*if (tcsetpgrp(0, jobs[job_id].pid) == -1) {
+		perror("Unable to set process to fg");
+	}*/
+
+	/*if (tcsetattr(0, TCSADRAIN, &jobs[job_id].term) == -1) {
+		perror("Job set attr");
+	}*/
+
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
@@ -281,18 +302,23 @@ int to_fg(int job_id_h) {
 	upd_job();
 	signal(SIGCHLD, sigCHLD);
 
-	if (tcgetattr(0, &jobs[job_id].term) == -1) {
+	/*if (jobs[job_id].status != 'f' && tcgetattr(0, &jobs[job_id].term) == -1) {
 		perror("error");
-	}
+	}*/
 
-	if (tcsetpgrp(0, getpid()) == -1) {
+	/*if (tcsetpgrp(0, shell_id) == -1) {
 		perror("Unable to set process to fg");
 		return -1;
+	}*/
+
+	if (tcsetattr(0, TCSADRAIN, &shell_term) == -1) {
+		perror("Shell set attr");
 	}
 
 	return 0;
 }
 
+//В bg
 int to_bg(int job_id) {
 	upd_job();
 
@@ -308,6 +334,7 @@ int to_bg(int job_id) {
 	return 0;
 }
 
+//Получить pid по job id
 pid_t get_g_int(int job_id) {
 	if (0 < job_id && job_id <= count && jobs[job_id].status != 'f') {
 		return jobs[job_id].pid;
@@ -317,6 +344,20 @@ pid_t get_g_int(int job_id) {
 	}
 }
 
+pid_t get_g_ch(char job_id) {
+	switch (job_id) {
+	case '-':
+		return (minus && jobs[minus].status != 'f') ? jobs[minus].pid : 0;
+	case '+':
+		return (plus && jobs[plus].status != 'f') ? jobs[plus].pid : 0;
+	case '%':  // Обработка текущего задания (например, `%`)
+		return (plus && jobs[plus].status != 'f') ? jobs[plus].pid : 0;
+	default:
+		return -1;
+	}
+}
+
+//Распечатать по pid
 void pr_job(pid_t pid) {
 	upd_job();
 	int i;
@@ -326,15 +367,3 @@ void pr_job(pid_t pid) {
 	if (i) print_job(str);
 }
 
-pid_t get_g_ch(char job_id) {
-	switch (job_id) {
-	case '-':
-		return (minus && jobs[minus].status != 'f') ? jobs[minus].pid : 0;
-	case '+':
-		return (plus && jobs[plus].status != 'f') ? jobs[plus].pid : 0;
-	case '%':  // ��������� �������� ������� (��������, `%`)
-		return (plus && jobs[plus].status != 'f') ? jobs[plus].pid : 0;
-	default:
-		return -1;
-	}
-}

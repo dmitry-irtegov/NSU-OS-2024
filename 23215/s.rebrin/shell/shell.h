@@ -37,4 +37,6 @@ pid_t get_g_ch(char job_id);
 int get_job_id(pid_t p);
 void sigCHLD(int sig);
 void set_default_termios();
+void set_shell_id(pid_t t);
+
 #endif /* SHELL_H */
