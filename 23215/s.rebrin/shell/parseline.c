@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include "shell.h"
 static char* blankskip(register char*);
 
