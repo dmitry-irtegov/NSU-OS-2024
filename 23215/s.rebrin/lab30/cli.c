@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 char* socket_path = "./socket";
 //char* socket_path = "\0hidden";
