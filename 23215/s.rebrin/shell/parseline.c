@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include "shell.h"
 static char* blankskip(register char*);
 
@@ -22,6 +21,7 @@ int parseline(char* line) {
     int rval;
     register int i;
     static char delim[] = " \t|&<>;\n";
+    pid_t pid;
     memset(ss, 0, 1024); 
 
 
@@ -97,7 +97,6 @@ int parseline(char* line) {
             break;
 
         case '%':  // Special handling for jobs
-            pid_t pid;
             s++;
             if (*s == '\0') {
                 fprintf(stderr, "syntax error\n");
