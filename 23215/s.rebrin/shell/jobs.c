@@ -10,6 +10,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <termios.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <signal.h>
 #include "shell.h"
 
@@ -100,6 +102,10 @@ void print_jobs() {
 void set_default_termios() {
 	tcgetattr(STDIN_FILENO, &saved_term);
 	tcgetattr(STDIN_FILENO, &shell_term);
+}
+
+void reset_terminal() {
+	tcsetattr(STDIN_FILENO, TCSANOW, &shell_term);
 }
 
 //Сбросить терм через saved_term
@@ -281,39 +287,57 @@ int to_fg(int job_id_h) {
 
 	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
 
-	// Ожидание завершения процесса
 	int status;
 	signal(SIGCHLD, SIG_DFL);//Игнорируем всех детей пока
 
-	/*if (tcsetpgrp(0, jobs[job_id].pid) == -1) {
+	//Насротройка терминала
+	setpgid(jobs[job_id].pid, jobs[job_id].pid);
+	if (tcsetpgrp(0, jobs[job_id].pid) == -1) {
 		perror("Unable to set process to fg");
-	}*/
+	}
 
-	/*if (tcsetattr(0, TCSADRAIN, &jobs[job_id].term) == -1) {
+	if (tcsetattr(0, TCSADRAIN, &jobs[job_id].term) == -1) {
 		perror("Job set attr");
-	}*/
+	}
 
+	// Ожидание завершения процесса
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
 	}
 	jobs[job_id].status = WIFSTOPPED(status) ? 's' : 'f';
 
+
+	//Возращаем контроль шеллу
+	if (setpgid(0, 0) == -1) {
+		perror("Failed to set process group ID");
+	}
+
+	pid_t current_fg = tcgetpgrp(0);
+	if (tcsetpgrp(0, getpid()) == -1) {
+		perror("Unable to set shell as foreground process group");
+		fprintf(stderr, "Current process group: %d\n", tcgetpgrp(0));
+	}
+
+
+	current_fg = tcgetpgrp(0);
+	if (current_fg != getpid()) {
+		fprintf(stderr, "Shell does not have control of the terminal.\n");
+	}
+
+
 	upd_job();
 	signal(SIGCHLD, sigCHLD);
 
-	/*if (jobs[job_id].status != 'f' && tcgetattr(0, &jobs[job_id].term) == -1) {
+	if (jobs[job_id].status != 'f' && tcgetattr(0, &jobs[job_id].term) == -1) { //Сохраняем настройки
 		perror("error");
-	}*/
+	}
 
-	/*if (tcsetpgrp(0, shell_id) == -1) {
-		perror("Unable to set process to fg");
-		return -1;
-	}*/
-
-	if (tcsetattr(0, TCSADRAIN, &shell_term) == -1) {
+	if (tcsetattr(0, TCSADRAIN, &shell_term) == -1) { //Возращаем настройки шелла
 		perror("Shell set attr");
 	}
+
+
 
 	return 0;
 }

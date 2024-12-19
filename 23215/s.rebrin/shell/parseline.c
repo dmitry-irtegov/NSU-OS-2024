@@ -5,15 +5,24 @@
 #include "shell.h"
 static char* blankskip(register char*);
 
+char* ss = NULL;
+char* sss = NULL;
+
 
 int parseline(char* line) {
 
+    if (!sss)
+        free(sss);
+    ss = (char*)malloc(1024);
+    sss = ss;
     int nargs, ncmds;
     register char* s;
     char aflg = 0;
     int rval;
     register int i;
     static char delim[] = " \t|&<>;\n";
+    memset(ss, 0, 1024); 
+
 
     /* Initialize */
     bkgrnd = nargs = ncmds = rval = 0;
@@ -87,13 +96,14 @@ int parseline(char* line) {
             break;
 
         case '%':  // Special handling for jobs
+            pid_t pid;
             s++;
             if (*s == '\0') {
                 fprintf(stderr, "syntax error\n");
                 return -1;
             }
             if (*s == '+' || *s == '-' || isdigit(*s)) {
-                pid_t pid = (isdigit(*s)) ? get_g_int(atoi(s)) : get_g_ch(*s);
+                pid = (isdigit(*s)) ? get_g_int(atoi(s)) : get_g_ch(*s);
                 if (pid == 0) {
                     fprintf(stderr, "No such job\n");
                     return -1;
@@ -103,6 +113,10 @@ int parseline(char* line) {
                 fprintf(stderr, "syntax error\n");
                 return -1;
             }
+            sprintf(ss, "%d", pid);
+            cmds[ncmds].cmdargs[nargs++] = ss;
+            cmds[ncmds].cmdargs[nargs] = (char*)NULL;
+            ss += strlen(ss) + 1;
             s = strpbrk(s, delim);
             if (s && isspace(*s)) {
                 *s++ = '\0';
@@ -142,4 +156,9 @@ static char* blankskip(register char* s)
 {
     while (isspace(*s) && *s) ++s;
     return(s);
+}
+
+void free_ss() {
+    if(!sss)
+        free(sss);
 }

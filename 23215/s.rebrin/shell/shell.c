@@ -26,6 +26,7 @@ void sigINT(int sig) {
 	if (front) {
 		kill(front, SIGINT);
 	}
+	upd_job();
 }
 
 void sigQUIT(int sig) {
@@ -33,6 +34,7 @@ void sigQUIT(int sig) {
 	if (front) {
 		kill(front, SIGQUIT);
 	}
+	upd_job();
 }
 
 void sigSTOP(int sig) {
@@ -42,6 +44,7 @@ void sigSTOP(int sig) {
 		front = 0;
 		bkgrnd = 0;
 	}
+	upd_job();
 }
 
 void sigCHLD(int sig) {
@@ -51,10 +54,12 @@ void sigCHLD(int sig) {
 
 int main(int argc, char* argv[]) {
 	register int i;
-	char* line = NULL;      /* Allow large command lines */
+	char line[1024];      /* Allow large command lines */
+	int len;
 	int ncmds;
 	char prompt[1100];      /* Shell prompt */
 	char cwd[1024];
+	char home_cwd[1024];
 
 	//Две трубы для 3ных и более конвееров
 	int pipefd[2] = { 0 };
@@ -74,19 +79,17 @@ int main(int argc, char* argv[]) {
 
 	//Директория
 	getcwd(cwd, sizeof(cwd));
+	getcwd(home_cwd, sizeof(home_cwd));
 	snprintf(prompt, sizeof(prompt), "%s: %s> ", argv[0], cwd);
 
 	set_default_termios();
 
 	set_shell_id(getpid());
 
-	while ((line = readline(prompt)) != NULL) { /* Until EOF */
-		size_t len = strlen(line);
-		line[len] = '\n';
-		line[len + 1] = '\0';
-		if ((ncmds = parseline(line)) <= 0) {
-			continue;   /* Read next line */
-		}
+	while ((len = promptline(prompt, line, sizeof(line))) > 0) { /* Until EOF */
+	line[len] = '\n';
+	line[len + 1] = '\0';
+		if ((ncmds = parseline(line)) <= 0) continue;
 
 #ifdef DEBUG
 		{
@@ -118,9 +121,11 @@ int main(int argc, char* argv[]) {
 					front = 0;
 				}
 				else {
+					front = atoi(cmds[i].cmdargs[1]);
 					if (to_fg(get_job_id(strtol(cmds[i].cmdargs[1], NULL, 10))) == -1) {
 						fprintf(stderr, "Failed to move job to foreground\n");
 					}
+					front = 0;
 				}
 				continue;  // No further parsing needed
 			}
@@ -144,11 +149,11 @@ int main(int argc, char* argv[]) {
 			//cd
 			if (strcmp(cmds[i].cmdargs[0], "cd") == 0) {
 				if (cmds[i].cmdargs[1] == NULL) {
-					fprintf(stderr, "cd: missing argument\n");
-					continue;
+					if (chdir(home_cwd)) {
+						perror("cd");
+					}
 				}
-
-				if (chdir(cmds[i].cmdargs[1])) {
+				else if (chdir(cmds[i].cmdargs[1])) {
 					perror("cd");
 				}
 
@@ -161,6 +166,8 @@ int main(int argc, char* argv[]) {
 			//quit
 			if (strcmp(cmds[i].cmdargs[0], "quit") == 0 || strcmp(cmds[i].cmdargs[0], "q") == 0) {
 				clear_jobs();
+				free_ss();
+				reset_terminal();
 				exit(0);
 			}
 
@@ -314,12 +321,13 @@ int main(int argc, char* argv[]) {
 		pipefd1[0] = 0;
 		if (pipefd[1]) close(pipefd[1]);
 		pipefd[1] = 0;
-		free(line);
-		line = NULL;
 		getcwd(cwd, sizeof(cwd));
 		snprintf(prompt, sizeof(prompt), "%s: %s> ", argv[0], cwd);
 	}  /* Close while */
-	fprintf(stderr, "HOW");
+
+	clear_jobs();
+	free_ss();
+	reset_terminal();
 	return 0;
 }
 

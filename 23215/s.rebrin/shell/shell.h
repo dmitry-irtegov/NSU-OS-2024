@@ -39,4 +39,9 @@ void sigCHLD(int sig);
 void set_default_termios();
 void set_shell_id(pid_t t);
 
+int promptline(char* prompt, char* line, int sizline);
+void free_ss();
+
+void reset_terminal();
+
 #endif /* SHELL_H */
