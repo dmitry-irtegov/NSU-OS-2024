@@ -1,0 +1,17 @@
+total 180
+drwxrwxr-x 3 aly0na aly0na  4096 Dec  2 23:45 build
+-rw-rw-r-- 1 aly0na aly0na    64 Dec  3 12:51 input.txt
+-rw-rw-r-- 1 aly0na aly0na  1010 Dec  3 12:01 Makefile
+-rw-r--r-- 1 aly0na aly0na     1 Dec  3 12:54 output.txt
+-rw-rw-r-- 1 aly0na aly0na  6058 Dec  3 12:45 parseline.c
+-rw-rw-r-- 1 aly0na aly0na 14360 Dec  3 13:00 parseline.o
+-rwxrwxr-x 1 aly0na aly0na 33672 Dec  3 12:24 parseline_test
+-rw-rw-r-- 1 aly0na aly0na  6418 Dec  3 12:24 parseline.test.c
+-rw-rw-r-- 1 aly0na aly0na 31112 Dec  3 12:24 parseline.test.o
+-rw-rw-r-- 1 aly0na aly0na   674 Nov 30 20:12 promptline.c
+-rw-rw-r-- 1 aly0na aly0na  4808 Dec  3 13:00 promptline.o
+-rwxrwxr-x 1 aly0na aly0na 28880 Dec  3 13:00 shell
+-rw-rw-r-- 1 aly0na aly0na  3828 Dec  3 13:00 shell.c
+-rw-rw-r-- 1 aly0na aly0na   335 Dec  3 12:59 shell.h
+-rw-rw-r-- 1 aly0na aly0na 11784 Dec  3 13:00 shell.o
+-rw-r--r-- 1 aly0na aly0na     0 Dec  3 13:02 test.txt
