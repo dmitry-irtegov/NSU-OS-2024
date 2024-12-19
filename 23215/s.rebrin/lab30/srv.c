@@ -43,9 +43,10 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
-	while ((cl = accept(fd, NULL, NULL)) == -1) {
+	if ((cl = accept(fd, NULL, NULL)) == -1) {
 		perror("accept error");
 		unlink(socket_path);
+		return 1;
 	}
 
 	while ((rc = read(cl, buf, sizeof(buf))) > 0) {
