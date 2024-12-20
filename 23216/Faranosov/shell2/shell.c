@@ -169,8 +169,6 @@ int start_job(job* jobs) {
 				job* curJ = jobForSpec;
 				if (curJ != NULL) {
 					setfgjob(curJ);
-					jobForSpec = nextJobForSpec;
-					findNextJobForSpec();
 				}
 				else {
 					printf("No cuurent job\n");
@@ -205,8 +203,6 @@ int start_job(job* jobs) {
 				job* curJ = jobForSpec;
 				if (curJ != NULL) {
 					setbgjob(curJ);
-					jobForSpec = nextJobForSpec;
-					findNextJobForSpec();
 				}
 				else {
 					printf("No current job\n");
