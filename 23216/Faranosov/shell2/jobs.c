@@ -127,7 +127,7 @@ void handling_status(job* curJob, int status) {
 				nextJobForSpec = curJob;
 			}
 		}
-		printJob(curJob, 0);x
+		printJob(curJob, 0);
 		return;
 	}
 
