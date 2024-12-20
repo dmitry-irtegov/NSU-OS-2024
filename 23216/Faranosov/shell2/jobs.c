@@ -84,11 +84,9 @@ void deleteJob(job* curj) {
 
 void findNextJobForSpec() {
 	job* j = lastjob;
-	while (j && (j == jobForSpec || j->conv->flag == 0 || j->gpid == 0)) {
-		printf("Find Next num = %d\n", j->number);
+	while (j && (j == jobForSpec || j->conv->flag == 0 || j->gpid == 0 || j->number == 0)) {
 		j = j->prevjob;
 	}
-	if (j == NULL) printf("next == NULL\n");
 	nextJobForSpec = j;
 }
 
@@ -119,8 +117,6 @@ void handling_status(job* curJob, int status) {
 	}
 	if (WIFSTOPPED(status)) {
 		printf("\n");
-		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
-		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
 		curJob->state = STOPPED;
 		curJob->conv->flag = 1;
 		if (curJob->number == -1) {
@@ -132,9 +128,7 @@ void handling_status(job* curJob, int status) {
 		else if (nextJobForSpec == NULL) {
 			nextJobForSpec = curJob;
 		}
-		
-		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
-		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
+	
 		printJob(curJob, 0);
 		return;
 	}
