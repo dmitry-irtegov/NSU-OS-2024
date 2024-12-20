@@ -416,6 +416,12 @@ int setfgjob(job* curJob) {
 		curJob->conv->flag = 0;
 	}
 
+	if (jobForSpec == curJob) {
+		jobForSpec = nextJobForSpec;
+		nextJobForSpec = NULL;
+		findNextJobForSpec();
+	}
+
 	return shellawaiting(curJob);
 }
 
