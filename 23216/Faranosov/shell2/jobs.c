@@ -85,9 +85,11 @@ void deleteJob(job* curj) {
 void findNextJobForSpec() {
 	job* j = lastjob;
 	while (j && (j == jobForSpec || j->conv->flag == 0 || j->gpid == 0)) {
+		printf("Find Next num = %d\n", j->number);
 		j = j->prevjob;
 	}
 
+	if (j) printf("Find end = %d\n", j->number);
 	nextJobForSpec = j;
 }
 
