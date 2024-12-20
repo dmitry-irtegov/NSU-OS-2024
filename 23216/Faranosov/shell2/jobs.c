@@ -88,8 +88,7 @@ void findNextJobForSpec() {
 		printf("Find Next num = %d\n", j->number);
 		j = j->prevjob;
 	}
-
-	if (j) printf("Find end = %d\n", j->number);
+	if (j == NULL) printf("next == NULL\n");
 	nextJobForSpec = j;
 }
 
