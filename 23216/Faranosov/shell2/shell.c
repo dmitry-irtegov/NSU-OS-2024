@@ -39,6 +39,7 @@ void handling_status(job* curJob, int status);
 int printCurDir();
 void printJob(job* j, int isDone);
 void printJobs();
+void findNextJobForSpec()
 
 int checkJobs() {
 	pid_t getted_id;
@@ -165,12 +166,11 @@ int start_job(job* jobs) {
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[1]) == 0) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
-				job* curJ = lastjob;
-				while (curJ != NULL && curJ->state != 1 && curJ->conv->flag == 0) {
-					curJ = curJ->prevjob;
-				}
+				job* curJ = jobForSpec;
 				if (curJ != NULL) {
 					setfgjob(curJ);
+					jobForSpec = nextJobForSpec;
+					findNextJobForSpec();
 				}
 				else {
 					printf("No cuurent job\n");
@@ -202,12 +202,11 @@ int start_job(job* jobs) {
 
 		if (strcmp(jobs->proc->cmd->cmdargs[0], specCommands[2]) == 0) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
-				job* curJ = lastjob;
-				while (curJ != NULL && curJ->state != 1) {
-					curJ = curJ->prevjob;
-				}
+				job* curJ = jobForSpec;
 				if (curJ != NULL) {
 					setbgjob(curJ);
+					jobForSpec = nextJobForSpec;
+					findNextJobForSpec();
 				}
 				else {
 					printf("No current job\n");
