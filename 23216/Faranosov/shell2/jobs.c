@@ -125,13 +125,14 @@ void handling_status(job* curJob, int status) {
 		curJob->conv->flag = 1;
 		if (curJob->number == -1) {
 			curJob->number = curNumber++;
-			if (jobForSpec == NULL) {
-				jobForSpec = curJob;
-			} 
-			else if (nextJobForSpec == NULL) {
-				nextJobForSpec = curJob;
-			}
 		}
+		if (jobForSpec == NULL) {
+			jobForSpec = curJob;
+		} 
+		else if (nextJobForSpec == NULL) {
+			nextJobForSpec = curJob;
+		}
+		
 		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
 		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
 		printJob(curJob, 0);
