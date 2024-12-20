@@ -18,6 +18,7 @@ typedef struct job {
 	process* proc;
 	struct job* nextjob, * prevjob;
 	char state;
+	int number;
 	pid_t gpid;
 	struct termios terminalattr;
 } job;

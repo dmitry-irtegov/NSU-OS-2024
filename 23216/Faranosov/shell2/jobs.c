@@ -10,22 +10,33 @@
 #include "shell.h"
 #include "structures.h"
 extern int errno;
-
+extern int curNumber;
 
 extern struct command cmds[MAXCMDS];
 extern struct convs conv[MAXCONV];
 extern char bkgrnd, type;
 extern int curcmd, maxJob;
-extern job* firstjob, * lastjob;
+extern job* firstjob, * lastjob, *jobForSpec, *nextJobForSpec;
 extern int terminalfd;
 
 extern char curDir[128];
 
 extern char* specCommands[];
 
+void printJob(job* j, int osDone);
+
 job* findJob(pid_t gpid) {
 	job* cur = firstjob;
 	while (cur && cur->gpid != gpid) {
+		cur = cur->nextjob;
+	}
+
+	return cur;
+}
+
+job* findJobNumber(int number) {
+	job* cur = firstjob;
+	while (cur && cur->number != number) {
 		cur = cur->nextjob;
 	}
 
@@ -71,20 +82,52 @@ void deleteJob(job* curj) {
 	clear(curj);
 }
 
+void findNextJobForSpec() {
+	job* j = lastjob;
+	while (j && (j == jobForSpec || j->conv->flag == 0 || j->gpid == 0)) {
+		j = j->prevjob;
+	}
+
+	nextJobForSpec = j;
+}
+
 void handling_status(job* curJob, int status) {
 	if (WIFEXITED(status)) {
-		if (curJob->conv->flag == BKGRND) printf("gpid = %d exited\n", curJob->gpid);
+		if (curJob->conv->flag == BKGRND) printJob(curJob, 1);
+		if (curJob == jobForSpec) {
+			jobForSpec = nextJobForSpec;
+			findNextJobForSpec();
+		}
+		if (curJob == nextJobForSpec) {
+			findNextJobForSpec();
+		}
 		deleteJob(curJob);
 		return;
 	}
 	if (WIFSIGNALED(status)) {
-		printf("gpid = %d killed by signal\n", curJob->gpid);
+		if (curJob == jobForSpec) {
+			jobForSpec = nextJobForSpec;
+			findNextJobForSpec();
+		}
+		if (curJob == nextJobForSpec) {
+			findNextJobForSpec();
+		}
 		deleteJob(curJob);
 		return;
 	}
 	if (WIFSTOPPED(status)) {
-		printf("gpid = %d stopped by signal\n", curJob->gpid);
+		printf("\n");
 		curJob->state = STOPPED;
+		if (curJob->number == -1) {
+			curJob->number = curNumber++;
+			if (!jobForSpec) {
+				jobForSpec = curJob;
+			} 
+			else if (!nextJobForSpec) {
+				nextJobForSpec = curJob;
+			}
+		}
+		printJob(curJob, 0);x
 		return;
 	}
 

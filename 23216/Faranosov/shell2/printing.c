@@ -16,7 +16,7 @@ extern struct command cmds[MAXCMDS];
 extern struct convs conv[MAXCONV];
 extern char bkgrnd, type;
 extern int curcmd, maxJob;
-extern job* firstjob, * lastjob;
+extern job* firstjob, * lastjob, *jobForSpec, *nextJobForSpec;
 extern int terminalfd;
 
 extern char curDir[128];
@@ -41,17 +41,24 @@ int printCurDir() {
 	return 0;
 }
 
-void printJob(job* j) {
-	printf("gpid = %d  ", j->gpid);
+void printJob(job* j, int isDone) {
+	printf("[%d]", j->number);
+	if (j == jobForSpec) printf("+ ");
+	else if (j == nextJobForSpec) printf("- ");
+	else printf(" ");
 
-	if (j->state == RUNNING) {
-		printf("Running ");
+	if (!isDone) {
+		if (j->state == RUNNING) {
+			printf("Running\t\t");
+		}
+		else if (j->state == STOPPED) {
+			printf("Stopped\t\t");
+		}
+		else printf("Linked\t\t");
 	}
-	else if (j->state == STOPPED) {
-		printf("Stopped ");
+	else {
+		printf("Done\t\t");
 	}
-	else printf("Linked ");
-
 	for (process* p = j->proc; p; p = p->nextproc) {
 		for (int i = 0; p->cmd->cmdargs[i]; i++) {
 			printf("%s ", p->cmd->cmdargs[i]);
@@ -62,13 +69,11 @@ void printJob(job* j) {
 }
 
 void printJobs() {
-	printf("\n");
 	int cnt = 0;
 	for (job* j = firstjob; j; j = j->nextjob) {
 		if (j->state != 3 && j->gpid != 0) {
 			cnt++;
-			printJob(j);
+			printJob(j, 0);
 		}
 	}
-	printf("total: %d\n\n", cnt);
 }

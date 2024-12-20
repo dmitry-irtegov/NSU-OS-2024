@@ -15,7 +15,7 @@ struct command cmds[MAXCMDS];
 struct convs conv[MAXCONV];
 char bkgrnd, type;
 int curcmd, maxJob;
-job* firstjob, * lastjob;
+job* firstjob, * lastjob, * jobForSpec, *nextJobForSpec;
 int terminalfd;
 
 char curDir[128];
@@ -31,12 +31,13 @@ process* initProc(command* cmd);
 job* initJob(convs* conv);
 job* linkConsAndJobs();
 job* findJob(pid_t gpid);
+job* findJobNumber(int number);
 void clear(job* curj);
 void clearAll();
 void deleteJob(job* curj);
 void handling_status(job* curJob, int status);
 int printCurDir();
-void printJob(job* j);
+void printJob(job* j, int isDone);
 void printJobs();
 
 int checkJobs() {
@@ -169,18 +170,30 @@ int start_job(job* jobs) {
 					curJ = curJ->prevjob;
 				}
 				if (curJ != NULL) {
-					printf("set fg job gpid == %d\n", curJ->gpid);
 					setfgjob(curJ);
+				}
+				else {
+					printf("No cuurent job\n");
 				}
 			}
 			else {
 				int value = atoi(jobs->proc->cmd->cmdargs[1]);
-				if (value == 0) {
-					printf("atoi error");
-					return -1;
+				if (value <= 0) {
+					printf("Job number must be positive\n");
+					return 0;
 				}
-				job* fj = findJob(value);
-				if (fj == NULL) return -1;
+				job* fj = findJobNumber(value);
+				if (fj == NULL) {
+					printf("No such job\n");
+					return 0;
+				}
+				for (process* p = fj->proc; p; p = p->nextproc) {
+					for (int i = 0; p->cmd->cmdargs[i]; i++) {
+						printf("%s ", p->cmd->cmdargs[i]);
+					}
+					if (p->nextproc != NULL) printf("| ");
+				}
+				printf("\n");
 				setfgjob(fj);
 			}
 			deleteJob(jobs);
@@ -196,15 +209,28 @@ int start_job(job* jobs) {
 				if (curJ != NULL) {
 					setbgjob(curJ);
 				}
+				else {
+					printf("No current job\n");
+				}
 			}
 			else {
 				int value = atoi(jobs->proc->cmd->cmdargs[1]);
-				if (value == 0) {
-					printf("atoi error");
-					return -1;
+				if (value <= 0) {
+					printf("Job number must be positive\n");
+					return 0;
 				}
-				job* fj = findJob(value);
-				if (fj == NULL) return -1;
+				job* fj = findJobNumber(value);
+				if (fj == NULL) {
+					printf("No such job\n");
+					return 0;
+				}
+				for (process* p = fj->proc; p; p = p->nextproc) {
+					for (int i = 0; p->cmd->cmdargs[i]; i++) {
+						printf("%s ", p->cmd->cmdargs[i]);
+					}
+					if (p->nextproc != NULL) printf("| ");
+				}
+				printf("\n");
 				setbgjob(fj); 
 			}
 			
@@ -340,14 +366,14 @@ int start_job(job* jobs) {
 			if (shellawaiting(jobs) == -1) return -1;
 		}
 		else {
-			printf("gpid = %d Running in bg\n", jobs->gpid);
+			printf("[%d] %d\n", jobs->number, jobs->gpid);
 		}
 		return 0;
 	}
 }
 
 int setbgjob(job* curJob) {
-	printf("gpid = %d Running in bg\n", curJob->gpid);
+	curJob->conv->flag = 1;
 
 	if (curJob->state == STOPPED) {
 		if (kill((-1) * curJob->gpid, SIGCONT) == -1) {
@@ -358,6 +384,19 @@ int setbgjob(job* curJob) {
 		curJob->conv->flag = BKGRND;
 	}
 
+	printf("[%d]", curJob->number);
+	if (curJob == jobForSpec) printf("+ ");
+	else if (curJob == nextJobForSpec) printf("- ");
+	else printf(" ");
+
+	for (process* p = curJob->proc; p; p = p->nextproc) {
+		for (int i = 0; p->cmd->cmdargs[i]; i++) {
+			printf("%s ", p->cmd->cmdargs[i]);
+		}
+		if (p->nextproc != NULL) printf("| ");
+	}
+	printf("\n");
+
 	return 0;
 }
 
@@ -367,6 +406,7 @@ int setfgjob(job* curJob) {
 		return -1;
 	}
 
+	curJob->conv->flag = 0;
 
 	if (curJob->state == STOPPED) {
 		if (kill((-1) * curJob->gpid, SIGCONT) == -1) {
@@ -391,6 +431,8 @@ int main() {
 	terminalfd = 0;
 	job* jobToStart;
 	firstjob = NULL;
+	jobForSpec = NULL;
+	nextJobForSpec = NULL;
 
 	if (isatty(terminalfd) == 0) {
 		perror("isatty error");

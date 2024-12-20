@@ -10,13 +10,13 @@
 #include "shell.h"
 #include "structures.h"
 extern int errno;
-
+int curNumber = 1;
 
 extern struct command cmds[MAXCMDS];
 extern struct convs conv[MAXCONV];
 extern char bkgrnd, type;
 extern int curcmd, maxJob;
-extern job* firstjob, * lastjob;
+extern job* firstjob, * lastjob, *jobForSpec, *nextJobForSpec;
 extern int terminalfd;
 
 extern char curDir[128];
@@ -166,6 +166,14 @@ job* initJob(convs* conv) {
 	newjob->state = LINKED;
 	newjob->gpid = 0;
 	newjob->conv = copyconv(conv);
+	if (newjob->conv->flag == 1) {
+		newjob->number = curNumber++;
+		nextJobForSpec = jobForSpec;
+		jobForSpec = newjob;
+	}
+	else {
+		newjob->number = -1;
+	}
 	if (newjob->conv == NULL) {
 		clear(newjob);
 		return NULL;
