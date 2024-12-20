@@ -120,6 +120,7 @@ void handling_status(job* curJob, int status) {
 	if (WIFSTOPPED(status)) {
 		printf("\n");
 		curJob->state = STOPPED;
+		curJob->conv->flag = 1;
 		if (curJob->number == -1) {
 			curJob->number = curNumber++;
 			if (!jobForSpec) {
