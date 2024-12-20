@@ -417,13 +417,9 @@ int setfgjob(job* curJob) {
 	}
 
 	if (jobForSpec == curJob) {
-		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
 		jobForSpec = nextJobForSpec;
-		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
 		nextJobForSpec = NULL;
 		findNextJobForSpec();
-		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
-		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
 	}
 
 	return shellawaiting(curJob);

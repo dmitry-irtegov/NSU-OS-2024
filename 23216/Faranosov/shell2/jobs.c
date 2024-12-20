@@ -107,6 +107,7 @@ void handling_status(job* curJob, int status) {
 		return;
 	}
 	if (WIFSIGNALED(status)) {
+		printf("\n");
 		if (curJob == jobForSpec) {
 			jobForSpec = nextJobForSpec;
 			findNextJobForSpec();
@@ -119,6 +120,8 @@ void handling_status(job* curJob, int status) {
 	}
 	if (WIFSTOPPED(status)) {
 		printf("\n");
+		if (jobForSpec) printf("jobForSpec = %d\n", jobForSpec->number);
+		if (nextJobForSpec) printf("nextJobForSpec = %d\n", nextJobForSpec->number);
 		curJob->state = STOPPED;
 		curJob->conv->flag = 1;
 		if (curJob->number == -1) {
