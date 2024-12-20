@@ -39,7 +39,7 @@ void handling_status(job* curJob, int status);
 int printCurDir();
 void printJob(job* j, int isDone);
 void printJobs();
-void findNextJobForSpec()
+void findNextJobForSpec();
 
 int checkJobs() {
 	pid_t getted_id;
