@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #define MAX_JOB_STR (100)
 
 typedef enum {
@@ -10,21 +9,23 @@ typedef enum {
 
 typedef struct Job_t {
     int number;
-    pid_t pid;
+    int pgid;
     JobState state;
     struct Job_t* prev, *next;
     unsigned char is_state_changed;
     unsigned char is_foreground;
+    int alive_procs_count;
     char* name;
 } Job;
 
 typedef enum {
-    NUMBER,
-    PID
+    NUMBER
 } JobID;
 
-void create_job(pid_t pid, JobState state, char* name);
+Job* create_job(int pgid, JobState state, char* promptline, int procs_count);
+void print_job(Job* job);
 void print_jobs();
+void update_job_states();
 void check_jobs_states_updates();
 Job* get_job(JobID id_type, int job_number);
 void turn_to_background(Job* job);
@@ -33,3 +34,4 @@ void stop_job(Job* job);
 Job* get_first_job();
 __attribute__((destructor))
 void destroy_jobs();
+void wait_job_in_fg(Job* job);

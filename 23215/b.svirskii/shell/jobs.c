@@ -28,18 +28,13 @@ void update_job_state(Job* job) {
 #ifdef DEBUG
     fprintf(stderr, "(dev) %d - start updating state\n", job->number);
 #endif
-    if (job->state == DONE) {
+    if (job->is_foreground || job->state == DONE) {
         return;
-    }
-    if (job->is_foreground) {
-        job->is_state_changed = 0;
-        job->state = DONE;
-        return;
-    }
+    } 
     JobState prev_state = job->state;
     int stat = 0;
-    switch (waitpid(job->pid, &stat, WNOHANG | WUNTRACED | WCONTINUED)) {
-        case -1:
+    switch (waitpid(-job->pgid, &stat, WNOHANG | WUNTRACED | WCONTINUED)) {
+        case -1: 
             perror("waitpid() failed");
             exit(EXIT_FAILURE);
             break;
@@ -48,19 +43,30 @@ void update_job_state(Job* job) {
             if (WIFCONTINUED(stat)) {
                 job->state = RUNNING;
             } else if (WIFEXITED(stat)) {
-                job->state = DONE;
+                job->alive_procs_count--;
             } else if (WIFSTOPPED(stat)) {
                 job->state = STOPPED;
             } else if (WIFSIGNALED(stat)) {
                 job->state = SIGNALED;
             }
-            if (prev_state != job->state) {
-                job->is_state_changed = 1;
-            }
     } 
+    if (job->alive_procs_count == 0) {
+        job->state = DONE;
+    }
+    if (prev_state != job->state) {
+        job->is_state_changed = 1;
+    }
 #ifdef DEBUG
     fprintf(stderr, "(dev) end\n");
 #endif
+}
+
+void update_job_states() {
+    Job* curr_job = first_job;
+    while (curr_job) {
+        update_job_state(curr_job);
+        curr_job = curr_job->next;
+    }
 }
 
 
@@ -69,7 +75,7 @@ void print_job(Job* job) {
     job->is_state_changed = 0;
     fprintf(stderr, 
             "[%d] %8s %7d %s\n", job->number, state_to_str(job->state),
-                job->pid, job->name);  
+                job->pgid, job->name);  
 }
 
 Job* delete_job(Job* job) {
@@ -107,7 +113,7 @@ void print_jobs() {
     }
 }
 
-void create_job(pid_t pid, JobState state, char* name) {
+Job* create_job(int pgid, JobState state, char* name, int procs_count) {
     int job_number = 1;
     Job* new_job = (Job*) calloc(1, sizeof(Job));
     
@@ -136,11 +142,11 @@ void create_job(pid_t pid, JobState state, char* name) {
     int len = strlen(name);
     new_job->name = (char*) malloc(sizeof(char) * len);
     memcpy(new_job->name, name, len);
-    
+    new_job->alive_procs_count = procs_count;
     new_job->number = job_number;
-    new_job->pid = pid;
+    new_job->pgid = pgid;
     new_job->state = state;
-    print_job(new_job);
+    return new_job;
 }
 
 void check_jobs_states_updates() {
@@ -153,6 +159,10 @@ void check_jobs_states_updates() {
         if (curr_job->is_state_changed) {
             print_job(curr_job);
         }
+#ifdef DEBUG
+        fprintf(stderr, "%d - %s, %d\n", curr_job->number, 
+                state_to_str(curr_job->state), curr_job->alive_procs_count);
+#endif
         if (curr_job->state == DONE) {
             curr_job = delete_job(curr_job);
         } else {
@@ -175,8 +185,6 @@ Job* get_job(JobID id_type, int id) {
     while (job) {
         if (id_type == NUMBER && job->number == id)
             break;
-        if (id_type == PID && job->pid == id)
-            break;
         job = job->next;
     }
 
@@ -195,12 +203,12 @@ void turn_to_foreground(Job* job) {
         return;
     }
 
-    if (tcsetpgrp(0, getpgid(job->pid)) == -1) {
+    if (tcsetpgrp(0, job->pgid) == -1) {
         perror("tcsetpgrp() fail");
         exit(EXIT_FAILURE);
     }
 
-    if (kill(job->pid, SIGCONT) == -1) {
+    if (kill(-job->pgid, SIGCONT) == -1) {
         perror("kill() failed");
         exit(EXIT_FAILURE);
     }
@@ -221,7 +229,7 @@ void turn_to_background(Job* job) {
         exit(EXIT_FAILURE);
     }
 
-    if (kill(job->pid, SIGCONT) == -1) {
+    if (kill(-job->pgid, SIGCONT) == -1) {
         perror("kill() failed");
         exit(EXIT_FAILURE);
     }
@@ -244,4 +252,26 @@ void destroy_jobs() {
         curr_job = delete_job(curr_job);
     }
     first_job = NULL;
+}
+
+void wait_job_in_fg(Job* job) {
+    job->is_foreground = 1;
+    int stat;
+    while (job->alive_procs_count) {
+        if (waitpid(-job->pgid, &stat, WUNTRACED | WCONTINUED) == -1) {
+            perror("waitpid() failed");
+            exit(EXIT_FAILURE);
+        }
+        if (WIFEXITED(stat)) {
+            job->alive_procs_count--;
+        } else if (WIFSTOPPED(stat)) {
+            job->state = STOPPED;
+            job->is_state_changed = 1;
+            job->is_foreground = 0;
+            return;
+        } else if (WIFSIGNALED(stat)) {
+            break;
+        }
+    }
+    delete_job(job);
 }
