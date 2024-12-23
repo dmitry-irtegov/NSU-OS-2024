@@ -1,5 +1,3 @@
-#define MAX_JOB_STR (100)
-
 typedef enum {
     RUNNING,
     STOPPED,
@@ -35,3 +33,4 @@ Job* get_first_job();
 __attribute__((destructor))
 void destroy_jobs();
 void wait_job_in_fg(Job* job);
+Job* parse_job(char* line);

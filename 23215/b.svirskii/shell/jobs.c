@@ -1,4 +1,3 @@
-#include "jobs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -6,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include "jobs.h"
 
 static Job* first_job = NULL;
 
@@ -139,7 +139,7 @@ Job* create_job(int pgid, JobState state, char* name, int procs_count) {
         curr_job->prev = new_job;
     }
 
-    int len = strlen(name);
+    int len = strlen(name) + 1;
     new_job->name = (char*) malloc(sizeof(char) * len);
     memcpy(new_job->name, name, len);
     new_job->alive_procs_count = procs_count;
@@ -249,6 +249,10 @@ Job* get_first_job() {
 void destroy_jobs() {
     Job* curr_job = first_job;
     while (curr_job) {
+        update_job_state(curr_job);
+        if (curr_job->state != DONE) {
+            kill(-curr_job->pgid, SIGKILL);
+        }
         curr_job = delete_job(curr_job);
     }
     first_job = NULL;
