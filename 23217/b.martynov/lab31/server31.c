@@ -23,7 +23,7 @@ void closeFunc(struct pollfd* fds, int clientCount, int len, int index) {
     close(fds[index].fd);
 
     fds[index] = fds[clientCount];
-    memset(fds + clientCount, 0, sizeof(fds[0]));
+    memset(fds + clientCount, -1, sizeof(fds[0]));
 }
 
 void SIGINTer(int sigNum) {
@@ -65,7 +65,7 @@ int main() {
     }
 
     struct pollfd fds[1 + MAX_CLIENT_COUNT];
-    memset(&fds, 0, sizeof(fds));
+    memset(&fds, -1, sizeof(fds));
     struct pollfd *clientFds = fds + 1;
     int clientCount = 0;
 
