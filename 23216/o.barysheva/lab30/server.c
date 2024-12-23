@@ -28,7 +28,7 @@ int main() {
     unlink(SOCKET_FILE);
 
     if (bind(server_socket, (struct sockaddr*)&socket_address, sizeof(socket_address)) == -1) {
-        perror("Ошибка привязки сокета");
+        perror("Bind error");
         close(server_socket);
         return EXIT_FAILURE;
     }
