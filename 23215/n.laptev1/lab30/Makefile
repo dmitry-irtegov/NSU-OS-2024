@@ -1,9 +1,7 @@
-all: server client
+all: client.out server.out
 
-server: server.o
-	gcc -Wall server.o -lbsd -o server
+client.out: client.c
+        gcc -Wall client.c -o client.out
 
-client: client.o
-	gcc -Wall client.o -lbsd -o client
-
-
+server.out: server.c
+        gcc -Wall server.c -o server.out

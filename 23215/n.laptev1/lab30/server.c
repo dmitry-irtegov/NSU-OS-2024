@@ -13,7 +13,6 @@ int main(int argc, char *argv[]) {
     int read_socket;
     int data_socket;
 
-
     if ((read_socket = socket(AF_UNIX, SOCK_STREAM, 0))== -1) {
         perror("socket failed.");
         exit(EXIT_FAILURE);
