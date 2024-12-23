@@ -283,6 +283,11 @@ int to_fg(int job_id_h) {
 
 	//Насротройка терминала
 	//setpgid(jobs[job_id].pid, jobs[job_id].pid);
+
+	if (tcgetpgrp(STDIN_FILENO) != getpid()) {
+		perror("Current process does not control the terminal");
+	}
+
 	if (tcsetpgrp(0, jobs[job_id].pid) == -1) {
 		perror("Unable to set process to fg");
 	}

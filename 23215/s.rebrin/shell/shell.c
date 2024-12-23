@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
 	char home_cwd[1024];
 	pid_t pgid = 0;
 
+	setpgid(0, 0);
+
 	//Две трубы для 3ных и более конвееров
 	int pipefd[2] = { 0 };
 	int pipefd1[2] = { 0 };
