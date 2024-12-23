@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     }
 
     char buffer[BUFFER_SIZE];
-    int readBytes = read(STDERR_FILENO, buffer, BUFFER_SIZE);
+    int readBytes = read(STDIN_FILENO, buffer, BUFFER_SIZE);
     if (readBytes != -1) {
         if (write(socket_fd, buffer, readBytes) == -1) {
             perror("write failed.");
