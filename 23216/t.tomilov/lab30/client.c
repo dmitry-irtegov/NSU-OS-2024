@@ -5,10 +5,22 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
+#define BUFSIZE 256
+
+void newSigReact(){
+    perror("Lost connection with server!");
+    _exit(EXIT_FAILURE);
+}
 
 int main(int argc, char** argv){
     if (argc < 2){
         fprintf(stderr, "ERROR: wrong arg format to start! Try %s <socet_name>", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    if (signal(SIGPIPE, newSigReact) == SIG_ERR) {
+        perror("ERROR: failde in signal!");
         exit(EXIT_FAILURE);
     }
 
@@ -25,18 +37,30 @@ int main(int argc, char** argv){
     if(connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1){
         perror("ERROR: failed in connect!");
         close(sockfd);
-        unlink(argv[1]);
         exit(EXIT_FAILURE);
     }
 
-    if (write(sockfd, "I`m just a message! What do you want from me?\n", strlen("I`m just a message! What do you want from me?\n")) == -1){
+    char str[BUFSIZE];
+    size_t n;
+    if (write(0, "Click on Ctrl+D for the end.\n", strlen("Click on Ctrl+D for the end.\n")) < 0){
         perror("ERROR: failde in write!");
-        unlink(argv[1]);
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+    while((n = read(0, str, BUFSIZE)) > 0){
+        if (write(sockfd, str, n) == -1){
+            perror("ERROR: failde in write!");
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if((int)n == -1){
+        perror("ERROR: failde in read!");
         close(sockfd);
         exit(EXIT_FAILURE);
     }
 
     close(sockfd);
-    unlink(argv[1]);
     exit(EXIT_SUCCESS);
 }

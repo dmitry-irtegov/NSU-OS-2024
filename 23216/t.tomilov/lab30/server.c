@@ -46,11 +46,10 @@ int main(int argc, char** argv){
     char str[BUFSIZE];
     int len;
     while((len = read(clientSockfd, str, BUFSIZE)) > 0){
-        char upperStr[BUFSIZE];
         for (int i = 0; i < len; i++){
-            upperStr[i] = toupper(str[i]);
+            str[i] = toupper(str[i]);
         }
-        if (write(1, upperStr, len) == -1){
+        if (write(1, str, len) == -1){
             perror("ERROR: failed to write!");
             close(sockfd);
             close(clientSockfd);
