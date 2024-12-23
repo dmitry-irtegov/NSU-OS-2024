@@ -23,7 +23,6 @@ int main() {
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, socket_name);
 
-    unlink(socket_name);
 
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         perror("bind failed");
