@@ -28,7 +28,6 @@ int main(int argc, char** argv) {
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, argv[1], sizeof(addr.sun_path)-1);
-    unlink(argv[1]);
     if (bind(soc, (struct sockaddr*)&addr, sizeof(addr))) {
         perror("problem in bind");
         close(soc);
