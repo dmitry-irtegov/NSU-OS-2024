@@ -23,7 +23,7 @@ extern char bkgrnd;
 int parseline(char* line);
 
 void init_jobs();
-void reorder_priorities();
+void reorder_priorities(int last);
 int add_job(char* name, pid_t pid, int frnt);
 void upd_job();
 int to_fg(int job_id);
@@ -37,11 +37,13 @@ pid_t get_g_ch(char job_id);
 int get_job_id(pid_t p);
 void sigCHLD(int sig);
 void set_default_termios();
-void set_shell_id(pid_t t);
+void sigSTOP(int sig);
 
 int promptline(char* prompt, char* line, int sizline);
 void free_ss();
 
 void reset_terminal();
+void able_job_control();
+void kill_all();
 
 #endif /* SHELL_H */

@@ -20,7 +20,6 @@ unsigned int cup = 20;//Для вектора
 unsigned int plus = 0;//индекс для +
 unsigned int minus = 0;//-
 unsigned int exs = 0; //количество незавершенных
-pid_t shell_id;
 
 typedef struct {
 	char name[100];
@@ -34,9 +33,6 @@ job* jobs;
 struct termios shell_term;//Терм шелла
 struct termios saved_term;//Образец терма
 
-void set_shell_id(pid_t t) {
-	shell_id = t;
-}
 
 void init_jobs() {
 	jobs = (job*)malloc(sizeof(job) * cup);
@@ -227,14 +223,13 @@ void clear_jobs() {
 //Обновить все джобы
 void upd_job() {
 	int status;
-	for (int i = 1; i <= count; i++) {
-		if (jobs[i].status == 'f') continue;
-		pid_t result = waitpid(jobs[i].pid, &status, WNOHANG /* | WUNTRACED | WCONTINUED*/);
+	pid_t result;
 
-		if (result == 0) {
-			continue;
-		}
-		else if (result > 0) {
+	while ((result = waitpid(-1, &status, WNOHANG | WCONTINUED /*| WEXITED | WSTOPPED*/ | WUNTRACED))) {
+		int i = get_job_id(result);
+
+		if (i < 0 && result >= 0) continue;
+		if (result >= 0) {
 			char stat = (i == plus) ? '+' : (i == minus) ? '-' : ' ';
 
 			if (WIFEXITED(status)) {
@@ -257,10 +252,7 @@ void upd_job() {
 			}
 		}
 		else {
-			if (errno != ECHILD) {
-				perror("waitpid");
-				fprintf(stderr, "- [%d]", i);
-			}
+			break;
 		}
 	}
 
@@ -285,13 +277,12 @@ int to_fg(int job_id_h) {
 	if (job_id_h) job_id = job_id_h;
 	else job_id = plus;
 
-	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
 
 	int status;
 	signal(SIGCHLD, SIG_DFL);//Игнорируем всех детей пока
 
 	//Насротройка терминала
-	setpgid(jobs[job_id].pid, jobs[job_id].pid);
+	//setpgid(jobs[job_id].pid, jobs[job_id].pid);
 	if (tcsetpgrp(0, jobs[job_id].pid) == -1) {
 		perror("Unable to set process to fg");
 	}
@@ -300,13 +291,20 @@ int to_fg(int job_id_h) {
 		perror("Job set attr");
 	}
 
+	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
+
 	// Ожидание завершения процесса
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
+
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
 	}
 	jobs[job_id].status = WIFSTOPPED(status) ? 's' : 'f';
 
+	char* strr = (char*)malloc(20);
+	snprintf(strr, 20, "%d", job_id);
+	if (jobs[job_id].status == 's') { print_job(strr); }
+	free(strr);
 
 	//Возращаем контроль шеллу
 	if (setpgid(0, 0) == -1) {
@@ -355,6 +353,7 @@ int to_bg(int job_id) {
 		kill(jobs[job_id].pid, SIGCONT);
 	}
 
+	upd_job();
 	return 0;
 }
 
@@ -391,3 +390,41 @@ void pr_job(pid_t pid) {
 	if (i) print_job(str);
 }
 
+void kill_all() {
+	if (!count) return;
+	upd_job();
+	signal(SIGCHLD, SIG_IGN);
+	for (int i = 1; i <= count; i++) { if (jobs[i].status != 'f');	kill(-jobs[i].pid, SIGTERM); }
+	sleep(2);
+
+	pid_t result;
+	int status;
+	while ((result = waitpid(-1, &status, WNOHANG | WCONTINUED /*| WEXITED | WSTOPPED*/ | WUNTRACED))) {
+		int i = get_job_id(result);
+		if (result >= 0) {
+
+			if (WIFEXITED(status)) {
+				exs--;
+				jobs[i].status = 'f'; // завершён
+			}
+			else if (WIFSTOPPED(status)) {
+				jobs[i].status = 's'; // остановлен
+			}
+			else if (WIFCONTINUED(status)) {
+				jobs[i].status = 'r'; // возобновлен
+			}
+			else if (WIFSIGNALED(status)) {
+				exs--;
+				jobs[i].status = 'f'; // завершён сигналом
+			}
+		}
+		else {
+			break;
+		}
+	}
+	for (int i= 1; i <= count; i++) {
+		if (jobs[i].status != 'f');
+		kill(-jobs[i].pid, SIGKILL);
+	}
+
+}
