@@ -303,8 +303,9 @@ int main(int argc, char* argv[]) {
 				// Выполнение команды
 
 				upd_job();
-				for (int h = 0; cmds[i].cmdargs[h]; h++) fprintf(stderr, "%s ", cmds[i].cmdargs[h]);
-				fprintf(stderr, ", %d %d\n", getpid(), getpgid(getpid()));
+				//for (int h = 0; cmds[i].cmdargs[h]; h++) fprintf(stderr, "%s ", cmds[i].cmdargs[h]);
+				//fprintf(stderr, ", %d %d\n", getpid(), getpgid(getpid()));
+				//fprintf(stderr, ", %d\n", bkgrnd);
 				execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
 				perror("Execution error");
 				done(1);
