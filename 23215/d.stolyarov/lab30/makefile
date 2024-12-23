@@ -1,4 +1,4 @@
-FLAGS = -Wall
+FLAGS = -Wall -lsocket
 all: server client
 
 server:
