@@ -291,7 +291,7 @@ int to_fg(int job_id_h) {
 		perror("Job set attr");
 	}
 
-	if (jobs[job_id].status == 's') kill(jobs[job_id].pid, SIGCONT);
+	if (jobs[job_id].status == 's') kill(-jobs[job_id].pid, SIGCONT);
 
 	// Ожидание завершения процесса
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
@@ -350,7 +350,7 @@ int to_bg(int job_id) {
 	}
 
 	if (jobs[job_id].status == 's') {
-		kill(jobs[job_id].pid, SIGCONT);
+		kill(-jobs[job_id].pid, SIGCONT);
 	}
 
 	upd_job();

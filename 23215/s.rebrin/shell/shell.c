@@ -13,7 +13,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#define DEBUG
+//#define DEBUG
 
 char* infile, * outfile, * appfile;
 struct command cmds[MAXCMDS];
@@ -304,7 +304,7 @@ int main(int argc, char* argv[]) {
 
 				upd_job();
 				for (int h = 0; cmds[i].cmdargs[h]; h++) fprintf(stderr, "%s ", cmds[i].cmdargs[h]);
-				fprintf(stderr, "\n");
+				fprintf(stderr, ", %d %d\n", getpid(), getpgid(getpid()));
 				execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
 				perror("Execution error");
 				done(1);
@@ -329,9 +329,10 @@ int main(int argc, char* argv[]) {
 					close(pipefd1[0]);
 					pipefd1[0] = 0;
 				}
+				if (!(cmds[i].cmdflag & INPIP)) pgid = pid;
 
 				if (!(cmds[i].cmdflag & OUTPIP)) {//Если не в конвейере
-					int jb = add_job(cmds[i].cmdargs[0], pid, !bkgrnd);
+					int jb = add_job(cmds[i].cmdargs[0], pgid, !bkgrnd);
 					upd_job();
 					reorder_priorities(jb);
 					if (!bkgrnd) {
