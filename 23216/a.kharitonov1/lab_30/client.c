@@ -7,8 +7,11 @@
 #include <signal.h>
 #define buffer 512
 
+int soc;
+
 void signalHandler(){
     write(2,"lost connection with sercer", strlen("lost connection with sercer"));
+    close(soc);
     _exit(EXIT_FAILURE);
 }
 
@@ -24,7 +27,7 @@ int main(int argc, char** argv){
     char buf[buffer];
     ssize_t msglen;
     struct sockaddr_un addr;
-    int soc = socket(AF_UNIX, SOCK_STREAM, 0);
+    soc = socket(AF_UNIX, SOCK_STREAM, 0);
     if (soc == -1){
         perror("problem in socket");
         exit(EXIT_FAILURE);
