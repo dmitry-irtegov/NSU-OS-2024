@@ -1,7 +1,9 @@
-all: client.out server.out
+CC = gcc
+CFLAGS = -Wall -lsocket -o
 
-client.out: client.c
-        gcc -Wall client.c -o client.out
+all: client server
 
-server.out: server.c
-        gcc -Wall server.c -o server.out
+client:
+        $(CC) client.c $(CFLAGS) client
+server:
+        $(CC) server.c $(CFLAGS) server
