@@ -74,7 +74,7 @@ int main() {
 
     int cnt = 0;
     while (1) {
-        int pollCount = poll(fds, 1 + clientCount, 0);
+        int pollCount = poll(fds, 1 + clientCount, -1);
         if (pollCount == -1) {
             perror("Error in poll");
             break;
