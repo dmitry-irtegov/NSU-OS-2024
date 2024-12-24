@@ -114,7 +114,7 @@ void listenUser(){
         }else if (num_of_line == 0){
             break;
         }else{
-            printLine(num_of_line)
+            printLine(num_of_line);
         }
     }
 }
