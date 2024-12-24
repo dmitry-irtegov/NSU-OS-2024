@@ -42,11 +42,6 @@ int main(int argc, char** argv){
 
     char str[BUFSIZE];
     size_t n;
-    if (write(0, "Click on Ctrl+D for the end.\n", strlen("Click on Ctrl+D for the end.\n")) < 0){
-        perror("ERROR: failde in write!");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
     while((n = read(0, str, BUFSIZE)) > 0){
         if (write(sockfd, str, n) == -1){
             perror("ERROR: failde in write!");
