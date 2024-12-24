@@ -28,7 +28,7 @@ void printLine(int num_of_line){
     char *string = NULL;
     if (num_of_line > file_table.cur) {
         puts("Num of line is too big");
-        continue;
+        return;
     }
     string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
     if (string == NULL) {
