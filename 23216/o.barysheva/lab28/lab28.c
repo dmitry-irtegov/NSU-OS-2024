@@ -34,18 +34,12 @@ int main() {
 
     // Чтение и вывод отсортированных чисел
     int number, count = 0;
-    while (fscanf(fd[1], "%d", &number) == 1) {
+    while (fscanf(fd[1], "%d", &number) == EOF) {
         printf("%d ", number);
         count++;
         if (count % 10 == 0) {
             putchar('\n');
         }
-    }
-
-    if (ferror(fd[1])) {
-        perror("Error reading from pipe");
-        fclose(fd[1]);
-        exit(EXIT_FAILURE);
     }
 
     // Закрытие канала чтения
