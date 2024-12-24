@@ -168,7 +168,6 @@ int start_job(job* jobs) {
 			if (jobs->proc->cmd->cmdargs[1] == NULL) {
 				job* curJ = jobForSpec;
 				if (curJ != NULL) {
-					printf("fg n = %d\n", curJ->number);
 					setfgjob(curJ);
 				}
 				else {
