@@ -24,6 +24,30 @@ void freeAndCloseOnFail(){
     close(file);
     exit(EXIT_FAILURE);
 }
+void printLine(int num_of_line){
+    char *string = NULL;
+    if (num_of_line > file_table.cur) {
+        puts("Num of line is too big");
+        continue;
+    }
+    string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
+    if (string == NULL) {
+        perror("problem in calloc");
+        freeAndCloseOnFail();
+    }
+    if (lseek(file, file_table.elems[num_of_line - 1].off, SEEK_SET) == -1) {
+        perror("problem in lseek");
+        free(string);
+        freeAndCloseOnFail();
+    }
+    if (read(file, string, file_table.elems[num_of_line - 1].len) == -1) {
+        perror("problem in read");
+        free(string);
+        freeAndCloseOnFail();
+    }
+    printf("%s",string);
+    free(string);
+}
 void addLine(off_t cur_len, off_t cur_off){
     if (file_table.cap == file_table.cur) {
         file_table.cap *= 2;
@@ -77,7 +101,6 @@ void makeTable(){
 
 void listenUser(){
     int num_of_line, res;
-    char *string = NULL;
     puts("Enter line number (end programm enter 0)");
     while (1) {
         res = scanf("%d", &num_of_line);
@@ -91,28 +114,8 @@ void listenUser(){
         }else if (num_of_line == 0){
             break;
         }else{
-            if (num_of_line > file_table.cur) {
-                puts("Num of line is too big");
-                continue;
-            }
-            string = calloc(file_table.elems[num_of_line - 1].len + 1, sizeof(char));
-            if (string == NULL) {
-                perror("problem in calloc");
-                freeAndCloseOnFail();
-            }
-            if (lseek(file, file_table.elems[num_of_line - 1].off, SEEK_SET) == -1) {
-                perror("problem in lseek");
-                free(string);
-                freeAndCloseOnFail();
-            }
-            if (read(file, string, file_table.elems[num_of_line - 1].len) == -1) {
-                perror("problem in read");
-                free(string);
-                freeAndCloseOnFail();
-            }
-            printf("%s",string);
+            printLine(num_of_line)
         }
-        free(string);
     }
 }
 
