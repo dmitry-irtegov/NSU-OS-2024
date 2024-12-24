@@ -17,9 +17,8 @@ func main() {
 	var jm jobs.JobManager
 	var groupPid int
 	var fgPid int
-	signChan := make(chan os.Signal, 1)
 	jm.Init()
-	jm.SignalHandler(signChan, &fgPid)
+	jm.SignalHandler(&fgPid)
 	for {
 		err := tools.Promptline()
 		if err != nil {

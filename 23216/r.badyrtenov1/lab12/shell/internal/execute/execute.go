@@ -178,7 +178,6 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 		defer func(stdin *os.File) {
 			err := stdin.Close()
 			if err != nil {
-				fmt.Println("Error closing readPipe")
 				return
 			}
 		}(stdin)
@@ -226,7 +225,7 @@ func (cmd *Command) ForkAndExec(jm *jobs.JobManager, cmdPipe *[]string, groupPid
 		Dir:   "",
 		Files: []uintptr{stdin.Fd(), stdout.Fd(), os.Stderr.Fd()},
 		Sys: &syscall.SysProcAttr{
-			Setpgid: cmd.Bkgrnd || (cmd.Cmdflag != 0),
+			Setpgid: true,
 			Pgid:    *groupPid,
 		},
 	})

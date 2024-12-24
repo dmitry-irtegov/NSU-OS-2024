@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"unsafe"
 )
 
 type JobManager struct {
@@ -21,6 +22,101 @@ func (jm *JobManager) Init() {
 	jm.Jobs = list.New()
 }
 
+func (jm *JobManager) SignalHandler(fgPid *int) {
+	go func() {
+		signChan := make(chan os.Signal, 1)
+		signal.Notify(signChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
+		for sig := range signChan {
+			switch sig {
+			case syscall.SIGINT:
+				fmt.Println()
+				if *fgPid != 0 {
+					jm.Update(*fgPid, "Done")
+					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGINT)
+					if err != nil {
+					}
+					*fgPid = 0
+				} else {
+					err := tools.Promptline()
+					if err != nil {
+						fmt.Println("Error in Prompt")
+					}
+				}
+			case syscall.SIGTSTP:
+				fmt.Println()
+				if *fgPid != 0 {
+					jm.Update(*fgPid, "Stopped")
+					jm.Write(*fgPid)
+					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGSTOP)
+					if err != nil {
+						fmt.Println("Error stopping process")
+					}
+					*fgPid = 0
+				} else {
+					err := tools.Promptline()
+					if err != nil {
+						fmt.Println("Error in Prompt")
+					}
+				}
+			}
+		}
+	}()
+}
+
+func (jm *JobManager) FgWait(pid int) {
+	var ws syscall.WaitStatus
+	for {
+		_, err := syscall.Wait4(jm.PgId(pid), &ws, syscall.WUNTRACED, nil)
+		if ws.Stopped() {
+			fmt.Println()
+			jm.Update(pid, "Stopped")
+			jm.Write(pid)
+			err = syscall.Kill(jm.PgId(pid), syscall.SIGSTOP)
+			if err != nil {
+				fmt.Println("Error stopping process")
+			}
+			return
+		}
+		if ws.Signaled() {
+			jm.Update(pid, "Done")
+			err = syscall.Kill(jm.PgId(pid), syscall.SIGINT)
+			if err != nil {
+				fmt.Println()
+				return
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	jm.Update(pid, "Done")
+}
+
+func (jm *JobManager) WaitForForeground(pid int, fgPid *int) {
+	*fgPid = pid
+	var ws syscall.WaitStatus
+	for {
+		_, err := syscall.Wait4(jm.PgId(pid), &ws, syscall.WUNTRACED, nil)
+		if ws.Stopped() {
+			for *fgPid != 0 {
+			}
+			return
+		}
+		if ws.Signaled() {
+			for *fgPid != 0 {
+			}
+			if err != nil {
+				return
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	jm.Update(pid, "Done")
+	*fgPid = 0
+}
+
 func (jm *JobManager) WaitForBackground(pid int) {
 	go func() {
 		var ws syscall.WaitStatus
@@ -29,30 +125,18 @@ func (jm *JobManager) WaitForBackground(pid int) {
 			if ws.Stopped() {
 				return
 			}
+			if ws.Signaled() {
+				if jm.PgId(pid) >= 0 {
+					fmt.Println()
+				}
+				return
+			}
 			if err != nil {
 				break
 			}
 		}
 		jm.Update(pid, "Done")
 	}()
-}
-
-func (jm *JobManager) WaitForForeground(pid int, fgPid *int) {
-	var ws syscall.WaitStatus
-	*fgPid = pid
-	for {
-		_, err := syscall.Wait4(jm.PgId(pid), &ws, syscall.WUNTRACED, nil)
-		if ws.Stopped() || ws.Signaled() {
-			for *fgPid != 0 {
-			}
-			return
-		}
-		if err != nil {
-			break
-		}
-	}
-	jm.Update(pid, "Done")
-	*fgPid = 0
 }
 
 func (jm *JobManager) WriteDoneJobs() {
@@ -101,7 +185,7 @@ func (jm *JobManager) Add(pid int, cmdargs []string, flag bool, pipeFlag bool) {
 			}
 		}
 	}
-	if cmdargs[0] == "cat" && flag {
+	if (cmdargs[0] == "cat" || cmdargs[0] == "vim") && flag {
 		jm.jobsMutex.Unlock()
 		jm.Update(pid, "Running")
 		pgId := jm.PgId(pid)
@@ -181,7 +265,7 @@ func (jm *JobManager) Bg(pid int) {
 			jm.Update(pid, "Running")
 			pgId := jm.PgId(pid)
 			jm.jobsMutex.Lock()
-			if job.Cmdargs[0] == "cat" {
+			if job.Cmdargs[0] == "cat" || job.Cmdargs[0] == "vim" {
 				err := syscall.Kill(pgId, syscall.SIGSTOP)
 				if err != nil {
 					fmt.Println("Error stopping process")
@@ -222,13 +306,21 @@ func (jm *JobManager) Fg(pid int, fgPid *int) {
 				fmt.Println("Error continuing job")
 				return
 			}
-			if bkgrndFlag {
-				tools.Tcsetpgrp(os.Stdin.Fd(), pgId)
-			}
 			jm.jobsMutex.Unlock()
-			jm.WaitForForeground(pid, fgPid)
+			if bkgrndFlag {
+				_, _, err = syscall.Syscall(syscall.SYS_IOCTL, os.Stdin.Fd(), uintptr(syscall.TIOCSPGRP), uintptr(unsafe.Pointer(&pid)))
+				if err != nil {
+				}
+				jm.FgWait(pid)
+			} else {
+				jm.WaitForForeground(pid, fgPid)
+			}
 			jm.jobsMutex.Lock()
-			tools.Tcsetpgrp(os.Stdin.Fd(), os.Getpid())
+			sysPid := os.Getpid()
+			_, _, err = syscall.Syscall(syscall.SYS_IOCTL, os.Stdin.Fd(), uintptr(syscall.TIOCSPGRP), uintptr(unsafe.Pointer(&sysPid)))
+			if err != nil {
+				return
+			}
 			break
 		}
 	}
@@ -240,7 +332,7 @@ func (jm *JobManager) Update(pid int, status string) {
 	for elem := jm.Jobs.Front(); elem != nil; elem = elem.Next() {
 		job := elem.Value.(tools.Job)
 		if pid == job.Pid {
-			if job.Cmdargs[0] == "cat" && job.Bkgrnd && status == "Running" {
+			if (job.Cmdargs[0] == "cat" || job.Cmdargs[0] == "vim") && job.Bkgrnd && status == "Running" {
 				job.Status = "Stopped"
 			} else {
 				job.Status = status
@@ -263,45 +355,4 @@ func (jm *JobManager) Update(pid int, status string) {
 			break
 		}
 	}
-}
-
-func (jm *JobManager) SignalHandler(signChan chan os.Signal, fgPid *int) {
-	signal.Notify(signChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
-	go func() {
-		for sig := range signChan {
-			switch sig {
-			case syscall.SIGINT:
-				fmt.Println()
-				if *fgPid > 0 {
-					jm.Update(*fgPid, "Done")
-					jm.Write(*fgPid)
-					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGINT)
-					if err != nil {
-					}
-					*fgPid = 0
-				} else {
-					err := tools.Promptline()
-					if err != nil {
-						fmt.Println("Error in Prompt")
-					}
-				}
-			case syscall.SIGTSTP:
-				fmt.Println()
-				if *fgPid > 0 {
-					jm.Update(*fgPid, "Stopped")
-					jm.Write(*fgPid)
-					err := syscall.Kill(jm.PgId(*fgPid), syscall.SIGSTOP)
-					if err != nil {
-						fmt.Println("Error stopping process")
-					}
-					*fgPid = 0
-				} else {
-					err := tools.Promptline()
-					if err != nil {
-						fmt.Println("Error in Prompt")
-					}
-				}
-			}
-		}
-	}()
 }

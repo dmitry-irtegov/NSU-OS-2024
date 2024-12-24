@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	"syscall"
-	"unsafe"
 )
 
 type Job struct {
@@ -16,13 +14,6 @@ type Job struct {
 	Bkgrnd   bool
 	Id       int
 	PipeFlag bool
-}
-
-func Tcsetpgrp(fd uintptr, pgrp int) {
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCSPGRP), uintptr(unsafe.Pointer(&pgrp)))
-	if err != 0 {
-		return
-	}
 }
 
 func RemoveByte(slice []byte, beginId int, endId int) []byte {
