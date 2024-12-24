@@ -105,7 +105,7 @@ void listenUser(){
     while (1) {
         res = scanf("%d", &num_of_line);
         if (res != 1){
-            write(2,"problem in scanf, you should type int number\n", strlen("problem in scanf, you should type int number\n"));
+            printf("problem in scanf, you should type int number\n");
             freeAndCloseOnFail();
         }
         if (num_of_line < 0){
@@ -122,7 +122,7 @@ void listenUser(){
 int main(int argc, char *argv[]) {
     file_table.elems = NULL;
     if (argc != 2) {
-        write(2,"you have to give file name and nothing else\n", strlen("you have to give file name and nothing else\n"));
+        printf("you have to give file name and nothing else\n");
         exit(EXIT_FAILURE);
     }
     file = open(argv[1], O_RDONLY);
