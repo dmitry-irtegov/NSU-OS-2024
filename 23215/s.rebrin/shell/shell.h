@@ -39,11 +39,11 @@ void sigCHLD(int sig);
 void set_default_termios();
 void sigSTOP(int sig);
 
-int promptline(char* prompt, char* line, int sizline);
+//int promptline(char* prompt, char* line, int sizline);
 void free_ss();
 
 void reset_terminal();
-void able_job_control();
+//void able_job_control();
 void kill_all();
 
 #endif /* SHELL_H */

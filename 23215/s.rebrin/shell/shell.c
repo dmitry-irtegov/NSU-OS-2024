@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <fcntl.h>
 #include <errno.h>
 #include "shell.h"
@@ -67,7 +69,7 @@ void sigCHLD(int sig) {
 
 int main(int argc, char* argv[]) {
 	register int i;
-	char line[1024];      /* Allow large command lines */
+	char* line = NULL;      /* Allow large command lines */
 	int len;
 	int ncmds;
 	char prompt[1100];      /* Shell prompt */
@@ -101,12 +103,12 @@ int main(int argc, char* argv[]) {
 	set_default_termios();
 
 
-	while ((len = promptline(prompt, line, sizeof(line))) >= 0) { /* Until EOF */\
-		if (!len) continue;
+	while ((line = readline(prompt)) != NULL) { /* Until EOF */\
+		len = strlen(line);
 		line[len] = '\n';
 		line[len + 1] = '\0';
 		if ((ncmds = parseline(line)) <= 0) continue;
-		able_job_control();
+		//able_job_control();
 
 #ifdef DEBUG
 		{
@@ -363,6 +365,8 @@ int main(int argc, char* argv[]) {
 		pipefd1[0] = 0;
 		if (pipefd[1]) close(pipefd[1]);
 		pipefd[1] = 0;
+		if (line) free(line);
+		line = NULL;
 		getcwd(cwd, sizeof(cwd));
 		snprintf(prompt, sizeof(prompt), "%s: %s> ", argv[0], cwd);
 	}  /* Close while */

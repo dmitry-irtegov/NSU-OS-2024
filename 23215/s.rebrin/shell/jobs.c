@@ -277,6 +277,7 @@ int to_fg(int job_id_h) {
 	if (job_id_h) job_id = job_id_h;
 	else job_id = plus;
 
+	setpgid(jobs[job_id].pid, getpid());
 
 	int status;
 	signal(SIGCHLD, SIG_DFL);//Игнорируем всех детей пока
@@ -297,10 +298,11 @@ int to_fg(int job_id_h) {
 	}
 
 	if (jobs[job_id].status == 's') kill(-jobs[job_id].pid, SIGCONT);
+	fprintf(stderr, "<%d %d>\n", jobs[job_id].pid, getpgid(jobs[job_id].pid));
 
 	// Ожидание завершения процесса
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
-
+	setpgid(jobs[job_id].pid, jobs[job_id].pid);
 	if (code == -1) {
 		perror("unable to wait termination of one of job processes");
 	}
