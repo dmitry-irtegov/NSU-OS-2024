@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <errno.h>
 
 int main() {
     // Инициализация генератора случайных чисел
@@ -34,7 +35,12 @@ int main() {
 
     // Чтение и вывод отсортированных чисел
     int number, count = 0;
-    while (fscanf(fd[1], "%d", &number) == EOF) {
+
+    while (fscanf(fd[1], "%d", &number) != EOF) {
+        if (fscanf(fd[1], "%d", &number) == 0) {  
+            perror("fscanf failed");
+            break;
+        }
         printf("%d ", number);
         count++;
         if (count % 10 == 0) {
