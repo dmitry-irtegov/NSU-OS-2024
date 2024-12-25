@@ -103,11 +103,17 @@ int main(int argc, char* argv[]) {
 	set_default_termios();
 
 
-	while ((line = readline(prompt)) != NULL) { /* Until EOF */\
+	while ((line = readline(prompt)) != NULL) { /* Until EOF */
 		len = strlen(line);
+		line = realloc(line, len + 2);
 		line[len] = '\n';
 		line[len + 1] = '\0';
-		if ((ncmds = parseline(line)) <= 0) continue;
+
+		if ((ncmds = parseline(line)) <= 0) {
+			free(line);
+			line = NULL;
+			continue;
+		}
 		//able_job_control();
 
 #ifdef DEBUG
@@ -118,19 +124,19 @@ int main(int argc, char* argv[]) {
 					fprintf(stderr, "cmd[%d].cmdargs[%d] = %s\n", i, j, cmds[i].cmdargs[j]);
 				}
 				fprintf(stderr, "cmds[%d].cmdflag = %o\n", i, cmds[i].cmdflag);
-			}
 		}
+	}
 #endif
 
 		for (i = 0; i < ncmds; i++) {
 			pid_t pid;
-			if (!sss)
+			if (sss)
 				free(sss);
 			ss = (char*)malloc(1024);
 			sss = ss;
 			memset(ss, 0, 1024);
-			
-			
+
+
 			int mul = 1;
 			//kill
 			if (strcmp(cmds[i].cmdargs[0], "kill") == 0) {
@@ -144,7 +150,7 @@ int main(int argc, char* argv[]) {
 					continue;
 				}
 				if (cmds[i].cmdargs[j][0] == '%') {
-					pidd = mul*((isdigit(*cmds[i].cmdargs[j])) ? get_g_int(atoi(cmds[i].cmdargs[j])) : get_g_ch(*cmds[i].cmdargs[j]));
+					pidd = mul * ((isdigit(*cmds[i].cmdargs[j])) ? get_g_int(atoi(cmds[i].cmdargs[j])) : get_g_ch(*cmds[i].cmdargs[j]));
 					sprintf(ss, "%d", pidd);
 					cmds[i].cmdargs[j] = ss;
 					ss += strlen(ss) + 1;
@@ -227,8 +233,7 @@ int main(int argc, char* argv[]) {
 				signal(SIGTERM, SIG_IGN);
 				int fd;
 
-				if (pipefd[0] && pipefd[1] && !pipefd1[0] && !pipefd1[1]) pgid = getpid();
-				if (!pipefd[0] && !pipefd[1] && pipefd1[0] && pipefd1[1]) pgid = 0;
+				if (!(cmds[i].cmdflag & INPIP)) pgid = 0;
 				setpgid(0, pgid);
 
 				signal(SIGINT, SIG_DFL);
@@ -273,9 +278,9 @@ int main(int argc, char* argv[]) {
 					outfile = NULL;
 				}
 
-			#ifdef DEBUG
+#ifdef DEBUG
 				fprintf(stderr, "<%d, %d + %d, %d - %d>\n", pipefd[0], pipefd[1], pipefd1[0], pipefd1[1], cmds[i].cmdflag);
-			#endif
+#endif
 
 
 				if (cmds[i].cmdflag & INPIP) {//Входящая труба
@@ -313,7 +318,7 @@ int main(int argc, char* argv[]) {
 				execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
 				perror("Execution error");
 				done(1);
-			}
+				}
 			else if (pid > 0) {
 
 				//Закрываем определенные использованные трубы
@@ -334,6 +339,7 @@ int main(int argc, char* argv[]) {
 					close(pipefd1[0]);
 					pipefd1[0] = 0;
 				}
+
 				if (!(cmds[i].cmdflag & INPIP)) pgid = pid;
 
 				if (!(cmds[i].cmdflag & OUTPIP)) {//Если не в конвейере
@@ -354,7 +360,7 @@ int main(int argc, char* argv[]) {
 				}
 				bkgrnd = 0;
 			}
-		}
+			}
 
 		//Подгавливаем к следующей строке
 		if (pipefd[0]) close(pipefd[0]);
@@ -369,8 +375,9 @@ int main(int argc, char* argv[]) {
 		line = NULL;
 		getcwd(cwd, sizeof(cwd));
 		snprintf(prompt, sizeof(prompt), "%s: %s> ", argv[0], cwd);
-	}  /* Close while */
+		}  /* Close while */
 
 	done(0);
 }
+
 

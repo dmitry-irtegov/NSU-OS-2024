@@ -36,6 +36,16 @@ struct termios saved_term;//Образец терма
 
 void init_jobs() {
 	jobs = (job*)malloc(sizeof(job) * cup);
+	if (!jobs) {
+		perror("malloc failed");
+		exit(EXIT_FAILURE);
+	}
+	for (int i = 0; i < cup; i++) {
+		jobs[i].name[0] = '\0';           
+		jobs[i].status = '\0';            
+		jobs[i].pid = 0;                  
+		tcgetattr(0, &jobs[i].term);       
+	}
 }
 
 //Проверить все рабочие джобы
@@ -50,8 +60,8 @@ void count_to_ne_f() {
 }
 
 int get_job_id(pid_t p) {
-	for (int i = 0;i <= count;i++) {
-		if (jobs[count].pid == p) return count;
+	for (int i = 1;i <= count;i++) {
+		if (jobs[i].pid == p) return i;
 	}
 	return -1;
 }
@@ -144,8 +154,8 @@ void reorder_priorities(int last) {
 	}
 
 	if (!last) {
-		if (jobs[plus].status == 'f') {
-			if (jobs[minus].status == 'f') {
+		if (!plus || jobs[plus].status == 'f') {
+			if (!minus || jobs[minus].status == 'f') {
 				plus = count;
 				minus = count - 1;
 				while (minus && jobs[minus].status == 'f') minus--;
@@ -156,7 +166,7 @@ void reorder_priorities(int last) {
 				else minus = 0;
 			}
 		}
-		else if (jobs[minus].status == 'f') {
+		else if (!minus || jobs[minus].status == 'f') {
 			if (plus == count) {
 				minus = count - 1;
 				while (minus && jobs[minus].status == 'f') minus--;
@@ -167,7 +177,7 @@ void reorder_priorities(int last) {
 		}
 	}
 	else {
-		if (last <= count && jobs[last].status != 'f') return;
+		if (last < 0 || last > count || jobs[last].status == 'f') return;
 		else {
 			plus = last;
 			if (plus == count) {
@@ -186,10 +196,27 @@ int add_job(char* name, pid_t pid, int frnt) {
 	upd_job();
 
 	exs++;
+
 	if (count >= cup) {
 		cup *= 2;
-		jobs = (job*)realloc(jobs, cup * sizeof(job));
+		job* new_jobs = (job*)realloc(jobs, cup * sizeof(job));
+		if (!new_jobs) {
+			perror("realloc failed");
+			free(jobs); // Освобождаем старую память
+			exit(EXIT_FAILURE);
+		}
+		jobs = new_jobs;
+
+		// Инициализация новых элементов массива
+		for (int i = count; i < cup; i++) {
+			jobs[i].name[0] = '\0';     
+			jobs[i].status = '\0';       
+			jobs[i].pid = 0;             
+
+			tcgetattr(0, &jobs[i].term);
+		}
 	}
+
 
 	count++;
 	strcpy(jobs[count].name, name);
@@ -269,21 +296,22 @@ int to_fg(int job_id_h) {
 	upd_job();
 	int job_id;
 
-	if (job_id_h < 0 || job_id_h > count || jobs[job_id_h].status == 'f') {
-		fprintf(stderr, "shell: no such job");
-		return -1;
-	}
 
 	if (job_id_h) job_id = job_id_h;
 	else job_id = plus;
 
-	setpgid(jobs[job_id].pid, getpid());
+	if (job_id < 0 || job_id > count || jobs[job_id].status == 'f') {
+		fprintf(stderr, "shell: no such job");
+		return -1;
+	}
+
+	//setpgid(jobs[job_id].pid, getpid());
 
 	int status;
 	signal(SIGCHLD, SIG_DFL);//Игнорируем всех детей пока
 
 	//Насротройка терминала
-	//setpgid(jobs[job_id].pid, jobs[job_id].pid);
+	setpgid(jobs[job_id].pid, jobs[job_id].pid);
 
 	if (tcgetpgrp(STDIN_FILENO) != getpid()) {
 		perror("Current process does not control the terminal");
@@ -298,7 +326,7 @@ int to_fg(int job_id_h) {
 	}
 
 	if (jobs[job_id].status == 's') kill(-jobs[job_id].pid, SIGCONT);
-	fprintf(stderr, "<%d %d>\n", jobs[job_id].pid, getpgid(jobs[job_id].pid));
+	//fprintf(stderr, "<%d %d>\n", jobs[job_id].pid, getpgid(jobs[job_id].pid));
 
 	// Ожидание завершения процесса
 	pid_t code = waitpid(jobs[job_id].pid, &status, WUNTRACED);
