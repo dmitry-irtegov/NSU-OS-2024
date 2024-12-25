@@ -41,10 +41,10 @@ void init_jobs() {
 		exit(EXIT_FAILURE);
 	}
 	for (int i = 0; i < cup; i++) {
-		jobs[i].name[0] = '\0';           
-		jobs[i].status = '\0';            
-		jobs[i].pid = 0;                  
-		tcgetattr(0, &jobs[i].term);       
+		jobs[i].name[0] = '\0';
+		jobs[i].status = '\0';
+		jobs[i].pid = 0;
+		tcgetattr(0, &jobs[i].term);
 	}
 }
 
@@ -209,9 +209,9 @@ int add_job(char* name, pid_t pid, int frnt) {
 
 		// Инициализация новых элементов массива
 		for (int i = count; i < cup; i++) {
-			jobs[i].name[0] = '\0';     
-			jobs[i].status = '\0';       
-			jobs[i].pid = 0;             
+			jobs[i].name[0] = '\0';
+			jobs[i].status = '\0';
+			jobs[i].pid = 0;
 
 			tcgetattr(0, &jobs[i].term);
 		}
@@ -428,9 +428,9 @@ void pr_job(pid_t pid) {
 void kill_all() {
 	if (!count) return;
 	upd_job();
-	signal(SIGCHLD, SIG_IGN);
-	for (int i = 1; i <= count; i++) { if (jobs[i].status != 'f');	kill(-jobs[i].pid, SIGTERM); }
-	sleep(2);
+	signal(SIGCHLD, SIG_DFL);
+	for (int i = 1; i <= count; i++) { if (jobs[i].status != 'f') kill(-jobs[i].pid, SIGTERM); }
+	sleep(1);
 
 	pid_t result;
 	int status;
@@ -457,9 +457,7 @@ void kill_all() {
 			break;
 		}
 	}
-	for (int i= 1; i <= count; i++) {
-		if (jobs[i].status != 'f');
-		kill(-jobs[i].pid, SIGKILL);
-	}
+
+	for (int i = 1; i <= count; i++) { if (jobs[i].status != 'f') kill(-jobs[i].pid, SIGKILL); }
 
 }

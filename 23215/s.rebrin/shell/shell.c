@@ -26,11 +26,11 @@ char* sss = NULL;
 
 
 void done(int stat) {
-	clear_jobs();
 	if (sss)
 		free(sss);
-	reset_terminal();
 	kill_all();
+	clear_jobs();
+	reset_terminal();
 	exit(stat);
 }
 
