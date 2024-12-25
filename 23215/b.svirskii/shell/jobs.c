@@ -9,7 +9,7 @@
 
 static Job* first_job = NULL;
 
-const char* state_to_str(JobState state) {
+const char* state_to_str(State state) {
     switch (state) {
         case RUNNING:
             return "RUNNING";
@@ -24,34 +24,65 @@ const char* state_to_str(JobState state) {
     }
 }
 
+int is_dead(State state) {
+	return state == DONE || state == SIGNALED;
+}
+
 void update_job_state(Job* job) {
+    if (job->is_foreground || is_dead(job->state)) {
+        return;
+    } 
 #ifdef DEBUG
     fprintf(stderr, "(dev) %d - start updating state\n", job->number);
 #endif
-    if (job->is_foreground || job->state == DONE) {
-        return;
-    } 
-    JobState prev_state = job->state;
-    int stat = 0;
-    switch (waitpid(-job->pgid, &stat, WNOHANG | WUNTRACED | WCONTINUED)) {
-        case -1: 
-            perror("waitpid() failed");
-            exit(EXIT_FAILURE);
-            break;
-        case 0: break;
-        default:
-            if (WIFCONTINUED(stat)) {
-                job->state = RUNNING;
-            } else if (WIFEXITED(stat)) {
-                job->alive_procs_count--;
-            } else if (WIFSTOPPED(stat)) {
-                job->state = STOPPED;
-            } else if (WIFSIGNALED(stat)) {
-                job->state = SIGNALED;
-            }
-    } 
-    if (job->alive_procs_count == 0) {
-        job->state = DONE;
+    State prev_state = job->state;
+    int stat;
+    int is_all_done = 1;
+    int is_all_signaled = 1;
+    int is_all_running = 1;
+    int is_all_dead = 1;
+    for (Proc* curr_proc = job->procs; curr_proc; curr_proc = curr_proc->next) {
+        if (is_dead(curr_proc->state)) {
+            continue;
+        }
+	    stat = 0;
+	    switch (waitpid(curr_proc->pid, &stat, 
+                    WNOHANG | WUNTRACED | WCONTINUED)) {
+            case -1: 
+                perror("waitpid() failed");
+                exit(EXIT_FAILURE);
+                break;
+            case 0: break;
+            default:
+                if (WIFEXITED(stat)) {
+                    curr_proc->state = DONE;
+                } else if (WIFSIGNALED(stat)) {
+                    curr_proc->state = SIGNALED;
+                } else if (WIFCONTINUED(stat)) {
+                    curr_proc->state = RUNNING;
+                } else if (WIFSTOPPED(stat)) {
+                    job->state = curr_proc->state = STOPPED;
+                }
+	    }
+	    if (is_all_done && curr_proc->state != DONE) {
+		    is_all_done = 0;
+	    }
+	    if (is_all_signaled && curr_proc->state != SIGNALED) {
+		    is_all_signaled = 0;
+	    }
+	    if (is_all_running && curr_proc->state != RUNNING) {
+		    is_all_running = 0;
+	    }
+        if (is_all_dead && !is_dead(curr_proc->state)) {
+            is_all_dead = 0;
+        }
+    }
+    if (is_all_done) {
+	    job->state = DONE;
+    } else if (is_all_signaled || is_all_dead) {
+	    job->state = SIGNALED;
+    } else if (is_all_running) {
+	    job->state = RUNNING;
     }
     if (prev_state != job->state) {
         job->is_state_changed = 1;
@@ -61,21 +92,12 @@ void update_job_state(Job* job) {
 #endif
 }
 
-void update_job_states() {
-    Job* curr_job = first_job;
-    while (curr_job) {
-        update_job_state(curr_job);
-        curr_job = curr_job->next;
-    }
-}
-
-
 void print_job(Job* job) {
     if (job->is_foreground) return;
     job->is_state_changed = 0;
     fprintf(stderr, 
             "[%d] %8s %7d %s\n", job->number, state_to_str(job->state),
-                job->pgid, job->name);  
+                job->pgid, job->prompt);  
 }
 
 Job* delete_job(Job* job) {
@@ -92,7 +114,13 @@ Job* delete_job(Job* job) {
     if (job->next) {
         job->next->prev = job->prev;
     }
-    free(job->name);
+    Proc* prev_proc = NULL;
+    Proc* curr_proc = job->procs;
+    while (curr_proc) {
+        prev_proc = curr_proc;
+        curr_proc = curr_proc->next;
+        free(prev_proc);
+    }
     free(job);
 #ifdef DEBUG
     fprintf(stderr, "(dev) end\n");
@@ -105,7 +133,7 @@ void print_jobs() {
     while (curr_job != NULL) {
         update_job_state(curr_job);
         print_job(curr_job);
-        if (curr_job->state == DONE ) {
+        if (is_dead(curr_job->state)) {
             curr_job = delete_job(curr_job);
         } else {
             curr_job = curr_job->next;
@@ -113,7 +141,7 @@ void print_jobs() {
     }
 }
 
-Job* create_job(int pgid, JobState state, char* name, int procs_count) {
+Job* create_job(int pgid, State state, char* prompt, Proc* procs) {
     int job_number = 1;
     Job* new_job = (Job*) calloc(1, sizeof(Job));
     
@@ -138,11 +166,9 @@ Job* create_job(int pgid, JobState state, char* name, int procs_count) {
         new_job->next = curr_job;
         curr_job->prev = new_job;
     }
-
-    int len = strlen(name) + 1;
-    new_job->name = (char*) malloc(sizeof(char) * len);
-    memcpy(new_job->name, name, len);
-    new_job->alive_procs_count = procs_count;
+    
+    strcpy(new_job->prompt, prompt);
+    new_job->procs = procs;
     new_job->number = job_number;
     new_job->pgid = pgid;
     new_job->state = state;
@@ -163,7 +189,7 @@ void check_jobs_states_updates() {
         fprintf(stderr, "%d - %s, %d\n", curr_job->number, 
                 state_to_str(curr_job->state), curr_job->alive_procs_count);
 #endif
-        if (curr_job->state == DONE) {
+        if (is_dead(curr_job->state)) {
             curr_job = delete_job(curr_job);
         } else {
             curr_job = curr_job->next;
@@ -250,7 +276,7 @@ void destroy_jobs() {
     Job* curr_job = first_job;
     while (curr_job) {
         update_job_state(curr_job);
-        if (curr_job->state != DONE) {
+        if (!is_dead(curr_job->state)) {
             kill(-curr_job->pgid, SIGKILL);
         }
         curr_job = delete_job(curr_job);
@@ -259,22 +285,34 @@ void destroy_jobs() {
 }
 
 void wait_job_in_fg(Job* job) {
+#ifdef DEBUG
+    fprintf(stderr, "(dev) start waiting job %d in fg\n", job->number);
+#endif
     job->is_foreground = 1;
     int stat;
-    while (job->alive_procs_count) {
-        if (waitpid(-job->pgid, &stat, WUNTRACED | WCONTINUED) == -1) {
+    for (Proc* curr_proc = job->procs; curr_proc; curr_proc = curr_proc->next) {
+        if (is_dead(curr_proc->state)) {
+            continue;
+        }
+#ifdef DEBUG
+        fprintf(stderr, "(dev) start updating state of \"%s\", pid: %d\n", curr_proc->prompt, curr_proc->pid);
+#endif
+        stat = 0;
+        if (waitpid(curr_proc->pid, &stat, WUNTRACED) == -1) {
             perror("waitpid() failed");
             exit(EXIT_FAILURE);
         }
         if (WIFEXITED(stat)) {
-            job->alive_procs_count--;
-        } else if (WIFSTOPPED(stat)) {
-            job->state = STOPPED;
-            job->is_state_changed = 1;
-            job->is_foreground = 0;
-            return;
-        } else if (WIFSIGNALED(stat)) {
-            break;
+            curr_proc->state = DONE;
+        }  else if (WIFSIGNALED(stat)) {
+            curr_proc->state = SIGNALED;
+        } else {
+            if (WIFSTOPPED(stat)) {
+                job->state = curr_proc->state = STOPPED;
+                job->is_state_changed = 1;
+                job->is_foreground = 0;
+                return;
+            }
         }
     }
     delete_job(job);

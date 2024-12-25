@@ -6,18 +6,12 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "shell.h"
-#include <signal.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include "jobs.h"
 
 char *infile, *outfile, *appfile;
 struct command cmds[MAXCMDS];
 char bkgrnd;
-
-void sigchld_hand(int sig) {
-    update_job_states();
-}
 
 int main(int argc, char *argv[])
 {
@@ -37,12 +31,6 @@ int main(int argc, char *argv[])
     char curr_cmd[1024] = "";
 
     ignore_signals();
-    sigset_t sigset;
-    sigemptyset(&sigset);
-    //struct sigaction act = { { sigchld_hand }, sigset, SA_RESTART }; for ubuntu
-    struct sigaction act = { SA_RESTART, { sigchld_hand }, sigset, {{0}}}; // for solaris
-    sigaction(SIGCHLD, &act, NULL);
-    //signal(SIGCHLD, sigchld_hand); //TODO sa_restart
 
     sprintf(prompt,"[%s] ", argv[0]);
 
@@ -83,10 +71,11 @@ int main(int argc, char *argv[])
                 run_proc(cmds[i]);
             } else {
                 build_cmd_prompt(cmds[i], curr_cmd);
+                Proc* new_proc = create_proc(child_pid, curr_cmd);
 
                 if (is_pipe(cmds[i])) {
                     prepare_for_next_pipe();
-                    add_proc_to_pipeline(child_pid, curr_cmd);
+                    add_proc_to_pipeline(new_proc);
                 } else {
                     setpgid(child_pid, 0);
                 }
@@ -97,7 +86,7 @@ int main(int argc, char *argv[])
 
                 Job* job = create_job(getpgid(child_pid), RUNNING, 
                         is_pipe(cmds[i]) ? get_pipeline_prompt() : curr_cmd, 
-                        is_pipe(cmds[i]) ? get_pipeline_procs_count() : 1);
+                        is_pipe(cmds[i]) ? get_pipeline_procs() : new_proc);
 
 #ifdef DEBUG
                 print_job(job);

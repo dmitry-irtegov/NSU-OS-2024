@@ -1,3 +1,5 @@
+#include "jobs.h"
+
 #define MAXARGS 256
 #define MAXCMDS 50
 
@@ -26,10 +28,11 @@ int get_pipeline_out_fd();
 void create_new_pipe();
 void prepare_for_next_pipe();
 void end_pipeline();
-void add_proc_to_pipeline(int pid, char* cmd_prompt);
+void add_proc_to_pipeline(Proc* proc);
 void close_all_pipeline_fds();
 int get_pipeline_procs_count();
 char* get_pipeline_prompt();
+Proc* get_pipeline_procs();
 
 // builtins
 unsigned char run_builtin(char** args);
@@ -43,3 +46,4 @@ void run_proc(struct command cmd);
 void build_cmd_prompt(struct command cmd, char* buff);
 void ignore_signals();
 void set_sighandlers_to_dfl();
+Proc* create_proc(int pid, char* prompt);
