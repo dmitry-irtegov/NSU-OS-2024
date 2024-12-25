@@ -14,16 +14,29 @@ int main() {
     char buffer[256];
 
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    //unlink(SOCKET_PATH);
+    unlink(SOCKET_PATH);
 
     server_addr.sun_family = AF_UNIX;
     strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
-
-    bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
-    listen(server_fd, 1);
-
-    client_fd = accept(server_fd, NULL, NULL);
-
+	
+   	if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1){
+   		perror("Bind failed");
+   		close(server_fd);
+   		return 1;
+   	}
+   	if (listen(server_fd, 1) == -1) { // Allow up to 5 pending connections
+   	   	perror("Listen failed");
+   		close(server_fd);
+   	    return 1;
+   	}
+	client_fd = accept(server_fd, NULL, NULL);
+    if (client_fd == -1){
+		printf("Failed to connect client");
+		close(client_fd);
+	    close(server_fd);
+	    unlink(SOCKET_PATH);
+		return 1;
+    }
     int n;
     while ((n = read(client_fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[n] = '\0';
