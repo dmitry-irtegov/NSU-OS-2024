@@ -1,5 +1,5 @@
-CC = cc
-CFLAGS = -Wall -Wextra -O2
+CC = gcc
+CFLAGS = -lsocket -Wall -Wextra -O2
 
 all: server client
 
