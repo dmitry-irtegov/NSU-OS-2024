@@ -14,7 +14,7 @@ int main() {
     char buffer[256];
 
     server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    unlink(SOCKET_PATH);
+    //unlink(SOCKET_PATH);
 
     server_addr.sun_family = AF_UNIX;
     strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
