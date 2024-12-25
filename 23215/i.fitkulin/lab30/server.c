@@ -5,12 +5,18 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <signal.h>
 
 #define SIZE 1024
+char *socket_path = "socket";
+
+void handle_sigint(int sig) {
+    unlink(socket_path);
+    _exit(EXIT_SUCCESS);
+}
 
 int main() {
     struct sockaddr_un addr;
-    char *socket_path = "socket";
 
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
@@ -35,6 +41,8 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    signal(SIGINT, handle_sigint);
+
     int accepted = accept(fd, NULL, NULL);
     if (accepted == -1) {
         perror("accept error");
@@ -56,7 +64,7 @@ int main() {
         close(accepted);
         close(fd);
         unlink(socket_path);
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     close(fd);

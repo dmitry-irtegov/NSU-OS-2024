@@ -6,10 +6,10 @@
 #include <string.h>
 
 #define SIZE 1024
+char *socket_path = "socket";
 
 int main() {
     struct sockaddr_un addr;
-    char *socket_path = "socket";
 
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
