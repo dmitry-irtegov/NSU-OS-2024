@@ -357,8 +357,8 @@ int main(int argc, char* argv[]) {
 						upd_job();
 						pr_job(pid);
 					}
-				}
 				bkgrnd = 0;
+				}
 			}
 			}
 
