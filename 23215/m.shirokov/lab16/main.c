@@ -48,9 +48,15 @@ int main() {
     while (1)
     {
      if (read(STDIN_FILENO, &answer, 1) != 1) {
-        perror("read failed");
         restore_terminal_mode(&old_tio);
-        continue;
+        if(errno == EINTR)
+        {
+            continue;
+        }
+        else
+        {
+            break;
+        }
      }
      printf("\n");
      if (answer == 'y' || answer == 'Y') {
