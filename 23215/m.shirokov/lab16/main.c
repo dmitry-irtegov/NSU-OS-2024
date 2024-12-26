@@ -43,11 +43,12 @@ int main() {
         perror("signal(SIGCONT)");
         exit(EXIT_FAILURE);
     }
-    set_terminal_mode(&old_tio);
+    
     printf("Yes or no? (y/n): ");
     fflush(stdout);
     while (1)
     {
+     set_terminal_mode(&old_tio);
      if (read(STDIN_FILENO, &answer, 1) != 1) {
         restore_terminal_mode(&old_tio);
         if(errno == EINTR)
