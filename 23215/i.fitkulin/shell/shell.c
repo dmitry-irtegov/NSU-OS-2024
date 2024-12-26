@@ -36,7 +36,8 @@ int main(int argc, char *argv[])
             continue;   /* read next line */
             
         job* new_job = create_job_from_cmds(line, cmds, ncmds);
-
+        
+        update_job_statuses();
         start_job(new_job);
         
         // print_process(new_job);
