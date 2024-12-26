@@ -3,6 +3,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 struct termios old_tio;
 
