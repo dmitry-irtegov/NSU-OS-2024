@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
+
+struct termios old_tio;
 
 void set_terminal_mode(struct termios *old_tio) {
     struct termios new_tio;
@@ -26,9 +29,19 @@ void restore_terminal_mode(struct termios *old_tio) {
     }
 }
 
+void handle_sigcont(int signo) {
+    printf("\nReceived SIGCONT, restoring changed terminal state...\n");
+    printf("Yes or no? (y/n): ");
+    set_terminal_mode(&old_tio);
+    fflush(stdout);
+}
 int main() {
-    struct termios old_tio;
+
     char answer;
+    if (signal(SIGCONT, handle_sigcont) == SIG_ERR) {
+        perror("signal(SIGCONT)");
+        exit(EXIT_FAILURE);
+    }
     set_terminal_mode(&old_tio);
     printf("Yes or no? (y/n): ");
     fflush(stdout);
@@ -37,8 +50,6 @@ int main() {
         restore_terminal_mode(&old_tio);
         exit(EXIT_FAILURE);
     }
-
-    restore_terminal_mode(&old_tio);
     printf("\n");
     if (answer == 'y' || answer == 'Y') {
         printf("Yes!\n");
@@ -47,6 +58,6 @@ int main() {
     } else {
         printf("Invalid response: %c\n", answer);
     }
-
+    restore_terminal_mode(&old_tio);
     return 0;
 }
