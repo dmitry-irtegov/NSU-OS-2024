@@ -45,19 +45,22 @@ int main() {
     set_terminal_mode(&old_tio);
     printf("Yes or no? (y/n): ");
     fflush(stdout);
-    if (read(STDIN_FILENO, &answer, 1) != 1) {
+    while (1)
+    {
+     if (read(STDIN_FILENO, &answer, 1) != 1) {
         perror("read failed");
         restore_terminal_mode(&old_tio);
-        exit(EXIT_FAILURE);
+        continue;
+     }
+     printf("\n");
+     if (answer == 'y' || answer == 'Y') {
+         printf("Yes!\n");
+     } else if (answer == 'n' || answer == 'N') {
+         printf("No!\n");
+     } else {
+         printf("Invalid response: %c\n", answer);
+     }
+     restore_terminal_mode(&old_tio);
+     return 0;
     }
-    printf("\n");
-    if (answer == 'y' || answer == 'Y') {
-        printf("Yes!\n");
-    } else if (answer == 'n' || answer == 'N') {
-        printf("No!\n");
-    } else {
-        printf("Invalid response: %c\n", answer);
-    }
-    restore_terminal_mode(&old_tio);
-    return 0;
 }
