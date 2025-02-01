@@ -8,7 +8,7 @@ typedef struct data {
 	int cnt;
 } data;
 
-data d1;
+data d1, d2, d3, d4;
 
 void* func(void *param) {
 	
@@ -20,10 +20,18 @@ void* func(void *param) {
 	return NULL;
 }
 
+void start(pthread_t* thr, int numb, data* d) {
+	int res = 0;
+	res = pthread_create(thr, NULL, func, d);
+	if (res != 0) {
+		printf("create %d ", numb);
+		perror("error");
+		exit(1);
+	}
+}
 
 int main() {
-	pthread_t thread1;
-	int res;
+	pthread_t thread1, thread2, thread3, thread4;
 
 	d1.cnt = 4;
 	strcpy(d1.strs[0], "a");
@@ -31,13 +39,28 @@ int main() {
 	strcpy(d1.strs[2], "c");
 	strcpy(d1.strs[3], "d");
 	
+	d2.cnt = 4;
+	strcpy(d2.strs[0], "00");
+	strcpy(d2.strs[1], "01");
+	strcpy(d2.strs[2], "10");
+	strcpy(d2.strs[3], "11");
 
+	d3.cnt = 4;
+	strcpy(d3.strs[0], "1");
+	strcpy(d3.strs[1], "2");
+	strcpy(d3.strs[2], "3");
+	strcpy(d3.strs[3], "4");
 
-	res = pthread_create(&thread1, NULL, func, &d1);
-	if (res != 0) {
-		perror("create 1 error");
-		exit(1);
-	}
+	d4.cnt = 4;
+	strcpy(d4.strs[0], "5");
+	strcpy(d4.strs[1], "25");
+	strcpy(d4.strs[2], "125");
+	strcpy(d4.strs[3], "625");
+
+	start(thread1, 1, &d1);
+	start(thread2, 2, &d2);
+	start(thread3, 3, &d3);
+	start(thread4, 4, &d4);
 
 	pthread_exit(NULL);
 }
