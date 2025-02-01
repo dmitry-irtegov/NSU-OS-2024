@@ -44,5 +44,5 @@ func main() {
 	for partialSum := range result {
 		sum += partialSum
 	}
-	fmt.Printf("Approximated π = %.15f\n", sum*4.0)
+	fmt.Printf("Approximated pi = %.15f\n", sum*4.0)
 }
