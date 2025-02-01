@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include "stdio.h"
 
-void* thread_funk(void* param) {
+void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
 		printf("%d\n", i);
 	}
@@ -22,6 +22,6 @@ int main() {
 		exit(1);
 	}
 
-	thread_funk(NULL);
+	thread_funk();
 	pthread_exit(NULL);
 }
