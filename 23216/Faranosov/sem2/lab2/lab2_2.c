@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include "stdio.h"
 
-void* thread_funk(void* param) {
+void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
 		printf("%d\n", i);
 	}
