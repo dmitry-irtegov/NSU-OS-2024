@@ -57,10 +57,10 @@ int main() {
 	strcpy(d4.strs[2], "125");
 	strcpy(d4.strs[3], "625");
 
-	start(thread1, 1, &d1);
-	start(thread2, 2, &d2);
-	start(thread3, 3, &d3);
-	start(thread4, 4, &d4);
+	start(&thread1, 1, &d1);
+	start(&thread2, 2, &d2);
+	start(&thread3, 3, &d3);
+	start(&thread4, 4, &d4);
 
 	pthread_exit(NULL);
 }
