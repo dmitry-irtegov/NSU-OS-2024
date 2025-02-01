@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"sync"
 )
 
 func printTexts(s string) {
@@ -12,7 +12,13 @@ func printTexts(s string) {
 }
 
 func main() {
-	go printTexts("Parent Thread")
-	printTexts("Child Thread")
-	time.Sleep(time.Second)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		printTexts("Child Thread")
+		wg.Done()
+	}()
+
+	printTexts("Parent Thread")
+	wg.Wait()
 }
