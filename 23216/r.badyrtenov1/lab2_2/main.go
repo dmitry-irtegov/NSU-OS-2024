@@ -6,8 +6,8 @@ import (
 )
 
 func printTexts(s string) {
-	for i := 0; i < 10; i++ {
-		fmt.Println(s)
+	for i := 1; i <= 10; i++ {
+		fmt.Println(s, i)
 	}
 }
 
