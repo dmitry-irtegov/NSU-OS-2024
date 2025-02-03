@@ -94,22 +94,7 @@ int main() {
     code4 = pthread_create(&thread4, NULL, print_strings, strings4);
 
     if (code1 || code2 || code3 || code4) {
-        if (code1) {
-            pthread_cancel(thread1);
-        }
-
-        if (code2) {
-            pthread_cancel(thread1);
-        }
-
-        if (code3) {
-            pthread_cancel(thread1);
-        }
-
-        if (code4) {
-            pthread_cancel(thread1);
-        }
-
+        perror("pthread_create");
         exit(EXIT_FAILURE);
     }
 
