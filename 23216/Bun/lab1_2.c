@@ -14,7 +14,7 @@ int main() {
     perror("error creating thread");
     exit(EXIT_FAILURE);
   }
-  thread_function(NULL);
+  thread_function();
 
   pthread_exit(NULL);
 
