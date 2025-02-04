@@ -10,8 +10,11 @@ void* thread_function(void* arg) {
 }
 int main() {
     pthread_t thread;
-    if (pthread_create(&thread, NULL, thread_function, "from child") != 0) {
-        perror("error creating thread");
+    int res;
+    if ((res = pthread_create(&thread, NULL, thread_function, NULL)) != 0) {
+        char err[256];
+        strerror_r(res, err, sizeof(err));
+        fprintf(stderr, "Error creating thread: %s\n", err);
         exit(EXIT_FAILURE);
     }
 
