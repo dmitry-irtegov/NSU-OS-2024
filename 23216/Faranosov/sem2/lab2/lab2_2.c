@@ -1,6 +1,7 @@
 #include "stdlib.h"
 #include "pthread.h"
 #include "stdio.h"
+#include "string.h"
 
 void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
@@ -18,13 +19,17 @@ int main() {
 
 	checkRes = pthread_create(&thread, NULL, thread_funk, NULL);
 	if (checkRes != 0) {
-		perror("pthread_create error");
+		char buf[256];
+		strerror_r(checkRes, buf, 256);
+		printf("create error: %s", buf);
 		exit(1);
 	}
 
 	checkRes = pthread_join(thread, NULL);
 	if (checkRes != 0) {
-		perror("pthread_join error");
+		char buf[256];
+		strerror_r(checkRes, buf, 256);
+		printf("join error: %s", buf);
 		exit(1);
 	}
 
