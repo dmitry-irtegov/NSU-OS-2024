@@ -123,6 +123,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "pthread_create(&phils[i], ...) error: %d \n", code);
             exit(EXIT_FAILURE);
         }
+        pthread_detach(phils[i]);
     }
 
     for (int i = 0; i < PHILO; i++) {
@@ -131,6 +132,7 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }
     }
-    return 0;
+    
+    exit(EXIT_SUCCESS);
 
 }
