@@ -19,7 +19,10 @@ int main() {
     }
     
     // Ожидание завершения дочернего потока
-    pthread_join(thread, NULL);
+    if (pthread_join(thread, NULL) != 0){
+    	perror("Ошибкак при присоединениt потокая");
+    	return EXIT_FAILURE; 
+    }
     
     // Выполнение кода в главном потоке после завершения дочернего
     print_lines();
