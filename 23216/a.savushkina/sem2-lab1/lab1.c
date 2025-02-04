@@ -5,10 +5,14 @@
  
 #define handle_error_en(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0) 
  
-void * print_lines(void* arg) { 
+void print_all_lines(char* string){
     for (int i = 0; i < 10; i++) { 
-        printf("Thread: number %d\n", i); 
-    } 
+        printf("%s: number %d\n", string, i); 
+    }
+}
+ 
+void * print_lines(void* arg) { 
+    print_all_lines("Thread");
     pthread_exit(0); 
 } 
  
@@ -31,10 +35,7 @@ int main() {
         handle_error_en(result, "pthread_attr_destroy");
         
 
-    for (int i = 0; i < 10; i++) { 
-        printf("Parent thread: number %d\n", i); 
-    } 
- 
+    print_all_lines("Parent thread");
 
     pthread_exit(0);
 }
