@@ -22,9 +22,9 @@ void* thread_func(void* param) {
 
 int main() {
     pthread_t thread;
-    
-    if (pthread_create(&thread, NULL, thread_func, NULL)) {
-        perror("pthread_create");
+    int code = 0;
+    if ((code = pthread_create(&thread, NULL, thread_func, NULL)) != 0) {
+        fprintf(stderr, "pthread_create error: %d", code);
         exit(EXIT_FAILURE);
     }
     print_text();
