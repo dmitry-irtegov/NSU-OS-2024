@@ -14,14 +14,17 @@ int main() {
         fprintf(stderr, "At creating thread: %s\n", buf);
         exit(EXIT_FAILURE);
     }
-    printTenStrings();
+    
+    for (int i = 1; i <= 10; i++) {
+        printf("Print's number at source thread %d\n", i);
+    }
 
     exit(EXIT_SUCCESS);
 }
 
 void *printTenStrings() {
     for (int i = 1; i <= 10; i++) {
-        printf("Print number %d\n", i);
+        printf("Print's number %d\n", i);
     }
 
     return NULL;
