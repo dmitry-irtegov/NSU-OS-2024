@@ -27,6 +27,6 @@ void *printTenStrings() {
     for (int i = 1; i <= 10; i++) {
         printf("Print's number %d\n", i);
     }
-
+    pthread_exit(NULL);
     return NULL;
 }
