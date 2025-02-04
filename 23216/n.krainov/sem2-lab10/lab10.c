@@ -10,40 +10,79 @@
 pthread_mutex_t forks[PHILO];
 pthread_t phils[PHILO];
 
-void *philosopher(void *id);
-int food_on_table();
-void get_fork(int, int, char *);
-void down_forks(int, int);
+
 pthread_mutex_t foodlock;
 
 int sleep_seconds = 0;
 
-int main(int argc, char** argv) {
-    if (argc == 2) sleep_seconds = atoi(argv[1]);
+int food_on_table() {
+    static int food = FOOD;
+    int myfood;
 
-    pthread_mutex_init(&foodlock, NULL);
+    int code = 0;
 
-    for (int i = 0; i < PHILO; i++) pthread_mutex_init(&forks[i], NULL);
-    for (int i = 0; i < PHILO; i++) pthread_create(&phils[i], NULL, philosopher, i);
-    for (int i = 0; i < PHILO; i++) pthread_join(phils[i], NULL);
-    return 0;
+    if ((code = pthread_mutex_lock(&foodlock)) != 0) {
+        fprintf(stderr, "pthread_mutex_lock(&foodlock) error: %d \n", code);
+        exit(EXIT_FAILURE);
+    }
 
+    if (food > 0) {
+        food--;
+    }
+    myfood = food;
+    
+    if ((code = pthread_mutex_unlock(&foodlock)) != 0) {
+        fprintf(stderr, "pthread_mutex_unlock(&foodlock) error: %d \n", code);
+        exit(EXIT_FAILURE);
+    }
+    return myfood;
+}
+
+void get_fork(long long phil, long long fork, char *hand) {
+    int code = 0;
+    if ((code = pthread_mutex_lock(&forks[fork])) != 0) {
+        fprintf(stderr, "pthread_mutex_lock(&forks[fork]) error: %d \n", code);
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("Philosopher %lld: got %s fork %lld\n", phil, hand, fork);
+}
+
+void down_forks(long long f1, long long f2) {
+    int max_id = f1 > f2 ? f1 : f2;
+    int min_id = f1 < f2 ? f1 : f2;
+
+    int code = 0;
+
+    if ((code = pthread_mutex_unlock(&forks[max_id])) != 0) {
+        fprintf(stderr, "pthread_mutex_unlock(&forks[max_id]) error: %d \n", code);
+        exit(EXIT_FAILURE);
+    }
+    
+    if ((code = pthread_mutex_unlock(&forks[min_id])) != 0) {
+        fprintf(stderr, "pthread_mutex_unlock(&forks[max_id]) error: %d \n", code);
+        exit(EXIT_FAILURE);
+    }
+    
 }
 
 void* philosopher(void *num) {
-    int id;
-    int left_fork, right_fork, f;
+    int f;
+    long long left_fork, right_fork, id;
 
-    id = (int)num;
-    printf("Philosopher %d sitting down to dinner.\n", id);
+    id = (long long)num;
+    printf("Philosopher %lld sitting down to dinner.\n", id);
     right_fork = id;
     left_fork = id + 1;
 
     /* Wrap around the forks. */
     if (left_fork == PHILO) left_fork = 0;
 
-    while (f = food_on_table()) {
-        printf("Philosopher %d: get dish %d.\n", id, f);
+    while ((f = food_on_table()) != 0) {
+
+        if (id == 4) sleep(sleep_seconds);
+
+        printf("Philosopher %lld: get dish %d.\n", id, f);
 
         if (left_fork < right_fork) {
             get_fork(id, left_fork, "left ");
@@ -53,38 +92,45 @@ void* philosopher(void *num) {
             get_fork(id, left_fork, "left ");
         }
 
-        printf("Philosopher %d: eating.\n", id);
+        printf("Philosopher %lld: eating.\n", id);
         usleep(DELAY * (FOOD - f + 1));
         down_forks(left_fork, right_fork);
     }
-    printf("Philosopher %d is done eating.\n", id);
-    return NULL;
+    printf("Philosopher %lld is done eating.\n", id);
+    
+    pthread_exit(NULL);
 }
 
-int food_on_table() {
-    static int food = FOOD;
-    int myfood;
+int main(int argc, char** argv) {
+    if (argc == 2) sleep_seconds = atoi(argv[1]);
 
-    pthread_mutex_lock(&foodlock);
-    if (food > 0) {
-        food--;
+    int code = 0;
+    if ((code = pthread_mutex_init(&foodlock, NULL)) != 0){
+        fprintf(stderr, "pthread_mutex_init(&foodlock) error: %d \n", code);
+        exit(EXIT_FAILURE);
     }
-    myfood = food;
-    pthread_mutex_unlock(&foodlock);
-    return myfood;
-}
 
-void get_fork(int phil, int fork, char *hand) {
-    pthread_mutex_lock(&forks[fork]);
-    printf("Philosopher %d: got %s fork %d\n", phil, hand, fork);
-}
 
-void down_forks(int f1, int f2) {
-    if (f1 > f2) {
-        pthread_mutex_unlock(&forks[f1]);
-        pthread_mutex_unlock(&forks[f2]);
-    } else {
-        pthread_mutex_unlock(&forks[f2]);
-        pthread_mutex_unlock(&forks[f1]);
+    for (int i = 0; i < PHILO; i++) {
+        if ((code = pthread_mutex_init(&forks[i], NULL)) != 0) {
+            fprintf(stderr, "pthread_mutex_init(&forks[i]) error: %d \n", code);
+            exit(EXIT_FAILURE);
+        }
     }
+
+    for (long long i = 0; i < PHILO; i++) {
+        if ((code = pthread_create(&phils[i], NULL, philosopher, (void*) i)) != 0) {
+            fprintf(stderr, "pthread_create(&phils[i], ...) error: %d \n", code);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (int i = 0; i < PHILO; i++) {
+        if ((code = pthread_join(phils[i], NULL)) != 0) {
+            fprintf(stderr, "pthread_join(phils[i], NULL) error: %d \n", code);
+            exit(EXIT_FAILURE);
+        }
+    }
+    return 0;
+
 }
