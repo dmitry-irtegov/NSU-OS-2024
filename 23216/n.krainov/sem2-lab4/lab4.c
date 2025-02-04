@@ -12,20 +12,24 @@ void* thread_func(void* arg) {
     pthread_exit(NULL);
 }
 
+void my_perror(char* text, int code) {
+    fprintf(stderr, "%s: %s \n", text, strerror(code));
+}
+
 int main() {
     pthread_t thread;
     char* text = "this is the text";
 
     int code = 0;
     if ((code = pthread_create(&thread, NULL, thread_func, (void*)text)) != 0) {
-        fprintf(stderr, "pthread_create error: %d \n", code);
+        my_perror("pthread_create failed", code);
         exit(EXIT_FAILURE);
     }
     
     sleep(2);
 
     if ((code = pthread_cancel(thread)) != 0) {
-        fprintf(stderr, "pthread_cancel error: %d \n", code);
+        my_perror("pthread_cancel failed", code);
         exit(EXIT_FAILURE);
     }
 
