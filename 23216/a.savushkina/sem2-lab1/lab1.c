@@ -7,7 +7,7 @@
  
 void * print_lines(void* arg) { 
     for (int i = 0; i < 10; i++) { 
-        printf("Нить: Строка %d\n", i); 
+        printf("Thread: number %d\n", i); 
     } 
     pthread_exit(0); 
 } 
@@ -32,7 +32,7 @@ int main() {
         
 
     for (int i = 0; i < 10; i++) { 
-        printf("Родительская нить: Строка %d\n", i); 
+        printf("Parent thread: number %d\n", i); 
     } 
  
 
