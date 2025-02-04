@@ -18,7 +18,8 @@ int main() {
     for (int i = 1; i <= 10; i++) {
         printf("Print's number at source thread %d\n", i);
     }
-
+    
+    pthread_exit(NULL);
     exit(EXIT_SUCCESS);
 }
 
