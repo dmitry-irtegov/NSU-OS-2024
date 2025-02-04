@@ -17,7 +17,7 @@ void* func(void *param) {
 		printf("%s\n", d->strs[i]);
 	}
 
-	return NULL;
+	pthread_exit(NULL);
 }
 
 void start(pthread_t* thr, int numb, data* d) {
@@ -27,6 +27,14 @@ void start(pthread_t* thr, int numb, data* d) {
 		char buf[256];
 		strerror_r(res, buf, 256);
 		fprintf(stderr, "create %d error: %s", numb, buf);
+		exit(EXIT_FAILURE);
+	}
+
+	res = pthread_detach(*thr);
+	if (res != 0) {
+		char buf[256];
+		strerror_r(res, buf, 256);
+		fprintf(stderr, "detach %d error: %s", numb, buf);
 		exit(EXIT_FAILURE);
 	}
 }
