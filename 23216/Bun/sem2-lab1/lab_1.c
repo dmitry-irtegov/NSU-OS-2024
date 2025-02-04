@@ -6,6 +6,7 @@ void* thread_function() {
     for (int i = 0; i < 10; i++) {
         printf("Hello World\n");
     }
+    pthread_exit(NULL);
     return NULL;
 }
 int main() {
