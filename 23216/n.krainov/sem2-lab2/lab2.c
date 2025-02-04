@@ -22,14 +22,14 @@ void* thread_func(void* param) {
 
 int main() {
     pthread_t thread;
-
-    if (pthread_create(&thread, NULL, thread_func, NULL)) {
-        perror("pthread_create");
+    int code = 0;
+    if ((code = pthread_create(&thread, NULL, thread_func, NULL)) != 0) {
+        fprintf(stderr, "pthread_create error: %d \n", code);
         exit(EXIT_FAILURE);
     }
 
-    if (pthread_join(thread, NULL)) {
-        perror("pthread_join");
+    if ((code = pthread_join(thread, NULL)) != 0) {
+        fprintf(stderr, "pthread_join error: %d \n", code);
         exit(EXIT_SUCCESS);
     }
     print_text();
