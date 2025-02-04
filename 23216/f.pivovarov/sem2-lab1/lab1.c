@@ -14,19 +14,15 @@ int main() {
         fprintf(stderr, "At creating thread: %s\n", buf);
         exit(EXIT_FAILURE);
     }
+    pthread_detach(thread);
     
-    for (int i = 1; i <= 10; i++) {
-        printf("Print's number at source thread %d\n", i);
-    }
-    
-    pthread_exit(NULL);
-    exit(EXIT_SUCCESS);
+    printTenStrings();
 }
 
 void *printTenStrings() {
     for (int i = 1; i <= 10; i++) {
         printf("Print's number %d\n", i);
     }
+
     pthread_exit(NULL);
-    return NULL;
 }
