@@ -16,14 +16,15 @@ void print_text(char* name) {
 }
 
 void* thread_func(void* param) {
-    print_text("child");
+    print_text((char*) param);
     pthread_exit(NULL);
 }
 
 int main() {
     pthread_t thread;
     int code = 0;
-    if ((code = pthread_create(&thread, NULL, thread_func, NULL)) != 0) {
+    char* name = "child";
+    if ((code = pthread_create(&thread, NULL, thread_func, name)) != 0) {
         fprintf(stderr, "pthread_create error: %d", code);
         exit(EXIT_FAILURE);
     }
