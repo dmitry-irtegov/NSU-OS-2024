@@ -42,7 +42,7 @@ void start(pthread_t* thr, int numb, data* d) {
 
 	res = pthread_attr_destroy(&attr);
 	if (res != 0) {
-		handler("destroy");
+		handler("destroy", res);
 	}
 }
 
