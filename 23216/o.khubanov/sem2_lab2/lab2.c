@@ -13,14 +13,16 @@ int main() {
     pthread_t thread;
     
     // Создание нового потока
-    if (pthread_create(&thread, NULL, print_lines, NULL) != 0) {
-        perror("Ошибка при создании потока");
+    int val=pthread_create(&thread, NULL, print_lines, NULL);
+    if (val != 0) {
+        fprintf(stderr, "Ошибка при создании потока: %d\n", val);
         return EXIT_FAILURE;
     }
     
     // Ожидание завершения дочернего потока
-    if (pthread_join(thread, NULL) != 0){
-    	perror("Ошибкак при присоединениt потокая");
+    int val1=pthread_join(thread, NULL);
+    if (val1 != 0){
+    	fprintf(stderr, "Ошибка при ghbcjtlbytybb gjnjrf: %d\n", val1);
     	return EXIT_FAILURE; 
     }
     
