@@ -20,22 +20,29 @@ void* func(void *param) {
 	pthread_exit(NULL);
 }
 
+void handler(char str[], int num) {
+	char buf[256];
+	strerror_r(num, buf, 256);
+	fprintf(stderr, "%s error: %s", str, buf);
+	exit(EXIT_FAILURE);
+}
+
 void start(pthread_t* thr, int numb, data* d) {
 	int res = 0;
-	res = pthread_create(thr, NULL, func, d);
+	pthread_attr_t attr;
+	res = pthread_attr_init(&attr);
 	if (res != 0) {
-		char buf[256];
-		strerror_r(res, buf, 256);
-		fprintf(stderr, "create %d error: %s", numb, buf);
-		exit(EXIT_FAILURE);
+		handler("init", res);
+	}
+	
+	res = pthread_create(thr, &attr, func, d);
+	if (res != 0) {
+		handler("create", res);
 	}
 
-	res = pthread_detach(*thr);
+	res = pthread_attr_destroy(&attr);
 	if (res != 0) {
-		char buf[256];
-		strerror_r(res, buf, 256);
-		fprintf(stderr, "detach %d error: %s", numb, buf);
-		exit(EXIT_FAILURE);
+		handler("destroy");
 	}
 }
 
