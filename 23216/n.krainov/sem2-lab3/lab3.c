@@ -13,57 +13,25 @@ void* print_strings(void* params){
 }
 
 int init_strings(char** strings1, char** strings2, char** strings3, char** strings4) {
-    strings1[0] = strdup("first first");
-    strings1[1] = strdup("second first");
-    strings1[2] = strdup("third first");
-    strings1[3] = strdup("fourth first");
+    strings1[0] = "first first";
+    strings1[1] = "second first";
+    strings1[2] = "third first";
+    strings1[3] = "fourth first";
 
-    if (strings1[0] == NULL ||
-        strings1[1] == NULL || 
-        strings1[2] == NULL ||
-        strings1[3] == NULL) {
-        
-        return 1;
-    }
+    strings2[0] = "first second";
+    strings2[1] = "second second";
+    strings2[2] = "third second";
+    strings2[3] = "fourth second";
 
-    strings2[0] = strdup("first second");
-    strings2[1] = strdup("second second");
-    strings2[2] = strdup("third second");
-    strings2[3] = strdup("fourth second");
+    strings3[0] = "first third";
+    strings3[1] = "second third";
+    strings3[2] = "third third";
+    strings3[3] = "fourth third";
 
-    if (strings2[0] == NULL ||
-        strings2[1] == NULL || 
-        strings2[2] == NULL ||
-        strings2[3] == NULL) {
-        
-        return 1;
-    }
-
-    strings3[0] = strdup("first third");
-    strings3[1] = strdup("second third");
-    strings3[2] = strdup("third third");
-    strings3[3] = strdup("fourth third");
-
-    if (strings3[0] == NULL ||
-        strings3[1] == NULL || 
-        strings3[2] == NULL ||
-        strings3[3] == NULL) {
-        
-        return 1;
-    }
-
-    strings4[0] = strdup("first fourth");
-    strings4[1] = strdup("second fourth");
-    strings4[2] = strdup("third fourth");
-    strings4[3] = strdup("fourth fourth");
-
-    if (strings4[0] == NULL ||
-        strings4[1] == NULL || 
-        strings4[2] == NULL ||
-        strings4[3] == NULL) {
-        
-        return 1;
-    }
+    strings4[0] = "first fourth";
+    strings4[1] = "second fourth";
+    strings4[2] = "third fourth";
+    strings4[3] = "fourth fourth";
 
     return 0;
 }
@@ -71,21 +39,12 @@ int init_strings(char** strings1, char** strings2, char** strings3, char** strin
 int main() {
     pthread_t thread1, thread2, thread3, thread4;
 
-    char** strings1 = calloc(4, sizeof(char**));
-    char** strings2 = calloc(4, sizeof(char**));
-    char** strings3 = calloc(4, sizeof(char**));
-    char** strings4 = calloc(4, sizeof(char**));
+    char* strings1[4];
+    char* strings2[4];
+    char* strings3[4];
+    char* strings4[4];
 
-    if (strings1 == NULL ||
-        strings2 == NULL ||
-        strings3 == NULL ||
-        strings4 == NULL) {
-        exit(EXIT_FAILURE);
-    }
-
-    if (init_strings(strings1, strings2, strings3, strings4)) {
-        exit(EXIT_FAILURE);
-    }
+    init_strings(strings1, strings2, strings3, strings4);
 
     int code1, code2, code3, code4;
     code1 = pthread_create(&thread1, NULL, print_strings, strings1);
