@@ -25,6 +25,14 @@ int main() {
 		exit(1);
 	}
 
+	if (pthread_detach(thread) != 0) {
+		char buf[256];
+		strerror_r(checkRes, buf, 256);
+		fprintf(stderr, "detach error: %s", buf);
+		exit(1);
+	}
+
+	
 	thread_funk();
 	pthread_exit(NULL);
 }
