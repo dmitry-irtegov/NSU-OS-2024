@@ -17,7 +17,7 @@ void *thread_function() {
     return NULL;
 }
 
-// Функция, выполняемая в новой нити
+// Функция вывода ошибки
 void err_print(int error) {
     fprintf(stderr, "Ошибка: %s\n", strerror(error));
     _exit(EXIT_FAILURE);
