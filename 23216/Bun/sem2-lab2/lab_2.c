@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #define handle_error(err, msg) do { errno = err; perror(msg); exit(EXIT_FAILURE); } while(0)
 void* thread_function(void* arg) {
     for (int i = 0; i < 10; i++) {
