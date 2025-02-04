@@ -24,9 +24,10 @@ void start(pthread_t* thr, int numb, data* d) {
 	int res = 0;
 	res = pthread_create(thr, NULL, func, d);
 	if (res != 0) {
-		printf("create %d ", numb);
-		perror("error");
-		exit(1);
+		char buf[256];
+		strerror_r(res, buf, 256);
+		fprintf(stderr, "create %d error: %s", numb, buf);
+		exit(EXIT_FAILURE);
 	}
 }
 
