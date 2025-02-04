@@ -1,10 +1,14 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include <stdio.h>    
+#include <stdlib.h>   
+#include <pthread.h>  
+#include <errno.h>  
+
+#define handleerror(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 void* print_lines() {
     for (int i = 0; i < 10; i++) {
         printf("%d\n", i);
+        fflush(stdout); // Принудительный сброс буфера
     }
     return NULL;
 }
@@ -12,18 +16,15 @@ void* print_lines() {
 int main() {
     pthread_t thread;
     
-    // Создание нового потока
-    int val=pthread_create(&thread, NULL, print_lines, NULL);
-    if (val != 0) {
-        fprintf(stderr, "Ошибка при создании потока: %d\n", val);
-        return EXIT_FAILURE;
-    }
-    
+    int val1 = pthread_create(&thread, NULL, &print_lines, NULL); 
+    if (val1 != 0){ 
+        handleerror(val1, "pthread_create");
+        }
+        
     // Ожидание завершения дочернего потока
-    int val1=pthread_join(thread, NULL);
-    if (val1 != 0){
-    	fprintf(stderr, "Ошибка при ghbcjtlbytybb gjnjrf: %d\n", val1);
-    	return EXIT_FAILURE; 
+    int val2=pthread_join(thread, NULL);
+    if (val2 != 0){
+    	handleerror(val2, "pthread_create");
     }
     
     // Выполнение кода в главном потоке после завершения дочернего
