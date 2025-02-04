@@ -23,7 +23,7 @@ void* thread_func(void* param) {
 int main() {
     pthread_t thread;
     int code = 0;
-    char* name = "parent";
+    char* name = "child";
     if ((code = pthread_create(&thread, NULL, thread_func, (void*) name)) != 0) {
         fprintf(stderr, "pthread_create error: %d \n", code);
         exit(EXIT_FAILURE);
