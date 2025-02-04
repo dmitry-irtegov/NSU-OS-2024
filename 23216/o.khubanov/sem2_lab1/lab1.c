@@ -5,7 +5,7 @@
 
 void* print_lines() {
     for (int i = 0; i < 10; i++) {
-        puts("Текст: строка");
+        printf("%d\n",i);
     }
     return NULL;
 }
@@ -20,7 +20,7 @@ int main() {
     }
     
     // Выполнение кода в главном потоке
-    print_lines(NULL);
+    print_lines();
     
     // Ожидание завершения дочернего потока
     pthread_exit(NULL);
