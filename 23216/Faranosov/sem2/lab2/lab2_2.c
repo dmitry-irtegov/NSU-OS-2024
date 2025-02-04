@@ -21,7 +21,7 @@ int main() {
 	if (checkRes != 0) {
 		char buf[256];
 		strerror_r(checkRes, buf, 256);
-		printf("create error: %s", buf);
+		fprintf(stderr, "create error: %s", buf);
 		exit(1);
 	}
 
@@ -29,7 +29,7 @@ int main() {
 	if (checkRes != 0) {
 		char buf[256];
 		strerror_r(checkRes, buf, 256);
-		printf("join error: %s", buf);
+		fprintf(stderr, "join error: %s", buf);
 		exit(1);
 	}
 
