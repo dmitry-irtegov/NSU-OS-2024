@@ -14,8 +14,9 @@ int main() {
     pthread_t thread;
     
     // Создание нового потока
-    if (pthread_create(&thread, NULL, print_lines, NULL) != 0) {
-        perror("Ошибка при создании потока");
+    val = pthread_create(&thread, NULL, print_lines, NULL);
+    if (ret != 0) {
+        fprintf(stderr, "Ошибка при создании потока: %d\n", val);
         return EXIT_FAILURE;
     }
     
