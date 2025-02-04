@@ -4,12 +4,23 @@
 #include <string.h>
 #include <unistd.h>
 
-// Функция, выполняемая в новой нити
-void *thread_function(void *arg) {
+// Функция вывода 10 строк
+void ten_str(char* name) {
     for (int i = 0; i < 10; i++) {
-        printf("[Нить] Сообщение %d\n", i + 1);
+        printf("[%s] Сообщение %d\n",name, i + 1);
     }
+}
+
+// Функция, выполняемая в новой нити
+void *thread_function() {
+    ten_str("Нить");
     return NULL;
+}
+
+// Функция, выполняемая в новой нити
+void err_print(int error) {
+    fprintf(stderr, "Ошибка: %s\n", strerror(error));
+    _exit(EXIT_FAILURE);
 }
 
 int main() {
@@ -19,17 +30,17 @@ int main() {
     // Создание новой нити
     err = pthread_create(&thread, NULL, thread_function, NULL);
     if (err != 0) {
-        fprintf(stderr, "Ошибка при создании нити: %s\n", strerror(err));
-        return EXIT_FAILURE;
+        err_print(err);
     }
 
     // Код основной нити
-    for (int i = 0; i < 10; i++) {
-        printf("[Основная нить] Сообщение %d\n", i + 1);
-    }
+    ten_str("Основная нить");
 
     // Ожидание завершения созданной нити
-    pthread_join(thread, NULL);
+    err = pthread_join(thread, NULL);
+    if (err != 0) {
+        err_print(err);
+    }
 
     return EXIT_SUCCESS;
 }
