@@ -4,17 +4,19 @@ import (
 	"fmt"
 )
 
+func printer(msg string) {
+	for i := 0; i < 10; i++ {
+		fmt.Println(msg + " - " + fmt.Sprint(i))
+	}
+}
+
 func main() {
 	done := make(chan bool)
 	go func() {
-		for i := 0; i < 10; i++ {
-			fmt.Println("goroutine - " + fmt.Sprint(i))
-		}
+		printer("goroutine")
 		done <- true
 	}()
 	<-done
-	for i := 0; i < 10; i++ {
-		fmt.Println("main - " + fmt.Sprint(i))
-	}
+	printer("main")
 
 }
