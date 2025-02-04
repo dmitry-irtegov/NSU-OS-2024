@@ -20,17 +20,21 @@ void* thread_func(void* param) {
     pthread_exit(NULL);
 }
 
+void my_perror(char* text, int code) {
+    fprintf(stderr, "%s: %s \n", text, strerror(code));
+}
+
 int main() {
     pthread_t thread;
     int code = 0;
     char* name = "child";
     if ((code = pthread_create(&thread, NULL, thread_func, (void*) name)) != 0) {
-        fprintf(stderr, "pthread_create error: %d \n", code);
+        my_perror("pthread_create error", code);
         exit(EXIT_FAILURE);
     }
 
     if ((code = pthread_join(thread, NULL)) != 0) {
-        fprintf(stderr, "pthread_join error: %d \n", code);
+        my_perror("pthread_join error", code);
         exit(EXIT_SUCCESS);
     }
     print_text("parent");
