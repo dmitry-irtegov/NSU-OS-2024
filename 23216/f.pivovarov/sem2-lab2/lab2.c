@@ -23,7 +23,7 @@ int main() {
         errorHandler(code, "Attributes destroy");
     }
 
-    if ((code == pthread_join(thread, NULL)) != 0) {
+    if ((code = pthread_join(thread, NULL)) != 0) {
         errorHandler(code, "Join");
     }
 
