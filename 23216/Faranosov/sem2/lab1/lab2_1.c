@@ -7,7 +7,7 @@ void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
 		printf("%d\n", i);
 	}
-	return NULL;
+	pthread_exit(NULL);
 }
 
 
