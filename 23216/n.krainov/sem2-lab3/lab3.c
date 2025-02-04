@@ -94,7 +94,7 @@ int main() {
     code4 = pthread_create(&thread4, NULL, print_strings, strings4);
 
     if (code1 || code2 || code3 || code4) {
-        perror("pthread_create");
+        fprintf(stderr, "threads weren't create\n");
         exit(EXIT_FAILURE);
     }
 
