@@ -19,7 +19,7 @@ void handler(char str[], int num) {
 
 int main() {
 	pthread_t thread;
-	pthread_att_t attr;
+	pthread_attr_t attr;
 
 	int checkRes = 0;
 
