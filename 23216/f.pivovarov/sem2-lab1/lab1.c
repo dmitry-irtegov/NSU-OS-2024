@@ -4,18 +4,25 @@
 #include <stdio.h>
 
 void *printTenStrings();
+void errorHandler(int code, char *errorText);
 
 int main() {
     int code;
     pthread_t thread;
-    if ((code = pthread_create(&thread, NULL, printTenStrings, NULL)) != 0) {
-        char buf[256];
-        strerror_r(code, buf, sizeof(buf));
-        fprintf(stderr, "At creating thread: %s\n", buf);
-        exit(EXIT_FAILURE);
+    pthread_attr_t attr;
+
+    if ((code = pthread_attr_init(&attr)) != 0) {
+        errorHandler(code, "Attr initialization");
     }
-    pthread_detach(thread);
-    
+
+    if ((code = pthread_create(&thread, &attr, printTenStrings, NULL)) != 0) {
+        errorHandler(code, "Creating thread");
+    }
+
+    if ((code = pthread_attr_destroy(&attr)) != 0) {
+        errorHandler(code, "Attributes destroy");
+    }
+
     printTenStrings();
 }
 
@@ -25,4 +32,11 @@ void *printTenStrings() {
     }
 
     pthread_exit(NULL);
+}
+
+void errorHandler(int code, char *errorText) {
+    char buf[256];
+    strerror_r(code, buf, sizeof(buf));
+    fprintf(stderr, "%s : %s\n", errorText, buf);
+    exit(EXIT_FAILURE);
 }
