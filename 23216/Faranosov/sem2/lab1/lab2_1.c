@@ -10,29 +10,35 @@ void* thread_funk() {
 	pthread_exit(NULL);
 }
 
+void handler(char str[], int num) {
+	char buf[256];
+	strerror_r(num, buf, 256);
+	fprintf(stderr, "%s error: %s", str, buf);
+	exit(1);
+}
 
 int main() {
 	pthread_t thread;
+	pthread_att_t attr;
 
 	int checkRes = 0;
 
-
-	checkRes = pthread_create(&thread, NULL, thread_funk, NULL);
+	checkRes = pthread_attr_init(&attr);
 	if (checkRes != 0) {
-		char buf[256];
-		strerror_r(checkRes, buf, 256);
-		fprintf(stderr, "create error: %s", buf);
-		exit(1);
+		handler("attr_init", checkRes);
 	}
 
-	if (pthread_detach(thread) != 0) {
-		char buf[256];
-		strerror_r(checkRes, buf, 256);
-		fprintf(stderr, "detach error: %s", buf);
-		exit(1);
+	checkRes = pthread_create(&thread, &attr, thread_funk, NULL);
+	if (checkRes != 0) {
+		handler("create", checkRes);
 	}
 
-	
+
+	checkRes = pthread_attr_destroy(&attr);
+	if (checkRes != 0) {
+		handler("destroy", checkRes);
+	}
+
 	thread_funk();
 	pthread_exit(NULL);
 }
