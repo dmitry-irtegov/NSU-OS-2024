@@ -1,6 +1,7 @@
 #include "stdlib.h"
 #include "pthread.h"
 #include "stdio.h"
+#include "string.h"
 
 void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
