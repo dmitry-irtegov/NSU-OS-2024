@@ -19,12 +19,12 @@ int main() {
         errorHandler(code, "Creating thread");
     }
 
-    if ((code = pthread_attr_destroy(&attr)) != 0) {
-        errorHandler(code, "Attributes destroy");
-    }
-
     if ((code = pthread_join(thread, NULL)) != 0) {
         errorHandler(code, "Join");
+    }
+
+    if ((code = pthread_attr_destroy(&attr)) != 0) {
+        errorHandler(code, "Attributes destroy");
     }
 
     printTenStrings();
