@@ -24,7 +24,13 @@ int main()
         fprintf(stderr, "unable to create thread: %s", buf);
         return 1;
     }
-    sleep(2000);
-    pthread_cancel(th);
+    sleep(2);
+    code = pthread_cancel(th);
+    if(code){
+        char buf[256];
+        strerror_r(code, buf, sizeof(buf));
+        fprintf(stderr, "unable to cancel thread: %s", buf);
+        return 1;
+    }
     return 0;
 }
