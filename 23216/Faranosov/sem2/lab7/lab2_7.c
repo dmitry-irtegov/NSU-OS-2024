@@ -77,6 +77,7 @@ void* copyDir(void* param) {
 	if (res != 0) handler("thread attr init", res);
 
 	while ((dp = readdir(data->src)) != NULL) {
+		if (strcmp(dp->d_name, ".") || strcmp(dp->d_name, "..")) continue;
 
 		char* buf = NULL;
 		buf = malloc(sizeof(char) * 1024);
