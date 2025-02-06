@@ -20,7 +20,7 @@ void* func(void *param) {
 	pthread_exit(NULL);
 }
 
-void handler(char str[], int num) {
+void handler(char str[], int num, int number) {
 	char buf[256];
 	strerror_r(num, buf, 256);
 	fprintf(stderr, "%s error: %s", str, buf);
