@@ -13,7 +13,7 @@ void * sleepsort(void *line){
 }
 
 int main(){
-    coef = 1000;
+    coef = 10000;
     pthread_t thread;
     int k;
     for(k = 0; k < 100; k++){
