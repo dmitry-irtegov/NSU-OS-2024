@@ -8,7 +8,7 @@ void* thread_body(void* param) {
         printf("Child thread %d\n", i);
     }
 
-	return NULL;
+    return NULL;
 }
 
 int main(int argc, char *argv[]) {
