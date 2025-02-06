@@ -9,6 +9,7 @@ void* thread_body(void* param) {
     for (int i = 0;i < 10;i++) {
         printf("left\n");
     }
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
