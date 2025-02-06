@@ -6,10 +6,11 @@
 
 void* print_text(void* arg)
 {
-    for(int i = 0; i < 10; i++) {
+    int i = 0;
+    while(1) {
         printf("%d, created thread, line\n", i);
+        i++;
     }
-    return NULL;
 }
 
 int main()
@@ -22,9 +23,7 @@ int main()
         fprintf(stderr, "unable to create thread: %s", buf);
         return 1;
     }
-    pthread_join(th, NULL);
-    for(int i = 0; i < 10; i++) {
-        printf("%d, main thread\n", i);
-    }
+    sleep(2000);
+    pthread_cancel(th, NULL);
     return 0;
 }
