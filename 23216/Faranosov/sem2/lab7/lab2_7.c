@@ -164,7 +164,6 @@ void* copyDir(void* param) {
 			free(buf);
 		}
 	}
-}
 
 	res = pthread_attr_destroy(&attr);
 	if (res != 0) handler("thread attr destroy", res);
