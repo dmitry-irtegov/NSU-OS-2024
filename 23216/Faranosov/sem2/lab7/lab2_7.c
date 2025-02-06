@@ -78,16 +78,19 @@ void* copyDir(void* param) {
 
 	while ((dp = readdir(data->src)) != NULL) {
 
-		if (dp->d_type == DT_DIR || dp->d_type == DT_REG) {
-			char* buf = NULL;
-			buf = malloc(sizeof(char) * 1024);
-			check_malloc(buf);
+		char* buf = NULL;
+		buf = malloc(sizeof(char) * 1024);
+		check_malloc(buf);
 
-			strcpy(buf, data->path.src);
-			strcat(buf, dp->d_name);
-			stat(buf, &statbuf);
+		strcpy(buf, data->path.src);
+		strcat(buf, dp->d_name);
+		if (stat(buf, &statbuf) != 0) {
+			perror("stat thread error");
+			pthread_exit(NULL);
+		}
 
-			if (dp->d_type == DT_DIR) {
+		if (statbuf.st_mode & S_IFDIR || statbuf.st_mode & S_IFREG) {
+			if (statbuf.st_mode & S_IFDIR) {
 				new_dir = NULL;
 				new_dir = malloc(sizeof(dir_data));
 				check_malloc(new_dir);
@@ -99,7 +102,7 @@ void* copyDir(void* param) {
 				}
 
 				new_dir->path.src = buf;
-								
+
 			}
 			else {
 				new_file = NULL;
@@ -122,7 +125,7 @@ void* copyDir(void* param) {
 			strcpy(buf, data->path.dst);
 			strcat(buf, dp->d_name);
 
-			if (dp->d_type == DT_DIR) {
+			if (statbuf.st_mode & S_IFDIR) {
 				res = mkdir(buf, statbuf.st_mode);
 				if (res != 0) {
 					perror("mkdir error");
@@ -153,11 +156,15 @@ void* copyDir(void* param) {
 
 				res = pthread_create(&thread, NULL, copyFile, new_file);
 				if (res != 0) handler("pthread copyFile create", res);
-				
+
 				free(buf);
 			}
 		}
+		else {
+			free(buf);
+		}
 	}
+}
 
 	res = pthread_attr_destroy(&attr);
 	if (res != 0) handler("thread attr destroy", res);
