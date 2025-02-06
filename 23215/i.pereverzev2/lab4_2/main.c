@@ -1,6 +1,7 @@
 #define _REENTRANT
 #include <pthread.h>
 #include <thread.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,6 +25,6 @@ int main()
         return 1;
     }
     sleep(2000);
-    pthread_cancel(th, NULL);
+    pthread_cancel(th);
     return 0;
 }
