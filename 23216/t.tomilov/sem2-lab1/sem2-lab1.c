@@ -25,6 +25,11 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 
+	if ((errID = pthread_attr_destroy(&attr)) != 0){
+		fprintf(stderr, "ERROR: failed in pthread_attr_destroy. Program ended with code %d\n", errID);
+		exit(EXIT_FAILURE);
+	}
+
 	printf("Parent\n");
 
 	pthread_exit(EXIT_SUCCESS);
