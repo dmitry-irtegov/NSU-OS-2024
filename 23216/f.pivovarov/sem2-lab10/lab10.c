@@ -75,8 +75,8 @@ void *philosopher(void *num) {
       sleep(sleep_seconds);
 
     printf("Philosopher %d: get dish %d.\n", id, f);
-    get_fork(id, min(right_fork, left_fork), "right");
-    get_fork(id, max(right_fork, left_fork), "left ");
+    get_fork(id, min(right_fork, left_fork), min(right_fork, left_fork) == right_fork ? "right" : "left");
+    get_fork(id, max(right_fork, left_fork), min(right_fork, left_fork) == right_fork ? "left" : "right");
 
     printf("Philosopher %d: eating.\n", id);
     usleep(DELAY * (FOOD - f + 1));
