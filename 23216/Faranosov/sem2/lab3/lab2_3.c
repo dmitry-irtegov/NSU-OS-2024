@@ -23,7 +23,7 @@ void* func(void *param) {
 void handler(char str[], int num, int number) {
 	char buf[256];
 	strerror_r(num, buf, 256);
-	fprintf(stderr, "%s error: %s", str, buf);
+	fprintf(stderr, "%s %d error: %s", str, num, buf);
 	exit(EXIT_FAILURE);
 }
 
@@ -32,17 +32,17 @@ void start(pthread_t* thr, int numb, data* d) {
 	pthread_attr_t attr;
 	res = pthread_attr_init(&attr);
 	if (res != 0) {
-		handler("init", res);
+		handler("init", res, numb);
 	}
 	
 	res = pthread_create(thr, &attr, func, d);
 	if (res != 0) {
-		handler("create", res);
+		handler("create", res, numb);
 	}
 
 	res = pthread_attr_destroy(&attr);
 	if (res != 0) {
-		handler("destroy", res);
+		handler("destroy", res, numb);
 	}
 }
 
@@ -58,7 +58,7 @@ void set() {
 		strcpy(d1.strs[i], strs1[i]);
 		strcpy(d2.strs[i], strs2[i]);
 		strcpy(d3.strs[i], strs3[i]);
-		strcpy(d4.strs[i], strs5[i]);
+		strcpy(d4.strs[i], strs4[i]);
 	}
 }
 
