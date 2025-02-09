@@ -23,7 +23,7 @@ void* func(void *param) {
 void handler(char str[], int num, int number) {
 	char buf[256];
 	strerror_r(num, buf, 256);
-	fprintf(stderr, "%s %d error: %s", str, num, buf);
+	fprintf(stderr, "%s %d error: %s", str, number, buf);
 	exit(EXIT_FAILURE);
 }
 
