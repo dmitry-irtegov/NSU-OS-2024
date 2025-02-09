@@ -46,32 +46,27 @@ void start(pthread_t* thr, int numb, data* d) {
 	}
 }
 
+char* strs1[] = { "a", "b", "c", "d" };
+char* strs2[] = { "00", "01", "10", "11" };
+char* strs3[] = { "1", "2", "3", "4" };
+char* strs4[] = { "5", "25", "125", "625" };
+
+
+void set() {
+	d1.cnt = d2.cnt = d3.cnt = d4.cnt = 4;
+	for (int i = 0; i < 4; i++) {
+		strcpy(d1.strs[i], strs1[i]);
+		strcpy(d2.strs[i], strs2[i]);
+		strcpy(d3.strs[i], strs3[i]);
+		strcpy(d4.strs[i], strs5[i]);
+	}
+}
+
+
 int main() {
 	pthread_t thread1, thread2, thread3, thread4;
 
-	d1.cnt = 4;
-	strcpy(d1.strs[0], "a");
-	strcpy(d1.strs[1], "b");
-	strcpy(d1.strs[2], "c");
-	strcpy(d1.strs[3], "d");
-	
-	d2.cnt = 4;
-	strcpy(d2.strs[0], "00");
-	strcpy(d2.strs[1], "01");
-	strcpy(d2.strs[2], "10");
-	strcpy(d2.strs[3], "11");
-
-	d3.cnt = 4;
-	strcpy(d3.strs[0], "1");
-	strcpy(d3.strs[1], "2");
-	strcpy(d3.strs[2], "3");
-	strcpy(d3.strs[3], "4");
-
-	d4.cnt = 4;
-	strcpy(d4.strs[0], "5");
-	strcpy(d4.strs[1], "25");
-	strcpy(d4.strs[2], "125");
-	strcpy(d4.strs[3], "625");
+	set();
 
 	start(&thread1, 1, &d1);
 	start(&thread2, 2, &d2);
