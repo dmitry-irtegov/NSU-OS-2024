@@ -39,6 +39,16 @@ void* copyFile(void* param) {
 	while (1) {
 		res = read(data->src, buf, 1023);
 		if (res == 0) {
+			res = close(data->dst);
+			if (res != 0) {
+				perror("file dst close");
+				pthread_exit(NULL);
+			}
+			res = close(data->src);
+			if (res != 0) {
+				perror("file src close");
+				pthread_exit(NULL);
+			}
 			break;
 		}
 		else if (res < 0) {
@@ -46,7 +56,7 @@ void* copyFile(void* param) {
 			pthread_exit(NULL);
 		}
 		else {
-			res = write(data->dst, buf, 1023);
+			res = write(data->dst, buf, res);
 			if (res < 0) {
 				perror("write error");
 				pthread_exit(NULL);
@@ -84,14 +94,16 @@ void* copyDir(void* param) {
 		check_malloc(buf);
 
 		strcpy(buf, data->path.src);
+		strcat(buf, "/");
 		strcat(buf, dp->d_name);
 		if (stat(buf, &statbuf) != 0) {
+			printf("file = %s\n", buf);
 			perror("stat thread error");
 			pthread_exit(NULL);
 		}
 
-		if (statbuf.st_mode & S_IFDIR || statbuf.st_mode & S_IFREG) {
-			if (statbuf.st_mode & S_IFDIR) {
+		if (S_ISDIR(statbuf.st_mode) || S_ISREG(statbuf.st_mode)) {
+			if (S_ISDIR(statbuf.st_mode)) {
 				new_dir = NULL;
 				new_dir = malloc(sizeof(dir_data));
 				check_malloc(new_dir);
@@ -124,9 +136,10 @@ void* copyDir(void* param) {
 			check_malloc(buf);
 
 			strcpy(buf, data->path.dst);
+			strcat(buf, "/");
 			strcat(buf, dp->d_name);
 
-			if (statbuf.st_mode & S_IFDIR) {
+			if (S_ISDIR(statbuf.st_mode)) {
 				res = mkdir(buf, statbuf.st_mode);
 				if (res != 0) {
 					perror("mkdir error");
@@ -147,7 +160,7 @@ void* copyDir(void* param) {
 				if (res != 0) handler("thread copyDir create", res);
 			}
 			else {
-				new_file->dst = open(buf, O_WRONLY | O_CREAT, statbuf.st_mode);
+				new_file->dst = open(buf, O_WRONLY | O_CREAT | O_TRUNC, statbuf.st_mode);
 				if (new_file->dst == -1) {
 					perror("open dest error");
 					pthread_exit(NULL);
@@ -155,7 +168,7 @@ void* copyDir(void* param) {
 
 				pthread_t thread;
 
-				res = pthread_create(&thread, NULL, copyFile, new_file);
+				res = pthread_create(&thread, &attr, copyFile, new_file);
 				if (res != 0) handler("pthread copyFile create", res);
 
 				free(buf);
