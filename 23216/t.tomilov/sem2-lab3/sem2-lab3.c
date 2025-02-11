@@ -7,15 +7,15 @@ void err_handler(char* msg, int errID){
 	fprintf(stderr, "%s %s\n", msg, strerror(errID));
 }
 
-void* pthreadFunc(void *data) {
+void* pthreadFunc(void *data){
     char** strs = (char**) data;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++){
         printf("%s\n", strs[i]);
     }
     pthread_exit(0);
 }
 
-int main() {
+int main(){
     pthread_t *threads = NULL;
     pthread_attr_t attr;
     int errID = 0;
@@ -27,7 +27,7 @@ int main() {
 
     char** strs[] = {str1, str2, str3, str4};
 
-    if ((errID = pthread_attr_init(&attr)) != 0) {
+    if ((errID = pthread_attr_init(&attr)) != 0){
         err_handler("ERROR: failed to init attr. Program ended with code", errID);
         exit(EXIT_FAILURE);
     }
@@ -39,17 +39,20 @@ int main() {
     }
 
     for (int i = 0; i < 4; i++) {
-        if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*) strs[i])) != 0) {
+        if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*) strs[i])) != 0){
             err_handler("ERROR: failed to create thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
-		if ((errID = pthread_join(threads[i], NULL)) != 0) {
+    }
+
+    for (int i = 0; i < 4; i++){
+        if ((errID = pthread_join(threads[i], NULL)) != 0){
             err_handler("ERROR: failed to join a thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
     }
 
-    if ((errID = pthread_attr_destroy(&attr)) != 0) {
+    if ((errID = pthread_attr_destroy(&attr)) != 0){
         err_handler("ERROR: failed to destroy the attr. Program ended with code", errID);
         exit(EXIT_FAILURE);
     }
