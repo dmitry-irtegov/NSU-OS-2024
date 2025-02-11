@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 void err_handler(char* msg, int errID){
 	fprintf(stderr, "%s %s\n", msg, strerror(errID));
