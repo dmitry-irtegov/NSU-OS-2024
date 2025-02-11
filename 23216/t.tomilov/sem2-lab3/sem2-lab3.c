@@ -17,7 +17,7 @@ void* pthreadFunc(void *data){
 
 int main(){
     pthread_t *threads = NULL;
-    pthread_attr_t attr;
+    pthread_attr_t attr[4];
     int errID = 0;
 
     char* str1[] = {"1 1", "1 2", "1 3", "1 4"};
@@ -27,9 +27,11 @@ int main(){
 
     char** strs[] = {str1, str2, str3, str4};
 
-    if ((errID = pthread_attr_init(&attr)) != 0){
-        err_handler("ERROR: failed to init attr. Program ended with code", errID);
-        exit(EXIT_FAILURE);
+    for (int i = 0; i < 4; i++){
+        if ((errID = pthread_attr_init(&attr[i])) != 0){
+            err_handler("ERROR: failed to init attr. Program ended with code", errID);
+            exit(EXIT_FAILURE);
+        }
     }
 
     threads = malloc(sizeof(pthread_t) * 4);
@@ -39,7 +41,7 @@ int main(){
     }
 
     for (int i = 0; i < 4; i++) {
-        if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*) strs[i])) != 0){
+        if ((errID = pthread_create(&(threads[i]), &attr[i], pthreadFunc, (void*) strs[i])) != 0){
             err_handler("ERROR: failed to create thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
@@ -51,12 +53,14 @@ int main(){
             exit(EXIT_FAILURE);
         }
     }
-
-    if ((errID = pthread_attr_destroy(&attr)) != 0){
-        err_handler("ERROR: failed to destroy the attr. Program ended with code", errID);
-        exit(EXIT_FAILURE);
+    
+    for (int i = 0; i < 4; i++){
+        if ((errID = pthread_attr_destroy(&attr[i])) != 0){
+            err_handler("ERROR: failed to destroy the attr. Program ended with code", errID);
+            exit(EXIT_FAILURE);
+        }
     }
 
     free(threads);
-    pthread_exit(0);
+    exit(EXIT_SUCCESS);
 }
