@@ -6,12 +6,16 @@ typedef struct {
     char** strs;
 } Array;
 
+void err_handler(char* msg, int errID){
+	fprintf(stderr, "%s %s\n", msg, strerror(errID));
+}
+
 void* pthreadFunc(void *data) {
     Array* strs = (Array*) data;
     for (int i = 0; i < 4; i++) {
         printf("%s\n", strs->strs[i]);
     }
-    pthread_exit(EXIT_SUCCESS);
+    pthread_exit(0);
 }
 
 int main() {
@@ -33,26 +37,26 @@ int main() {
 
     threads = malloc(sizeof(pthread_t) * 4);
     if (threads == NULL) {
-        fprintf(stderr, "ERROR: failed to allocate memory. Program ended with code %d\n", errID);
+        err_handler("ERROR: failed to allocate memory. Program ended with code", errID);
         exit(EXIT_FAILURE);
     }
 
     for (int i = 0; i < 4; i++) {
         if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*)&strs[i])) != 0) {
-            fprintf(stderr, "ERROR: failed to create thread. Program ended with code %d\n", errID);
+            err_handler("ERROR: failed to create thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
 		if ((errID = pthread_join(threads[i], NULL)) != 0) {
-            fprintf(stderr, "ERROR: failed to join a thread. Program ended with code %d\n", errID);
+            err_handler("ERROR: failed to join a thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
     }
 
     if ((errID = pthread_attr_destroy(&attr)) != 0) {
-        fprintf(stderr, "ERROR: failed to destroy the attr. Program ended with code %d\n", errID);
+        err_handler("ERROR: failed to destroy the attr. Program ended with code", errID);
         exit(EXIT_FAILURE);
     }
 
     free(threads);
-    pthread_exit(EXIT_SUCCESS);
+    pthread_exit(0);
 }
