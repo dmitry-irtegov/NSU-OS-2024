@@ -42,6 +42,7 @@ int main(){
 
 	if ((errID = pthread_create(&thread, &attr, pthreadFunc, (void*) &str)) != 0) {
 		err_hendler("ERROR: failed to create thread. Program ended with code", errID);
+		free(str);
 		exit(EXIT_FAILURE);
 	}
 
@@ -49,13 +50,17 @@ int main(){
 
 	if ((errID = pthread_cancel(thread)) != 0) {
 		err_hendler("ERROR: failed to cancel thread. Program ended with code", errID);
+		free(str);
 		exit(EXIT_FAILURE);
 	}
 
 	if ((errID = pthread_attr_destroy(&attr)) != 0) {
         err_hendler("ERROR: failed to destroy the attr. Program ended with code", errID);
+		free(str);
         exit(EXIT_FAILURE);
     }
+
+	free(str);
 	pthread_exit(0);
 }
 	
