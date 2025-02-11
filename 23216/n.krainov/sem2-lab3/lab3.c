@@ -5,10 +5,9 @@
 
 void* print_strings(void* params){
     char** strings = (char**)params;
-    puts(strings[0]);
-    puts(strings[1]);
-    puts(strings[2]);
-    puts(strings[3]);
+    for (int i = 0; i < 4; i++) {
+        puts(strings[i]);
+    }
     pthread_exit(NULL);
 }
 
@@ -53,7 +52,7 @@ int main() {
     code4 = pthread_create(&thread4, NULL, print_strings, strings4);
 
     if (code1 || code2 || code3 || code4) {
-        fprintf(stderr, "threads weren't create\n");
+        fprintf(stderr, "some threads weren't create\n");
         exit(EXIT_FAILURE);
     }
 
