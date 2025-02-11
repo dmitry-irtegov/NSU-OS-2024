@@ -21,7 +21,7 @@ void* print_text(void* arg)
         i++;
     }
     pthread_cleanup_pop(1);
-    return NULL
+    return NULL;
 }
 
 int main()
