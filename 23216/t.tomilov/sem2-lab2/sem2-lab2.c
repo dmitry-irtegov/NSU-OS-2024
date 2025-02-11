@@ -41,5 +41,5 @@ int main(){
 	}
 	printf("Parent\n");
 
-	pthread_exit(0);
+	exit(EXIT_SUCCESS);
 }
