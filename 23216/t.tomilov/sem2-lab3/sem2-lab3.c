@@ -1,19 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-
-typedef struct {
-    char** strs;
-} Array;
+#include <string.h>
 
 void err_handler(char* msg, int errID){
 	fprintf(stderr, "%s %s\n", msg, strerror(errID));
 }
 
 void* pthreadFunc(void *data) {
-    Array* strs = (Array*) data;
+    char** strs = (char**) data;
     for (int i = 0; i < 4; i++) {
-        printf("%s\n", strs->strs[i]);
+        printf("%s\n", strs[i]);
     }
     pthread_exit(0);
 }
@@ -23,15 +20,15 @@ int main() {
     pthread_attr_t attr;
     int errID = 0;
 
-    char* arr1[] = {"1 1", "1 2", "1 3", "1 4"};
-    char* arr2[] = {"2 1", "2 2", "2 3", "2 4"};
-    char* arr3[] = {"3 1", "3 2", "3 3", "3 4"};
-    char* arr4[] = {"4 1", "4 2", "4 3", "4 4"};
+    char* str1[] = {"1 1", "1 2", "1 3", "1 4"};
+    char* str2[] = {"2 1", "2 2", "2 3", "2 4"};
+    char* str3[] = {"3 1", "3 2", "3 3", "3 4"};
+    char* str4[] = {"4 1", "4 2", "4 3", "4 4"};
 
-    Array strs[4] = {{arr1}, {arr2}, {arr3}, {arr4}};
+    char** strs[] = {str1, str2, str3, str4};
 
     if ((errID = pthread_attr_init(&attr)) != 0) {
-        fprintf(stderr, "ERROR: failed in pthread_attr_init. Program ended with code %d\n", errID);
+        err_handler("ERROR: failed to init attr. Program ended with code", errID);
         exit(EXIT_FAILURE);
     }
 
@@ -42,7 +39,7 @@ int main() {
     }
 
     for (int i = 0; i < 4; i++) {
-        if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*)&strs[i])) != 0) {
+        if ((errID = pthread_create(&(threads[i]), &attr, pthreadFunc, (void*) strs[i])) != 0) {
             err_handler("ERROR: failed to create thread. Program ended with code", errID);
             exit(EXIT_FAILURE);
         }
