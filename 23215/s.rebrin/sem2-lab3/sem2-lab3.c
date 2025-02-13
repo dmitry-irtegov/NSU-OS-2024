@@ -3,14 +3,11 @@
 #include <pthread.h>
 #include <string.h>
 
-typedef struct {
-    char** strings;
-} strings;
 
 void* print_strings(void* arg) {
-    strings* data = (strings*)arg;
-    for (int i = 0; data->strings[i]; i++) {
-        printf("%s\n",data->strings[i]);
+    char** data = (char**)arg;
+    for (int i = 0; data[i]; i++) {
+        printf("%s\n",data[i]);
     }
     pthread_exit(NULL);
 }
@@ -26,12 +23,9 @@ int main() {
 
     pthread_t threads[4];
 
-    strings thread_data[4];
-
     for (int i = 0; i < 4; i++) {
-        thread_data[i].strings = thread_strings[i];
 
-        int rc = pthread_create(&threads[i], NULL, print_strings, (void*)&thread_data[i]);
+        int rc = pthread_create(&threads[i], NULL, print_strings, (void*)thread_strings[i]);
         if (rc) {
             fprintf(stderr, "Error: Unable to create thread %d, return code %d\n", i + 1, rc);
             exit(1);
