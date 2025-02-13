@@ -29,5 +29,5 @@ int main(int argc, char *argv[]) {
         printf("Parent thread %d\n", i);
     }
     
-    pthread_exit(NULL);   
+    exit(0);   
 }
