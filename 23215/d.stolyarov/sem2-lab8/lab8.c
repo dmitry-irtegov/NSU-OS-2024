@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <string.h>
 
-#define num_steps 2000000000
+#define num_steps 200000000
 
 int strtoi(char* s){
     int t = 0, size = strlen(s);
