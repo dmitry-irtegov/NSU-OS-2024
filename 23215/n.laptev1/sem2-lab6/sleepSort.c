@@ -37,10 +37,10 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < real_size; i++)
     {
-        int ID = pthread_create(&thread, NULL, sleeping, (void *)(intptr_t)i);
-        if (ID != 0)
+        int code = pthread_create(&thread, NULL, sleeping, (void *)(intptr_t)i);
+        if (code != 0)
         {
-            perror("Error in pthread_creation.");
+            fprintf(stderr, "Error in pthread_create: %s\n", strerror(code));
             exit(EXIT_FAILURE);
         }
     }
