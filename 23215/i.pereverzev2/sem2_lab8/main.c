@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define num_steps 20000000
+#define num_steps 2000000
 
 typedef struct args_s {
     double partsum;
@@ -21,7 +21,7 @@ void* calc_partsum(void* param) {
         sumfrom->partsum += 1.0/(i*4.0 + 1.0);
         sumfrom->partsum -= 1.0/(i*4.0 + 3.0);
     }
-    return NULL;
+    pthread_exit(&(sumfrom->partsum));
 }
 
 
@@ -41,6 +41,9 @@ int main(int argc, char** argv) {
     args* argbuf = (args*)malloc(sizeof(args) * threadnum);
 
     for(int i = 0; i < threadnum; i++) {
+        argbuf[i].everyn = threadnum;
+        argbuf[i].from = i;
+        argbuf[i].partsum = 0;
         int code = pthread_create(threadbuf + i, NULL, calc_partsum, argbuf + i);
         if(code){
             char buf[256];
@@ -52,20 +55,21 @@ int main(int argc, char** argv) {
 
     double pi = 0;
     for(int i = 0; i < threadnum; i++) {
-        int code = pthread_join(threadbuf[i], NULL);
+        double *partsum = 0;
+        int code = pthread_join(threadbuf[i], (void*)&partsum);
         if(code){
             char buf[256];
             strerror_r(code, buf, sizeof(buf));
             fprintf(stderr, "unable to join thread: %s", buf);
             return 4;
         }
-        pi += argbuf[i].partsum;
+        pi += *partsum;
     }
     free(threadbuf);
     free(argbuf);
 
     pi = pi * 4.0;
-    printf("pi done - %.15g \n", pi);    
+    printf("%.15g \n", pi);    
     return 0;
 }
 
