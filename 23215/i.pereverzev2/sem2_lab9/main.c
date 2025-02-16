@@ -23,12 +23,13 @@ void handler(int signum) {
 
 void* calc_partsum(void* param) {
     args* sumfrom = (args*)param;
-    int i = sumfrom->from;
+    long long div = sumfrom->from;
     while(!intrpt) {
-        for (; i < num_steps; i += sumfrom->everyn)
+        for (int i = 0; i < num_steps_check; i++)
         {
-            sumfrom->partsum += 1.0/(i*4.0 + 1.0);
-            sumfrom->partsum -= 1.0/(i*4.0 + 3.0);
+            sumfrom->partsum += 1.0/(div*4.0 + 1.0);
+            sumfrom->partsum -= 1.0/(div*4.0 + 3.0);
+            div += sumfrom->everyn;
         }
     }
     
