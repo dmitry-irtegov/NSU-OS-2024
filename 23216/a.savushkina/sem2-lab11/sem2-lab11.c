@@ -5,69 +5,74 @@
 
 #define handle_error_en(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-int turn = 0;
+static pthread_mutex_t parent_mutex;
+static pthread_mutex_t child_mutex;
 
-void print_all_lines(char* string, int thread_id) {
+void *print_lines(void *arg) {
+    int result;
     for (int i = 0; i < 10; i++) {
-        int result = pthread_mutex_lock(&mutex);
+        result = pthread_mutex_lock(&child_mutex);
         if (result != 0)
             handle_error_en(result, "pthread_mutex_lock");
-
-        while (turn != thread_id) {
-            result = pthread_cond_wait(&cond, &mutex);
-            if (result != 0)
-                handle_error_en(result, "pthread_cond_wait");
-        }
-        printf("%s: number %d\n", string, i);
-        turn = 1 - turn;
-
-        result = pthread_cond_signal(&cond);
-        if (result != 0)
-            handle_error_en(result, "pthread_cond_signal");
-
-        result = pthread_mutex_unlock(&mutex);
+        printf("Thread: number %d\n", i);
+        result = pthread_mutex_unlock(&parent_mutex);
         if (result != 0)
             handle_error_en(result, "pthread_mutex_unlock");
     }
-}
-
-void *print_lines(void* arg) {
-    print_all_lines("Thread", 1);
     pthread_exit(0);
 }
 
 int main() {
     pthread_t thread;
-    pthread_attr_t attr;
     int result;
 
-    result = pthread_attr_init(&attr);
+    pthread_mutexattr_t mutex_attr;
+    result = pthread_mutexattr_init(&mutex_attr);
     if (result != 0)
-        handle_error_en(result, "pthread_attr_init");
+        handle_error_en(result, "pthread_mutexattr_init");
+    result = pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_NORMAL);
+    if (result != 0)
+        handle_error_en(result, "pthread_mutexattr_settype");
 
-    result = pthread_create(&thread, &attr, &print_lines, NULL);
+    result = pthread_mutex_init(&parent_mutex, &mutex_attr);
+    if (result != 0)
+        handle_error_en(result, "pthread_mutex_ini");
+    result = pthread_mutex_init(&child_mutex, &mutex_attr);
+    if (result != 0)
+        handle_error_en(result, "pthread_mutex_init");
+
+    pthread_mutexattr_destroy(&mutex_attr);
+
+    result = pthread_mutex_lock(&parent_mutex);
+    if (result != 0)
+        handle_error_en(result, "pthread_mutex_lock");
+
+    result = pthread_mutex_lock(&child_mutex);
+    if (result != 0)
+        handle_error_en(result, "pthread_mutex_lock");
+
+    result = pthread_create(&thread, NULL, print_lines, NULL);
     if (result != 0)
         handle_error_en(result, "pthread_create");
 
-    result = pthread_attr_destroy(&attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_attr_destroy");
-
-    print_all_lines("Parent thread", 0);
+    for (int i = 0; i < 10; i++) {
+        printf("Parent thread: number %d\n", i);
+        result = pthread_mutex_unlock(&child_mutex);
+        if (result != 0)
+            handle_error_en(result, "pthread_mutex_unlock");
+        if (i < 9) {
+            result = pthread_mutex_lock(&parent_mutex);
+            if (result != 0)
+                handle_error_en(result, "pthread_mutex_lock");
+        }
+    }
 
     result = pthread_join(thread, NULL);
     if (result != 0)
         handle_error_en(result, "pthread_join");
 
-    result = pthread_mutex_destroy(&mutex);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutex_destroy");
-
-    result = pthread_cond_destroy(&cond);
-    if (result != 0)
-        handle_error_en(result, "pthread_cond_destroy");
+    pthread_mutex_destroy(&parent_mutex);
+    pthread_mutex_destroy(&child_mutex);
 
     pthread_exit(0);
 }
