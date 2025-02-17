@@ -327,13 +327,27 @@ int main(int argc, char *argv[]) {
 		res = pthread_attr_init(&attr);
 		if (res != 0) handler("main attr init", res, NULL);
 
-		res = pthread_create(&thread, &attr, copyDir, &data);
+		res = pthread_create(&thread, &attr, copyDir, data);
 		if (res != 0) handler("main create", res, NULL);
 
-		res = pthread_join(thread, (void*)data);
+		res = pthread_join(thread, (void*)&data);
 		if (res != 0) handler("main join", res, NULL);
 
-		if (data != NULL) freeDirData(data);
+		res = closedir(data->dst);
+		if (res != 0) {
+			perror("closedir dst");
+			pthread_exit(NULL);
+		}
+
+		res = closedir(data->src);
+		if (res != 0) {
+			perror("closedir src");
+			pthread_exit(NULL);
+		}
+
+		free(data->path.dst);
+		free(data->path.src);
+		free(data);
 
 		res = pthread_attr_destroy(&attr);
 		if (res != 0) handler("main attr destroy", res, NULL);
