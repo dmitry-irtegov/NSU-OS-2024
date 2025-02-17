@@ -187,7 +187,7 @@ void* copyDir(void* param) {
 	pthread_attr_t attr;
 	int res, it = 0;
 	char isNew = 0;
-	void* retParam;
+	void* retParam = NULL;
 
 
 	pthread_t threads[MAXSUBTHREADS];
@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		res = pthread_join(thread, data);
+		res = pthread_join(thread, (void*)data);
 		if (res != 0) handler("main join", res, NULL);
 
 
