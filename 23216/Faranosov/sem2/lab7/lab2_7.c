@@ -183,8 +183,6 @@ void clear(void* param, char type) {
 void* copyDir(void* param) {
 	dir_data* data = param;
 	struct dirent* dp;
-	file_data* new_file;
-	dir_data* new_dir;
 	struct stat statbuf;
 	pthread_attr_t attr;
 	int res, it = 0;
@@ -203,7 +201,7 @@ void* copyDir(void* param) {
 		if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) continue;
 
 		if (isNew) {
-			pthread_join(&threads[it], retParam);
+			pthread_join(threads[it], retParam);
 			if (res != 0) handler("thread join", res, data);
 
 			if (param != NULL) clear(param, type[it]);
@@ -224,7 +222,7 @@ void* copyDir(void* param) {
 
 		if (S_ISDIR(statbuf.st_mode) || S_ISREG(statbuf.st_mode)) {
 
-			char buf2 = NULL;
+			char* buf2 = NULL;
 			buf2 = malloc(sizeof(char) * 1024);
 			check_malloc(buf2, data);
 
@@ -243,7 +241,8 @@ void* copyDir(void* param) {
 				free(buf2);
 			}
 
-			it = ++it % MAXSUBTHREADS;
+			it++;
+			it = it % MAXSUBTHREADS;
 			if (it == 0) isNew = 1;
 		}
 		else {
@@ -251,9 +250,9 @@ void* copyDir(void* param) {
 		}
 	}
 
-	
-	for (int i = 0; i < isNew ? MAXSUBTHREADS : it; i++) {
-		res = pthread_join(&threads[i], retParam);
+	if (isNew) it = MAXSUBTHREADS;
+	for (int i = 0; i < it; i++) {
+		res = pthread_join(threads[i], retParam);
 		if (res != 0) handler("thread join", res, data);
 
 		if (param != NULL) clear(param, type[i]);
@@ -321,7 +320,7 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		res = pthread_join(&thread, data);
+		res = pthread_join(thread, data);
 		if (res != 0) handler("main join", res, NULL);
 
 
@@ -330,7 +329,7 @@ int main(int argc, char *argv[]) {
 		res = pthread_attr_init(&attr);
 		if (res != 0) handler("main attr init", res, NULL);
 
-		res = pthread_create(&thread, &attr, copyDir, data);
+		res = pthread_create(&thread, &attr, copyDir, (void*)data);
 		if (res != 0) handler("main create thread", res, NULL);
 
 		res = pthread_attr_destroy(&attr);
