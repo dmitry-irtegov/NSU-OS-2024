@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#define MAXSUBTHREADS 64
+
 
 typedef struct paths {
 	char* src;
@@ -24,11 +26,30 @@ typedef struct file_data {
 	int src;
 } file_data;
 
-void handler(char str[], int err_num) {
+void freeDirData(dir_data *d) {
+	int res;
+	res = closedir(d->dst);
+	if (res != 0) {
+		perror("closedir dst");
+		pthread_exit(NULL);
+	}
+
+	res = closedir(d->src);
+	if (res != 0) {
+		perror("closedir src");
+		pthread_exit(NULL);
+	}
+
+	free(d->path.dst);
+	free(d->path.src);
+	free(d);
+}
+
+void handler(char str[], int err_num, void *param) {
 	char buf[256];
 	strerror_r(err_num, buf, 256);
 	fprintf(stderr, "%s error: %s\n", str, buf);
-	pthread_exit(NULL);
+	pthread_exit(param);
 }
 
 void* copyFile(void* param) {
@@ -42,56 +63,144 @@ void* copyFile(void* param) {
 			res = close(data->dst);
 			if (res != 0) {
 				perror("file dst close");
-				pthread_exit(NULL);
+				pthread_exit(data);
 			}
 			res = close(data->src);
 			if (res != 0) {
 				perror("file src close");
-				pthread_exit(NULL);
+				pthread_exit(data);
 			}
 			break;
 		}
 		else if (res < 0) {
 			perror("read error");
-			pthread_exit(NULL);
+			pthread_exit(data);
 		}
 		else {
 			res = write(data->dst, buf, res);
 			if (res < 0) {
 				perror("write error");
-				pthread_exit(NULL);
+				pthread_exit(data);
 			}
 		}
 	}
 
-	pthread_exit(NULL);
+	pthread_exit(data);
 }
 
-void check_malloc(void* param) {
+void check_malloc(void* param, void *retParam) {
 	if (param == NULL) {
 		fprintf(stderr, "thread malloc error");
-		pthread_exit(NULL);
+		pthread_exit(retParam);
 	}
 }
+
+void copyDirDir(pthread* thread, dir_data* data, pthread_attr_t *attr, char pathSrc[], 
+									char pathDst[], struct stat* statbuf) {
+	dir_data* new_dir = NULL;
+	new_dir = malloc(sizeof(dir_data));
+	check_malloc(new_dir, data);
+
+	new_dir->src = opendir(pathSrc);
+	if (new_dir->src == NULL) {
+		perror("opendir source thread");
+		pthread_exit(data);
+	}
+
+	new_dir->path.src = pathSrc;
+
+
+	res = mkdir(pathDst, statbuf->st_mode);
+	if (res != 0) {
+		perror("mkdir error");
+		pthread_exit(data);
+	}
+
+	new_dir->dst = opendir(pathDst);
+	if (new_dir->dst == NULL) {
+		perror("opendir dest error");
+		pthread_exit(data);
+	}
+
+	new_dir->path.dst = pathDst;
+
+
+	res = pthread_create(thread, attr, copyDir, new_dir);
+	if (res != 0) handler("thread copyDir create", res, data);
+}
+
+
+void copyDirFile(pthread* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
+														char pathDst[], struct stat* statbuf) {
+	file_data* new_file = NULL;
+	new_file = malloc(sizeof(file_data));
+	check_malloc(new_file, data);
+
+	new_file->src = open(pathSrc, O_RDONLY);
+	if (new_file->src == -1) {
+		perror("open source thread");
+		pthread_exit(data);
+	}
+
+	new_file->dst = open(pathDst, O_WRONLY | O_CREAT | O_TRUNC, statbuf->st_mode);
+	if (new_file->dst == -1) {
+		perror("open dest error");
+		pthread_exit(data);
+	}
+
+
+	res = pthread_create(thread, attr, copyFile, new_file);
+	if (res != 0) handler("pthread copyFile create", res, data);
+
+}
+
+void clear(void* param, char type) {
+	dir_data* ddata = NULL;
+	file_data* fdata = NULL;
+	switch (type) {
+	case 1:
+		ddata = param;
+		freeDirData(ddata);
+	case 2:
+		fdata = param;
+		free(fdata);
+	}
+}
+
 
 void* copyDir(void* param) {
 	dir_data* data = param;
 	struct dirent* dp;
 	file_data* new_file;
 	dir_data* new_dir;
+	void* param;
 	struct stat statbuf;
 	pthread_attr_t attr;
-	int res;
+	int res, it = 0;
+	char isNew = 0;
+	void* retParam;
+
+
+	pthread_t threads[MAXSUBTHREADS];
+	char type[MAXSUBTHREADS];
+	for (int i = 0; i < MAXSUBTHREADS; i++) type[i] = 0;
 
 	res = pthread_attr_init(&attr);
-	if (res != 0) handler("thread attr init", res);
+	if (res != 0) handler("thread attr init", res, data);
 
 	while ((dp = readdir(data->src)) != NULL) {
 		if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) continue;
 
+		if (isNew) {
+			pthread_join(&threads[it], retParam);
+			if (res != 0) handler("thread join", res, data);
+
+			if (param != NULL) clear(param, type[it]);
+		}
+
 		char* buf = NULL;
 		buf = malloc(sizeof(char) * 1024);
-		check_malloc(buf);
+		check_malloc(buf, data);
 
 		strcpy(buf, data->path.src);
 		strcat(buf, "/");
@@ -99,105 +208,53 @@ void* copyDir(void* param) {
 		if (stat(buf, &statbuf) != 0) {
 			printf("file = %s\n", buf);
 			perror("stat thread error");
-			pthread_exit(NULL);
+			pthread_exit(data);
 		}
 
 		if (S_ISDIR(statbuf.st_mode) || S_ISREG(statbuf.st_mode)) {
-			if (S_ISDIR(statbuf.st_mode)) {
-				new_dir = NULL;
-				new_dir = malloc(sizeof(dir_data));
-				check_malloc(new_dir);
 
-				new_dir->src = opendir(buf);
-				if (new_dir->src == NULL) {
-					perror("opendir source thread");
-					pthread_exit(NULL);
-				}
+			char buf2 = NULL;
+			buf2 = malloc(sizeof(char) * 1024);
+			check_malloc(buf2);
 
-				new_dir->path.src = buf;
-
-			}
-			else {
-				new_file = NULL;
-				new_file = malloc(sizeof(file_data));
-				check_malloc(new_file);
-
-				new_file->src = open(buf, O_RDONLY);
-				if (new_file->src == -1) {
-					perror("open source thread");
-					pthread_exit(NULL);
-				}
-
-				free(buf);
-			}
-
-			buf = NULL;
-			buf = malloc(sizeof(char) * 1024);
-			check_malloc(buf);
-
-			strcpy(buf, data->path.dst);
-			strcat(buf, "/");
-			strcat(buf, dp->d_name);
+			strcpy(buf2, data->path.dst);
+			strcat(buf2, "/");
+			strcat(buf2, dp->d_name);
 
 			if (S_ISDIR(statbuf.st_mode)) {
-				res = mkdir(buf, statbuf.st_mode);
-				if (res != 0) {
-					perror("mkdir error");
-					pthread_exit(NULL);
-				}
-
-				new_dir->dst = opendir(buf);
-				if (new_dir->dst == NULL) {
-					perror("opendir dest error");
-					pthread_exit(NULL);
-				}
-
-				new_dir->path.dst = buf;
-
-				pthread_t thread;
-
-				res = pthread_create(&thread, &attr, copyDir, new_dir);
-				if (res != 0) handler("thread copyDir create", res);
+				copyDirDir(&threads[it], data, &attr, buf, buf2, &statbuf);
+				type[it] = 1;
 			}
 			else {
-				new_file->dst = open(buf, O_WRONLY | O_CREAT | O_TRUNC, statbuf.st_mode);
-				if (new_file->dst == -1) {
-					perror("open dest error");
-					pthread_exit(NULL);
-				}
-
-				pthread_t thread;
-
-				res = pthread_create(&thread, &attr, copyFile, new_file);
-				if (res != 0) handler("pthread copyFile create", res);
-
+				copyDirFile(&threads[it], data, &attr, buf, buf2, &statbuf);
+				type[it] = 2;
 				free(buf);
+				free(buf2);
 			}
+
+			it = ++it % MAXSUBTHREADS;
+			if (it == 0) isNew = 1;
 		}
 		else {
 			free(buf);
 		}
 	}
 
+	
+	for (int i = 0; i < isNew ? MAXSUBTHREADS : it; i++) {
+		res = pthread_join(&threads[i], retParam);
+		if (res != 0) handler("thread join", res, data);
+
+		if (param != NULL) clear(param, type[i]);
+	}
+	
+
 	res = pthread_attr_destroy(&attr);
-	if (res != 0) handler("thread attr destroy", res);
+	if (res != 0) handler("thread attr destroy", res, data);
 
-	res = closedir(data->dst);
-	if (res != 0) {
-		perror("closedir dst");
-		pthread_exit(NULL);
-	}
+	
 
-	res = closedir(data->src);
-	if (res != 0) {
-		perror("closedir src");
-		pthread_exit(NULL);
-	}
-
-	free(data->path.dst);
-	free(data->path.src);
-	free(data);
-	pthread_exit(NULL);
+	pthread_exit(data);
 }
 
 int main(int argc, char *argv[]) {
@@ -252,6 +309,12 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
+
+		res = pthread_join(&thread, data);
+		if (res != 0) handler("main join", res);
+
+
+		if (data != NULL) freeDirData(data);
 
 		res = pthread_attr_init(&attr);
 		if (res != 0) handler("main attr init", res);
