@@ -206,7 +206,7 @@ void* copyDir(void* param) {
 		if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) continue;
 
 		if (isNew) {
-			pthread_join(threads[it], retParam);
+			pthread_join(threads[it], &retParam);
 			if (res != 0) handler("thread join", res, data);
 
 			if (param != NULL) clear(param, type[it]);
@@ -257,7 +257,7 @@ void* copyDir(void* param) {
 
 	if (isNew) it = MAXSUBTHREADS;
 	for (int i = 0; i < it; i++) {
-		res = pthread_join(threads[i], retParam);
+		res = pthread_join(threads[i], &retParam);
 		if (res != 0) handler("thread join", res, data);
 
 		if (param != NULL) clear(param, type[i]);
@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
 		res = pthread_attr_init(&attr);
 		if (res != 0) handler("main attr init", res, NULL);
 
-		res = pthread_create(&thread, &attr, copyDir, data);
+		res = pthread_create(&thread, &attr, copyDir, &data);
 		if (res != 0) handler("main create", res, NULL);
 
 		res = pthread_join(thread, (void*)data);
