@@ -52,6 +52,14 @@ void handler(char str[], int err_num, void *param) {
 	pthread_exit(param);
 }
 
+void* copyDir(void* param);
+void* copyFile(void* param);
+
+void copyDirDir(pthread_t* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
+	char pathDst[], struct stat* statbuf);
+void copyDirFile(pthread_t* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
+	char pathDst[], struct stat* statbuf);
+
 void* copyFile(void* param) {
 	file_data* data = param;
 	char buf[1024];
@@ -130,6 +138,7 @@ void copyDirDir(pthread_t* thread, dir_data* data, pthread_attr_t *attr, char pa
 	res = pthread_create(thread, attr, copyDir, new_dir);
 	if (res != 0) handler("thread copyDir create", res, data);
 }
+
 
 
 void copyDirFile(pthread_t* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
