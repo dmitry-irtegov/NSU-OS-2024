@@ -95,7 +95,7 @@ void check_malloc(void* param, void *retParam) {
 	}
 }
 
-void copyDirDir(pthread* thread, dir_data* data, pthread_attr_t *attr, char pathSrc[], 
+void copyDirDir(pthread_t* thread, dir_data* data, pthread_attr_t *attr, char pathSrc[], 
 									char pathDst[], struct stat* statbuf) {
 	dir_data* new_dir = NULL;
 	new_dir = malloc(sizeof(dir_data));
@@ -130,7 +130,7 @@ void copyDirDir(pthread* thread, dir_data* data, pthread_attr_t *attr, char path
 }
 
 
-void copyDirFile(pthread* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
+void copyDirFile(pthread_t* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
 														char pathDst[], struct stat* statbuf) {
 	file_data* new_file = NULL;
 	new_file = malloc(sizeof(file_data));
@@ -173,7 +173,6 @@ void* copyDir(void* param) {
 	struct dirent* dp;
 	file_data* new_file;
 	dir_data* new_dir;
-	void* param;
 	struct stat statbuf;
 	pthread_attr_t attr;
 	int res, it = 0;
@@ -215,7 +214,7 @@ void* copyDir(void* param) {
 
 			char buf2 = NULL;
 			buf2 = malloc(sizeof(char) * 1024);
-			check_malloc(buf2);
+			check_malloc(buf2, data);
 
 			strcpy(buf2, data->path.dst);
 			strcat(buf2, "/");
@@ -311,19 +310,19 @@ int main(int argc, char *argv[]) {
 
 
 		res = pthread_join(&thread, data);
-		if (res != 0) handler("main join", res);
+		if (res != 0) handler("main join", res, NULL);
 
 
 		if (data != NULL) freeDirData(data);
 
 		res = pthread_attr_init(&attr);
-		if (res != 0) handler("main attr init", res);
+		if (res != 0) handler("main attr init", res, NULL);
 
 		res = pthread_create(&thread, &attr, copyDir, data);
-		if (res != 0) handler("main create thread", res);
+		if (res != 0) handler("main create thread", res, NULL);
 
 		res = pthread_attr_destroy(&attr);
-		if (res != 0) handler("main attr destroy", res);
+		if (res != 0) handler("main attr destroy", res, NULL);
 	}
 	else {
 		printf("wrong type");
