@@ -173,9 +173,14 @@ void clear(void* param, char type) {
 	case 1:
 		ddata = param;
 		freeDirData(ddata);
+		break;
 	case 2:
 		fdata = param;
 		free(fdata);
+		break;
+	default:
+		fprintf(stderr, "clear error switch");
+		pthread_exit(NULL);
 	}
 }
 
