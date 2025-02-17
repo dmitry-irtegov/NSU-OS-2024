@@ -97,6 +97,8 @@ void check_malloc(void* param, void *retParam) {
 
 void copyDirDir(pthread_t* thread, dir_data* data, pthread_attr_t *attr, char pathSrc[], 
 									char pathDst[], struct stat* statbuf) {
+	
+	int res = 0;
 	dir_data* new_dir = NULL;
 	new_dir = malloc(sizeof(dir_data));
 	check_malloc(new_dir, data);
@@ -132,6 +134,7 @@ void copyDirDir(pthread_t* thread, dir_data* data, pthread_attr_t *attr, char pa
 
 void copyDirFile(pthread_t* thread, dir_data* data, pthread_attr_t* attr, char pathSrc[],
 														char pathDst[], struct stat* statbuf) {
+	int res = 0;
 	file_data* new_file = NULL;
 	new_file = malloc(sizeof(file_data));
 	check_malloc(new_file, data);
