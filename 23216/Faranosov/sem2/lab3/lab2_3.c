@@ -27,7 +27,7 @@ void handler(char str[], int num, int number) {
 	exit(EXIT_FAILURE);
 }
 
-void start(pthread_t* thr, pthread_attr_t* attr int numb, data* d) {
+void start(pthread_t* thr, pthread_attr_t* attr, int numb, data* d) {
 	int res = 0;
 	
 	res = pthread_create(thr, attr, func, d);
@@ -52,7 +52,7 @@ char* strs4[] = { "5", "25", "125", "625" };
 
 
 void set() {
-	d1.cnt = d2.cnt = d3.cnt = d4.cnt = 4;
+	d[0].cnt = d[1].cnt = d[2].cnt = d[3].cnt = 4;
 	for (int i = 0; i < 4; i++) {
 		strcpy(d[0].strs[i], strs1[i]);
 		strcpy(d[1].strs[i], strs2[i]);
@@ -69,7 +69,7 @@ int main() {
 
 	int res = pthread_attr_init(&attr);
 	if (res != 0) {
-		handler("init", res, numb);
+		handler("init", res, 0);
 	}
 
 
@@ -83,7 +83,7 @@ int main() {
 
 	res = pthread_attr_destroy(&attr);
 	if (res != 0) {
-		handler("destroy", res, numb);
+		handler("destroy", res, 0);
 	}
 
 	pthread_exit(NULL);
