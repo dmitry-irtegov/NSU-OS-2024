@@ -8,7 +8,7 @@ void print_text(char* name) {
         printf("text%d %s\n", i, name);
     }
 
-    fflush(stdin);
+    fflush(stdout);
 }
 
 void* thread_func(void* param) {
