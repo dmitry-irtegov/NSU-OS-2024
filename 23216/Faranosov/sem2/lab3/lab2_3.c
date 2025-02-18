@@ -8,7 +8,7 @@ typedef struct data {
 	int cnt;
 } data;
 
-data d1, d2, d3, d4;
+data d[4];
 
 void* func(void *param) {
 	
@@ -27,22 +27,21 @@ void handler(char str[], int num, int number) {
 	exit(EXIT_FAILURE);
 }
 
-void start(pthread_t* thr, int numb, data* d) {
+void start(pthread_t* thr, pthread_attr_t* attr int numb, data* d) {
 	int res = 0;
-	pthread_attr_t attr;
-	res = pthread_attr_init(&attr);
-	if (res != 0) {
-		handler("init", res, numb);
-	}
 	
-	res = pthread_create(thr, &attr, func, d);
+	res = pthread_create(thr, attr, func, d);
 	if (res != 0) {
 		handler("create", res, numb);
 	}
+}
 
-	res = pthread_attr_destroy(&attr);
+void join(pthread_t thread, int num) {
+	int res = 0;
+
+	res = pthread_join(thread, NULL);
 	if (res != 0) {
-		handler("destroy", res, numb);
+		handler("join", res, num);
 	}
 }
 
@@ -55,23 +54,37 @@ char* strs4[] = { "5", "25", "125", "625" };
 void set() {
 	d1.cnt = d2.cnt = d3.cnt = d4.cnt = 4;
 	for (int i = 0; i < 4; i++) {
-		strcpy(d1.strs[i], strs1[i]);
-		strcpy(d2.strs[i], strs2[i]);
-		strcpy(d3.strs[i], strs3[i]);
-		strcpy(d4.strs[i], strs4[i]);
+		strcpy(d[0].strs[i], strs1[i]);
+		strcpy(d[1].strs[i], strs2[i]);
+		strcpy(d[2].strs[i], strs3[i]);
+		strcpy(d[3].strs[i], strs4[i]);
 	}
 }
 
 
 int main() {
-	pthread_t thread1, thread2, thread3, thread4;
-
+	pthread_t thread[4];
+	pthread_attr_t attr;
 	set();
 
-	start(&thread1, 1, &d1);
-	start(&thread2, 2, &d2);
-	start(&thread3, 3, &d3);
-	start(&thread4, 4, &d4);
+	int res = pthread_attr_init(&attr);
+	if (res != 0) {
+		handler("init", res, numb);
+	}
+
+
+	for (int i = 0; i < 4; i++) {
+		start(&thread[i], &attr, i + 1, &d[i]);
+	}
+
+	for (int i = 0; i < 4; i++) {
+		join(thread[i], i + 1);
+	}
+
+	res = pthread_attr_destroy(&attr);
+	if (res != 0) {
+		handler("destroy", res, numb);
+	}
 
 	pthread_exit(NULL);
 }
