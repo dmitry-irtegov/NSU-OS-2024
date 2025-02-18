@@ -15,6 +15,7 @@ void* print_lines() {
 
 int main() {
     pthread_t thread;
+    pthread_attr_t attr;
     
     int val = pthread_attr_init(&attr); 
     if (val != 0){ 
@@ -40,6 +41,6 @@ int main() {
     // Выполнение кода в главном потоке после завершения дочернего
     print_lines();
     
-    exit(EXIT_SUCCESS;
+    exit(EXIT_SUCCESS);
 }
 
