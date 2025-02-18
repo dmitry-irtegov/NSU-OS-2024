@@ -49,7 +49,6 @@ int main(int argc, char** argv) {
             my_perror("pthread_create failed", code);
             exit(EXIT_FAILURE);
         }
-        pthread_detach(phils[i]);
     }
 
     for (int i = 0; i < PHILO; i++) {
