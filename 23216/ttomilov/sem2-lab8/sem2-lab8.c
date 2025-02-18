@@ -51,11 +51,20 @@ int main(int argc, char** argv){
 		exit(EXIT_FAILURE);
 	}
 
+	for (int i = 0; i < num_threads; i++){
+		if ((errID = pthread_attr_init(&attrs[i]) != 0)){
+			fprintf(stderr, "ERROR: failed to init attr. %s\n", strerror(errID));
+			free(threads);
+			free(sten);
+		}
+	}
+
 	sten[0] = malloc(sizeof(int) * 2);
 	if (sten[0] == NULL){
 		perror("ERRRO: failed to allocate memory.");
 		free(threads);
 		free(sten);
+		free(attrs);
 		exit(EXIT_FAILURE);
 	}
 	sten[0][0] = 0;
@@ -104,6 +113,17 @@ int main(int argc, char** argv){
 		}
 		
 		result += *(double*) inter_res;
+	}
+
+	for (int i = 0; i < num_threads; i++){
+		if ((errID = pthread_attr_destroy(&attrs[i])) != 0){
+			fprintf(stderr, "ERROR: failed to destroy attr. %s\n", strerror(errID));
+			for (int j = 0; j < num_threads; j++){
+				free(sten[i]);
+			}
+			free(sten);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	result *= 4.0;
