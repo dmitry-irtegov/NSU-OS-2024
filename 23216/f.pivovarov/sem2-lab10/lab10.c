@@ -36,7 +36,7 @@ pthread_mutex_t foodlock;
 int sleep_seconds = 0;
 
 int main(int argn, char **argv) {
-  int i;
+  long long i;
 
   if (argn == 2)
     sleep_seconds = atoi(argv[1]);
@@ -55,7 +55,8 @@ void *philosopher(void *num) {
   int id;
   int left_fork, right_fork, f;
 
-  id = (int)num;
+  long long tmp = (long long)num;
+  id = (int)tmp;
   printf("Philosopher %d sitting down to dinner.\n", id);
   right_fork = id;
   left_fork = id + 1;
@@ -64,7 +65,7 @@ void *philosopher(void *num) {
   if (left_fork == PHILO)
     left_fork = 0;
 
-  while (f = food_on_table()) {
+  while ((f = food_on_table())) {
 
     /* Thanks to philosophers #1 who would like to
      * take a nap before picking up the forks, the other
