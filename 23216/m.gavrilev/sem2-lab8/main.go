@@ -22,7 +22,7 @@ func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64
 }
 
 func main() {
-	var num_steps int = 2000000000
+	var num_steps int = 20000000
 
 	if len(os.Args) < 2 {
 		fmt.Println("write number of threads")
