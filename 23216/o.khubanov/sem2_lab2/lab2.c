@@ -16,20 +16,30 @@ void* print_lines() {
 int main() {
     pthread_t thread;
     
+    int val = pthread_attr_init(&attr); 
+    if (val != 0){ 
+        handleerror(val, "pthread_attr_init");\
+        } 
+    
     int val1 = pthread_create(&thread, NULL, &print_lines, NULL); 
     if (val1 != 0){ 
         handleerror(val1, "pthread_create");
         }
         
-    // Ожидание завершения дочернего потока
-    int val2=pthread_join(thread, NULL);
+    int val2 = pthread_attr_destroy(&attr);
     if (val2 != 0){
-    	handleerror(val2, "pthread_create");
+        handleerror(val2, "pthread_attr_destroy");
+        }
+        
+    // Ожидание завершения дочернего потока
+    int val3=pthread_join(thread, NULL);
+    if (val3 != 0){
+    	handleerror(val2, "pthread_join");
     }
     
     // Выполнение кода в главном потоке после завершения дочернего
     print_lines();
     
-    return 0;
+    exit(EXIT_SUCCESS;
 }
 
