@@ -9,14 +9,14 @@ void err_hendler(char* msg, int errID){
 }
 
 void cancel(){
-	printf("cancel\n");
+	printf("\ncancel\n");
 }
 
 void* pthreadFunc(void* data){
-	pthread_cleanup_push(cancel, "cancel");
 	char* str = *((char**) data);
+	pthread_cleanup_push(cancel, NULL);
 	while(1){
-		printf("%s", str);
+		write(1, str, strlen(str));
 	}
 	pthread_cleanup_pop(1);
 	pthread_exit(0);
@@ -59,8 +59,7 @@ int main(){
 		free(str);
         exit(EXIT_FAILURE);
     }
-
 	free(str);
+	str = NULL;
 	pthread_exit(0);
 }
-	
