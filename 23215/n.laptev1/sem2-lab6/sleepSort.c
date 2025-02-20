@@ -1,9 +1,10 @@
+#include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <string.h>
+#include <unistd.h>
 
 #define SIZE 100
 #define MAX_LENGTH 10
@@ -31,16 +32,26 @@ int main(int argc, char *argv[])
             break;
         }
     }
-    printf("\n----------------------\n");
+    printf("\n|-------------|\n");
 
     pthread_t thread;
+    char errbuf[256];
 
     for (int i = 0; i < real_size; i++)
     {
         int code = pthread_create(&thread, NULL, sleeping, (void *)(intptr_t)i);
         if (code != 0)
         {
-            fprintf(stderr, "Error in pthread_create: %s\n", strerror(code));
+            // Use strerror_r
+            int error = strerror_r(code, errbuf, sizeof(errbuf));
+            if (error == 0)
+            {
+                fprintf(stderr, "Error in pthread_create: %s\n", errbuf);
+            }
+            else
+            {
+                fprintf(stderr, "Error in pthread_create and strerror_r failed.\n errno: %d\n", errno);
+            }
             exit(EXIT_FAILURE);
         }
     }
