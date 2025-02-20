@@ -32,8 +32,7 @@ void* calculator(void* param) {
 
         if (argc >= 2) {
             countThreads = atol(argv[1]);
-        }
-        if (argc < 2) {
+        } else {
             fprintf(stderr, "Not enough arguments");
             exit(EXIT_FAILURE);
         }
@@ -54,5 +53,11 @@ void* calculator(void* param) {
         globalpi *= 4.0;
 
         printf("pi = %.15g\n", globalpi);
+        
+        free(idthreads);
+        free(params);
+
         return(EXIT_SUCCESS);
+        // как считают пи до тысяч знаков когда не хватает дабла
+
     }
