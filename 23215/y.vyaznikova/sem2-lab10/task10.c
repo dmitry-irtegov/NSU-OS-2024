@@ -31,9 +31,6 @@ void *philosopher(void *num) {
     }
 
     while ((f = food_on_table()) != 0) {
-        if (id == 1) {
-            sleep(sleep_seconds);
-        }
 
         printf("Philosopher %d: get dish %d.\n", id, f);
 
