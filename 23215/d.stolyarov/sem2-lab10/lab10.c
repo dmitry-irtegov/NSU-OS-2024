@@ -24,8 +24,7 @@ void down_forks (int, int);
 pthread_mutex_t foodlock;
 
 int
-main (int argn,
-      char **argv)
+main ()
 {
   long long i;
 
@@ -42,11 +41,11 @@ main (int argn,
 void *
 philosopher (void *num)
 {
-  int id;
+  long long id;
   int left_fork, right_fork, f;
 
-  id = (int)num;
-  printf ("Philosopher %d sitting down to dinner.\n", id);
+  id = (long long)num;
+  printf ("Philosopher %lld sitting down to dinner.\n", id);
   right_fork = id;
   left_fork = id + 1;
  
@@ -56,7 +55,7 @@ philosopher (void *num)
  
   while ((f = food_on_table ()) != 0) {
 
-    printf ("Philosopher %d: get dish %d.\n", id, f);
+    printf ("Philosopher %lld: get dish %d.\n", id, f);
     if(id%2){
         get_fork (id, left_fork, "left ");
         get_fork (id, right_fork, "right");
@@ -66,11 +65,11 @@ philosopher (void *num)
         get_fork (id, left_fork, "left ");
     }
 
-    printf ("Philosopher %d: eating.\n", id);
+    printf ("Philosopher %lld: eating.\n", id);
     usleep (DELAY * (FOOD - f + 1));
     down_forks (left_fork, right_fork);
   }
-  printf ("Philosopher %d is done eating.\n", id);
+  printf ("Philosopher %lld is done eating.\n", id);
   return (NULL);
 }
 
