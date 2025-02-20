@@ -58,6 +58,5 @@ void* calculator(void* param) {
         free(params);
 
         return(EXIT_SUCCESS);
-        // как считают пи до тысяч знаков когда не хватает дабла
 
     }
