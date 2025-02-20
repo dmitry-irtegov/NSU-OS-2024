@@ -27,7 +27,7 @@ int
 main (int argn,
       char **argv)
 {
-  int i;
+  long long i;
 
   pthread_mutex_init (&foodlock, NULL);
   for (i = 0; i < PHILO; i++)
@@ -54,7 +54,7 @@ philosopher (void *num)
   if (left_fork == PHILO)
     left_fork = 0;
  
-  while (f = food_on_table ()) {
+  while ((f = food_on_table ()) != 0) {
 
     printf ("Philosopher %d: get dish %d.\n", id, f);
     if(id%2){
