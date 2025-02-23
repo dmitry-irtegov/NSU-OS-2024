@@ -53,10 +53,12 @@ void list_add(list_t* list, char* str)
 
 void list_swap(list_t* list, elem_t* ael, elem_t* bel)
 {
-    if(ael == NULL || bel == NULL || ael == bel) 
+    if(ael == NULL || bel == NULL || ael == bel) {
         return;
-    if(ael->next != bel) 
+    }
+    if(ael->next != bel) {
         return;
+    }
 
     elem_t* a_prev = ael->prev;
     elem_t* b_next = bel->next;
@@ -70,6 +72,7 @@ void list_swap(list_t* list, elem_t* ael, elem_t* bel)
         b_next->prev = ael;
     if(a_prev) 
         a_prev->next = bel;
+    
 
     if(list->first == ael) 
         list->first = bel;
@@ -80,6 +83,7 @@ void list_swap(list_t* list, elem_t* ael, elem_t* bel)
         ael->prev->next = ael;
     else
         list->first = ael; 
+    
 
     if(ael->next)
         ael->next->prev = ael;
@@ -90,6 +94,7 @@ void list_swap(list_t* list, elem_t* ael, elem_t* bel)
         bel->prev->next = bel;
     else
         list->first = bel;
+    
 
     if(bel->next)
         bel->next->prev = bel;
@@ -101,7 +106,7 @@ void list_sort(list_t* list)
 {
     pthread_mutex_lock(&(list->mutex));
     for(int i = 0; i < list->listlen; i++) {
-        for(elem_t* iter = list->first; iter != list->last; iter = iter->next) {
+        for(elem_t* iter = list->first; iter != NULL; iter = iter->next) {
             if(iter->next != NULL && strcmp(iter->str, iter->next->str) > 0){
                 list_swap(list, iter, iter->next);
             }
@@ -126,7 +131,6 @@ void* sort_thread(void* arg)
     list_t *list = (list_t*)arg;
     while(1) {
         sleep(5);
-        printf("sorting started\n");
         list_sort(list);
     }
     return NULL;
