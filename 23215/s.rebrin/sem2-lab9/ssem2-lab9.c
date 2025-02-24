@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
         }
     }
     
-    pause();
+    while(!stop);
 
     double pi = 0.0;
     for (int i = 0;i < num_threads;i++) {
