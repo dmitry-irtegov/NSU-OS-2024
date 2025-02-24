@@ -63,7 +63,6 @@ int main() {
     pthread_create(&threadA, NULL, createA, NULL);
     pthread_create(&threadB, NULL, createB, NULL);
     pthread_create(&threadB2, NULL, createB, NULL);
-    pthread_create(&threadB2, NULL, createB, NULL);
     pthread_create(&threadC, NULL, createC, NULL);
     pthread_create(&threadC2, NULL, createC, NULL);
     pthread_create(&threadC3, NULL, createC, NULL);
