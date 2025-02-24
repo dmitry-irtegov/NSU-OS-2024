@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         if (pthread_create(&threads[i], NULL, compute_partial_sum, (void*)&thread_data[i])) {
             fprintf(stderr, "Error creating thread %d\n", i);
             for (int j = 0; j < i; j++) {
-                pthread_join(threads[j], NULL);
+                pthread_cancel(threads[j]);
             }
             free(threads);
             free(thread_data);
