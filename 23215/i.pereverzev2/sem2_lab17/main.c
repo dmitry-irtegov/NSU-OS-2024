@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <signal.h>
-// #include <thread.h>
+#include <thread.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -32,7 +32,6 @@ void list_init(list_t* list)
 
 void list_add(list_t* list, char* str)
 {
-    // str must be less than 80
     elem_t* cur = (elem_t*)malloc(sizeof(elem_t));
     pthread_mutex_lock(&(list->mutex));
     if(list->first == NULL) {
