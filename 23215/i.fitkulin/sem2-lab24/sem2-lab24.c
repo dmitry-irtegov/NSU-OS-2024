@@ -49,7 +49,10 @@ void* createWidget() {
 int main() {
     pthread_t threadA;    
     pthread_t threadB;
+    pthread_t threadB2;
     pthread_t threadC;
+    pthread_t threadC2;
+    pthread_t threadC3;
     pthread_t threadAB;
     
     sem_init(&semA, 0, 0);
@@ -59,7 +62,12 @@ int main() {
 
     pthread_create(&threadA, NULL, createA, NULL);
     pthread_create(&threadB, NULL, createB, NULL);
+    pthread_create(&threadB2, NULL, createB, NULL);
+    pthread_create(&threadB2, NULL, createB, NULL);
     pthread_create(&threadC, NULL, createC, NULL);
+    pthread_create(&threadC2, NULL, createC, NULL);
+    pthread_create(&threadC3, NULL, createC, NULL);
     pthread_create(&threadAB, NULL, createAB, NULL);
+    
     createWidget();    
 }
