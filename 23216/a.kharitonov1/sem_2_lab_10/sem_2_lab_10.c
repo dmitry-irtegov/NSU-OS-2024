@@ -11,8 +11,8 @@ pthread_mutex_t forks[PHILO];
 pthread_t phils[PHILO];
 void *philosopher (void *id);
 int food_on_table ();
-void get_fork (int, int, char *);
-void down_forks (int, int);
+void get_fork (long long, long long, char *);
+void down_forks (long , long long);
 pthread_mutex_t foodlock;
 
 int sleep_seconds = 0;
