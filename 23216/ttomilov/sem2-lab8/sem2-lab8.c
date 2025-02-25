@@ -3,18 +3,29 @@
 #include <pthread.h>
 #include <string.h>
 
-void* pi_serial(void* data){
-	int* sten = (int*) data;
-	double* result = malloc(sizeof(double));
-	if (result == NULL){
-		pthread_exit(NULL);
-	}
-	for (int i = sten[0]; i < sten[1]; i++){
-		*result += 1.0/(i*4.0 + 1.0);
-        *result -= 1.0/(i*4.0 + 3.0);
-	}
+pthread_mutex_t mutex;
+double* inter_res;
 
-	pthread_exit((void*) result);
+typedef struct Args{
+	int start;
+	int end;
+	int thread_id;
+	int done;
+	int isCounted;
+}Args;
+
+void* pi_serial(void* data){
+	pthread_mutex_lock(&mutex);
+	Args* args = (Args*) data;
+	double result = 0;
+	for (int i = args->start; i < args->end; i++){
+		result += 1.0/(i*4.0 + 1.0);
+        result -= 1.0/(i*4.0 + 3.0);
+	}
+	inter_res[args->thread_id] = result;
+	args->done = 1;
+	pthread_mutex_unlock(&mutex);
+	pthread_exit(NULL);
 }
 
 int main(int argc, char** argv){
@@ -27,106 +38,119 @@ int main(int argc, char** argv){
 	int num_elem_row = 200000000;
 	int steps = num_elem_row/num_threads;
 	int rest = num_elem_row%num_threads;
-	void* inter_res;
 	double result = 0;
+	int count = 0;
+	pthread_attr_t attr;
+	pthread_mutexattr_t mutexattr;
 
-	int** sten = malloc(sizeof(int*) * num_threads);
-	if (sten == NULL){
-		perror("ERRRO: failed to allocate memory!");
+	Args* args = malloc(sizeof(Args) * num_threads);
+	if (args == NULL){
+		perror("ERROR: failed to allocate memory!");
 		exit(EXIT_FAILURE);
 	}
 
 	pthread_t* threads = malloc(sizeof(pthread_t) * num_threads);
 	if (threads == NULL){
 		perror("ERRRO: failed to allocate memory!");
-		free(sten);
+		free(args);
 		exit(EXIT_FAILURE);
 	}
 
-	pthread_attr_t* attrs = malloc(sizeof(pthread_attr_t) * num_threads);
-	if (attrs == NULL){
+	inter_res = malloc(sizeof(double) * num_threads);
+	if (inter_res == NULL){
 		perror("ERRRO: failed to allocate memory.");
 		free(threads);
-		free(sten);
+		free(args);
 		exit(EXIT_FAILURE);
 	}
 
-	for (int i = 0; i < num_threads; i++){
-		if ((errID = pthread_attr_init(&attrs[i]) != 0)){
-			fprintf(stderr, "ERROR: failed to init attr. %s\n", strerror(errID));
-			free(threads);
-			free(sten);
-		}
-	}
-
-	sten[0] = malloc(sizeof(int) * 2);
-	if (sten[0] == NULL){
-		perror("ERRRO: failed to allocate memory.");
+	if (pthread_mutexattr_init(&mutexattr) != 0){
+		perror("ERROR: failed to init mutexattr.");
 		free(threads);
-		free(sten);
-		free(attrs);
+		free(args);
+		free(inter_res);
 		exit(EXIT_FAILURE);
 	}
-	sten[0][0] = 0;
-	sten[0][1] = steps;
 
-	for (int i = 1; i < num_threads; i++){
-		sten[i] = malloc(sizeof(int) * 2);
-		if (sten[i] == NULL){
-			perror("ERRRO: failed to allocate memory.");
+	if ((errID = pthread_mutex_init(&mutex, &mutexattr)) != 0){
+		perror("ERROR: failed to init mutex.");
+		free(threads);
+		free(args);
+		free(inter_res);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((errID = pthread_attr_init(&attr) != 0)){
+		fprintf(stderr, "ERROR: failed to init attr. %s\n", strerror(errID));
+		free(threads);
+		free(args);
+		free(inter_res);
+		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < num_threads; i++){
+		args[i].start = args[i - 1].end;
+		args[i].end = args[i].end + steps + rest;
+		args[i].thread_id = i;
+		args[i].done = 0;
+		args[i].isCounted = 0;
+	}
+
+	if (args[num_threads - 1].end > num_elem_row){
+		args[num_threads - 1].end = num_elem_row;
+	}
+
+	for (int i = 0; i < num_threads; i++){
+		if ((errID = pthread_create(&(threads[i]), &attr, &pi_serial, (void*) &args[i])) != 0){
+			fprintf(stderr, "ERROR: failed to create a pthread. %s\n", strerror(errID));
 			free(threads);
-			for (int j = 0; j < i; j++){
-				free(sten[j]);
-			}
-			free(sten);
-			exit(EXIT_FAILURE);
-		}
-
-		sten[i][0] = sten[i - 1][1];
-		sten[i][1] = sten[i][0] + rest;
-	}
-
-	if (sten[num_threads - 1][1] > num_elem_row){
-		sten[num_threads - 1][1] = num_elem_row;
-	}
-
-	for (int i = 0; i < num_threads; i++){
-		//printf("%d %d\n", sten[0], sten[1]);
-		if ((errID = pthread_create(&(threads[i]), &attrs[i], &pi_serial, (void*) sten[i])) != 0){
-			fprintf(stderr, "ERROR: failed to create a thread. %s\n", strerror(errID));
-			for (int j = 0; j < num_threads; j++){
-				free(sten[i]);
-			}
-			free(sten);
+			free(args);
+			free(inter_res);
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	for (int i = 0; i < num_threads; i++){
-		if ((errID = pthread_join(threads[i], &inter_res)) != 0){
-			fprintf(stderr, "ERROR: failed to join thread. %s\n", strerror(errID));
-			for (int j = 0; j < num_threads; j++){
-				free(sten[i]);
+	while(count < num_threads){
+		pthread_mutex_lock(&mutex);
+		for (int i = 0; i < num_threads; i++){
+			if (args[i].done == 1 && args[i].isCounted == 0){
+				result += inter_res[args[i].thread_id];
+				args[i].isCounted = 1;
+				count++;
+				break;
 			}
-			free(sten);
-			exit(EXIT_FAILURE);
 		}
-		
-		result += *(double*) inter_res;
+		pthread_mutex_unlock(&mutex);
 	}
 
-	for (int i = 0; i < num_threads; i++){
-		if ((errID = pthread_attr_destroy(&attrs[i])) != 0){
-			fprintf(stderr, "ERROR: failed to destroy attr. %s\n", strerror(errID));
-			for (int j = 0; j < num_threads; j++){
-				free(sten[i]);
-			}
-			free(sten);
-			exit(EXIT_FAILURE);
-		}
+	if ((errID = pthread_mutex_destroy(&mutex)) != 0){
+		fprintf(stderr, "ERROR: failed to destroy mutex. %s\n", strerror(errID));
+		free(threads);
+		free(args);
+		free(inter_res);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((errID = pthread_mutexattr_destroy(&mutexattr)) != 0){
+		fprintf(stderr, "ERROR: failed to destroy mutexattr. %s\n", strerror(errID));
+		free(threads);
+		free(args);
+		free(inter_res);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((errID = pthread_attr_destroy(&attr)) != 0){
+		fprintf(stderr, "ERROR: failed to destroy attr. %s\n", strerror(errID));
+		free(threads);
+		free(args);
+		free(inter_res);
+		exit(EXIT_FAILURE);
 	}
 
 	result *= 4.0;
 	printf("Result: %.5le\n", result);
+	free(threads);
+	free(args);
+	free(inter_res);
 	exit(EXIT_SUCCESS);
 }
