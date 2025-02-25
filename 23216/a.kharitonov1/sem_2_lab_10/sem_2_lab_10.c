@@ -64,7 +64,7 @@ philosopher (void *num)
   left_fork = id + 1;
   if (left_fork == PHILO)
     left_fork = 0;
-  while (f = food_on_table ()) {
+  while ((f = food_on_table ())) {
     printf ("Philosopher %lld: get dish %d.\n", id, f);
     if (left_fork == 0){
       get_fork (id, left_fork, "left ");
