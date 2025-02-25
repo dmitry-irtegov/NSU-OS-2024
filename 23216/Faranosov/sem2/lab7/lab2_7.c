@@ -209,7 +209,7 @@ void* copyDir(void* param) {
 			pthread_join(threads[it], &retParam);
 			if (res != 0) handler("thread join", res, data);
 
-			if (param != NULL) clear(param, type[it]);
+			if (retParam != NULL) clear(retParam, type[it]);
 		}
 
 		char* buf = NULL;
@@ -333,9 +333,7 @@ int main(int argc, char *argv[]) {
 		res = pthread_join(thread, NULL);
 		if (res != 0) handler("main join", res, NULL);
 
-		free(data->path.dst);
-		free(data->path.src);
-		free(data);
+		freeDirData(data);
 
 		res = pthread_attr_destroy(&attr);
 		if (res != 0) handler("main attr destroy", res, NULL);
