@@ -260,7 +260,7 @@ void* copyDir(void* param) {
 		res = pthread_join(threads[i], &retParam);
 		if (res != 0) handler("thread join", res, data);
 
-		if (param != NULL) clear(param, type[i]);
+		if (retParam != NULL) clear(retParam, type[i]);
 	}
 	
 
