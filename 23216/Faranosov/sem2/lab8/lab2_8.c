@@ -1,7 +1,7 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 #define num_steps 200000000
 
 typedef struct data {
@@ -42,9 +42,9 @@ void* func(void* param) {
 void free_after_bad_malloc(int j, pthread_t* t, pthread_attr_t* attr, data** datas) {
     int res = 0;
     for (int i = 0; i < j; i++) {
-        res = pthread_cancel(&t[i]);
+        res = pthread_cancel(t[i]);
         if (res != 0) {
-            fprintf("OK, i`m done\n");
+            fprintf(stderr, "OK, i`m done\n");
             exit(EXIT_FAILURE);
         }
         free(datas[i]);
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     for (int j = 0; j < cntThr; j++) {
         data* d = NULL;
         
-        check = pthread_join(threads[j], &d);
+        check = pthread_join(threads[j], &(void**)d);
         if (check != 0) {
             handler("join error", check);
         }
