@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     for (int j = 0; j < cntThr; j++) {
         data* d = NULL;
         
-        check = pthread_join(threads[j], &(void**)d);
+        check = pthread_join(threads[j], (void**)&d);
         if (check != 0) {
             handler("join error", check);
         }
