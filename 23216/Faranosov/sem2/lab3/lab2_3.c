@@ -86,5 +86,5 @@ int main() {
 		handler("destroy", res, 0);
 	}
 
-	pthread_exit(NULL);
+	exit(EXIT_SUCCESS);
 }
