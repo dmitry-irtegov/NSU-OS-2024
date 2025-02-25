@@ -55,9 +55,9 @@ main (int argn,
 void *
 philosopher (void *num)
 {
-  int id;
-  long long left_fork, right_fork, f;
-  id = (int)num;
+  int f;
+  long long left_fork, right_fork, id;
+  id = (long long)num;
   printf ("Philosopher %d sitting down to dinner.\n", id);
   right_fork = id;
   left_fork = id + 1;
