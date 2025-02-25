@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
 
 #define PHILO 5
 #define DELAY 30000
@@ -58,30 +59,30 @@ philosopher (void *num)
   int f;
   long long left_fork, right_fork, id;
   id = (long long)num;
-  printf ("Philosopher %d sitting down to dinner.\n", id);
+  printf ("Philosopher %lld sitting down to dinner.\n", id);
   right_fork = id;
   left_fork = id + 1;
   if (left_fork == PHILO)
     left_fork = 0;
   while (f = food_on_table ()) {
-    printf ("Philosopher %d: get dish %d.\n", id, f);
+    printf ("Philosopher %lld: get dish %d.\n", id, f);
     if (left_fork == 0){
       get_fork (id, left_fork, "left ");
       get_fork (id, right_fork, "right");
-      printf ("Philosopher %d: eating.\n", id);
+      printf ("Philosopher %lld: eating.\n", id);
       usleep (DELAY * (FOOD - f + 1));
       down_forks (right_fork, left_fork);
     }
     else{
       get_fork (id, right_fork, "right");
       get_fork (id, left_fork, "left ");
-      printf ("Philosopher %d: eating.\n", id);
+      printf ("Philosopher %lld: eating.\n", id);
       usleep (DELAY * (FOOD - f + 1));
       down_forks (left_fork, right_fork);
     }
 
   }
-  printf ("Philosopher %d is done eating.\n", id);
+  printf ("Philosopher %lld is done eating.\n", id);
   pthread_exit(NULL);
 }
 
@@ -116,7 +117,7 @@ get_fork (long long phil,
     threads_perror("pthread_mutex_lock(forks[fork]) failed", code);
     exit(EXIT_FAILURE);
   }
-  printf ("Philosopher %d: got %s fork %d\n", phil, hand, fork);
+  printf ("Philosopher %lld: got %s fork %lld\n", phil, hand, fork);
 }
 
 void
