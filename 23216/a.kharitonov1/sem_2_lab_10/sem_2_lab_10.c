@@ -25,7 +25,7 @@ int
 main (int argn,
       char **argv)
 {
-  int i, code = 0;
+  int code = 0;
 
   if (argn == 2)
     sleep_seconds = atoi (argv[1]);
@@ -34,17 +34,17 @@ main (int argn,
       threads_perror("pthread_mutex_init foodlock failed", code);
       exit(EXIT_FAILURE);
   }
-  for (i = 0; i < PHILO; i++)
+  for (int i = 0; i < PHILO; i++)
     if ((code = pthread_mutex_init(&forks[i], NULL)) != 0) {
       threads_perror("pthread_mutex_init forks failed", code);
       exit(EXIT_FAILURE);
     }
-  for (i = 0; i < PHILO; i++)
+  for (long long i = 0; i < PHILO; i++)
     if ((code = pthread_create(&phils[i], NULL, philosopher, (void*) i)) != 0) {
       threads_perror("pthread_create failed", code);
       exit(EXIT_FAILURE);
     }
-  for (i = 0; i < PHILO; i++)
+  for (int i = 0; i < PHILO; i++)
     if ((code = pthread_join(phils[i], NULL)) != 0) {
       threads_perror("pthread_join failed", code);
       exit(EXIT_FAILURE);
@@ -56,7 +56,7 @@ void *
 philosopher (void *num)
 {
   int id;
-  int left_fork, right_fork, f;
+  long long left_fork, right_fork, f;
   id = (int)num;
   printf ("Philosopher %d sitting down to dinner.\n", id);
   right_fork = id;
@@ -107,8 +107,8 @@ food_on_table ()
 }
 
 void
-get_fork (int phil,
-          int fork,
+get_fork (long long phil,
+          long long fork,
           char *hand)
 {
   int code = 0;
@@ -120,8 +120,8 @@ get_fork (int phil,
 }
 
 void
-down_forks (int f1,
-            int f2)
+down_forks (long long f1,
+            long long f2)
 {
   int code = 0;
   if ((code = pthread_mutex_unlock (&forks[f1])) != 0) {
