@@ -3,11 +3,22 @@
 #include <pthread.h>
 #include <signal.h>
 #include <limits.h>
+#include <string.h>
 
-#define num_steps 200000ull
+#define num_steps 2000000ull
 
-pthread_mutex_t mutex_piece, mutex_result;
-pthread_cond_t cond;
+typedef struct {
+    pthread_t thread;
+    int id;
+    double result;
+    char completed;
+    char processed;
+} thread_data;
+
+thread_data* threads;
+
+pthread_mutex_t mutex_piece, mutex;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 unsigned long long currentStart = 0;
 int num_result;
 char flag = 0;
@@ -61,25 +72,35 @@ int getNextPiece(unsigned long long* start, unsigned long long* end) {
     return 0;
 }
 
-void* calc_series(void* ignored) {
+void* calc_series(void* data) {
+    thread_data* thdata = (thread_data*) data;
 
-    double* res = malloc(sizeof(double));
-
-    if (res == NULL) {
-        pthread_exit(NULL);
-    }
-
-
+    int code = 0;
     unsigned long long start, end;
-    *res = 0;
+    double res = 0;
     while (1) {
         if (getNextPiece(&start, &end) == 1) {
-            pthread_exit((void*) res);
+            if ((code = pthread_mutex_lock(&mutex))) {
+                my_perror("pthread_mutex_lock", code);
+                exit(EXIT_FAILURE);
+            }
+            thdata->completed = 1;
+            thdata->result = res;
+            if ((code = pthread_cond_signal(&cond))) {
+                my_perror("pthread_cond_signal", code);
+                exit(EXIT_FAILURE);
+            }
+
+            if ((code = pthread_mutex_unlock(&mutex))) {
+                my_perror("pthread_mutex_unlock", code);
+                exit(EXIT_FAILURE);
+            }
+            break;
         }
 
         for (unsigned long long i = start; i < end; i++) {    
-            *res += 1.0/(i*4.0 + 1.0);
-            *res -= 1.0/(i*4.0 + 3.0);
+            res += 1.0/(i*4.0 + 1.0);
+            res -= 1.0/(i*4.0 + 3.0);
         }
     }
 
@@ -103,18 +124,20 @@ int main(int argc, char** argv) {
         my_perror("mutex_init", code);
         exit(EXIT_FAILURE);
     }
-    if ((code = pthread_mutex_init(&mutex_result, NULL))) {
+    if ((code = pthread_mutex_init(&mutex, NULL))) {
         my_perror("mutex_init", code);
         exit(EXIT_FAILURE);
     }
-    pthread_t* threads = malloc(sizeof(pthread_t)*count_threads);
+
+    thread_data* threads = calloc(count_threads, sizeof(thread_data));
     if (threads == NULL) {
         perror("malloc failed");
         exit(EXIT_FAILURE);
     }
 
     for (int i = 0; i < count_threads; i++) {
-        if ((code = pthread_create(&threads[i], NULL, &calc_series,  i)) != 0) {
+        threads[i].id = i;
+        if ((code = pthread_create(&threads[i].thread, NULL, &calc_series, (void*)&threads[i])) != 0) {
             fprintf(stderr, "pthread_create error: %d \n", code);
             exit(EXIT_FAILURE);
         }
@@ -126,22 +149,33 @@ int main(int argc, char** argv) {
     }
 
     double pi = 0;
-    void* ret;
-    for (int i = 0; i < count_threads; i++) {
-        if ((code = pthread_join(threads[i], &ret)) != 0) {
-            fprintf(stderr, "pthread_join error: %d\n", code);
+
+    int processed_count = 0;
+    while (processed_count < count_threads) {
+        pthread_mutex_lock(&mutex);
+        
+        char found = 0;
+        for (int i = 0; i < count_threads; i++) {
+            if (threads[i].completed && !threads[i].processed) {
+                threads[i].processed = 1;
+                processed_count++;
+                found = 1;
+                pi += threads[i].result;
+            }
+        }
+        
+        if (!found) {
+            if ((code = pthread_cond_wait(&cond, &mutex))) {
+                my_perror("pthread_cond_wait", code);
+                exit(EXIT_FAILURE);
+            }
+        }
+        
+        if ((code = pthread_mutex_unlock(&mutex))) {
+            my_perror("pthread_mutex_unlock", code);
             exit(EXIT_FAILURE);
         }
-
-        if (ret == NULL) {
-            fprintf(stderr, "An error occurred during the calculation of pi\n");
-            exit(EXIT_FAILURE);
-        }
-
-        pi += *(double*)ret;
     }
-
-
 
     pi *= 4;
     printf("pi done - %.15g \n", pi);    
