@@ -36,7 +36,7 @@ void* func(void* param) {
 #endif // DEBUG
 
     data->res = res;
-    pthread_exit(&data);
+    pthread_exit(data);
 }
 
 void free_after_bad_malloc(int j, pthread_t* t, pthread_attr_t* attr, data** datas) {
@@ -151,4 +151,3 @@ int main(int argc, char** argv) {
 
     return (EXIT_SUCCESS);
 }
-
