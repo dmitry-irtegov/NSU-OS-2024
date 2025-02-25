@@ -1,91 +1,93 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <errno.h>
+#include <stdlib.h>
 
-#define handle_error_en(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+#define handle_error_en(en, msg) \
+    do { \
+        errno = en; \
+        perror(msg); \
+        exit(EXIT_FAILURE); \
+    } while (0)
 
 pthread_mutex_t mutex;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-int turn = 0;
+int flag = 0;
+int global_count = 10;
 
-void print_all_lines(char* string, int thread_id) {
-    for (int i = 0; i < 10; i++) {
-        int result = pthread_mutex_lock(&mutex);
-        if (result != 0)
-            handle_error_en(result, "pthread_mutex_lock");
+void print_all_lines(char *string, int i) {
+    int s;
+    if ((s = pthread_mutex_lock(&mutex)) != 0) {
+        handle_error_en(s, "pthread_mutex_lock");
+    }
 
-        while (turn != thread_id) {
-            result = pthread_cond_wait(&cond, &mutex);
-            if (result != 0)
-                handle_error_en(result, "pthread_cond_wait");
-        }
-        printf("%s: number %d\n", string, i);
-        turn = 1 - turn;
+    printf("%s: number %d\n", string, i); 
 
-        result = pthread_cond_signal(&cond);
-        if (result != 0)
-            handle_error_en(result, "pthread_cond_signal");
-
-        result = pthread_mutex_unlock(&mutex);
-        if (result != 0)
-            handle_error_en(result, "pthread_mutex_unlock");
+    if ((s = pthread_mutex_unlock(&mutex)) != 0) {
+        handle_error_en(s, "pthread_mutex_unlock");
     }
 }
 
-void *print_lines(void* arg) {
-    print_all_lines("Thread", 1);
-    pthread_exit(0);
+void *print_lines(void *arg) {
+    int count = 0;
+
+    while (count < global_count) {
+        if (flag == 1) {
+            print_all_lines("Thread", count);
+            count++;
+            flag = 0;
+        }
+    }
+
+    pthread_exit(EXIT_SUCCESS);
 }
 
 int main() {
     pthread_t thread;
-    pthread_attr_t attr;
-    pthread_mutexattr_t mutex_attr;
-    int result;
+    int s, count = 0;
 
-    result = pthread_mutexattr_init(&mutex_attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutexattr_init");
+    pthread_mutexattr_t attr;
+    if ((s = pthread_mutexattr_init(&attr)) != 0) {
+        handle_error_en(s, "pthread_mutexattr_init");
+    }
 
-    result = pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_ERRORCHECK);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutexattr_settype");
+    if ((s = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK)) != 0) {
+        handle_error_en(s, "pthread_mutexattr_settype");
+        pthread_mutexattr_destroy(&attr);
+    }
 
-    result = pthread_mutex_init(&mutex, &mutex_attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutex_init");
+    if ((s = pthread_mutex_init(&mutex, &attr)) != 0) {
+        handle_error_en(s, "pthread_mutex_init");
+        pthread_mutexattr_destroy(&attr);
+    }
 
-    result = pthread_mutexattr_destroy(&mutex_attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutexattr_destroy");
+    if ((s = pthread_create(&thread, NULL, print_lines, NULL)) != 0) {
+        handle_error_en(s, "pthread_create");
+        pthread_mutex_destroy(&mutex);
+        pthread_mutexattr_destroy(&attr);
+    }
 
-    result = pthread_attr_init(&attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_attr_init");
+    while (count < global_count) {
+        if (flag == 0) {
+            print_all_lines("Parent thread", count);
+            count++;
+            flag = 1;
+        }
+    }
 
-    result = pthread_create(&thread, &attr, &print_lines, NULL);
-    if (result != 0)
-        handle_error_en(result, "pthread_create");
+    if ((s = pthread_join(thread, NULL)) != 0) {
+        handle_error_en(s, "pthread_join");
+        pthread_mutex_destroy(&mutex);
+        pthread_mutexattr_destroy(&attr);
+    }
 
-    result = pthread_attr_destroy(&attr);
-    if (result != 0)
-        handle_error_en(result, "pthread_attr_destroy");
+    if ((s = pthread_mutex_destroy(&mutex)) != 0) {
+        handle_error_en(s, "pthread_mutex_destroy");
+        pthread_mutexattr_destroy(&attr);
+    }
 
-    print_all_lines("Parent thread", 0);
+    if ((s = pthread_mutexattr_destroy(&attr)) != 0) {
+        handle_error_en(s, "pthread_mutexattr_destroy");
+    }
 
-    result = pthread_join(thread, NULL);
-    if (result != 0)
-        handle_error_en(result, "pthread_join");
-
-    result = pthread_mutex_destroy(&mutex);
-    if (result != 0)
-        handle_error_en(result, "pthread_mutex_destroy");
-
-    result = pthread_cond_destroy(&cond);
-    if (result != 0)
-        handle_error_en(result, "pthread_cond_destroy");
-
-    pthread_exit(0);
+    exit(EXIT_SUCCESS);
 }
-
