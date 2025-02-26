@@ -8,18 +8,18 @@
 #define DELAY 30000
 #define FOOD 50
 
-pthread_mutex_t forks[PHILO];//forks[i] - вилка.
+pthread_mutex_t forks[PHILO]; // forks[i] - вилка.
 pthread_mutex_t foodlock;
-pthread_t phils[PHILO];//phils[i] - какой-то филосов в виде отдельного потока
+pthread_t phils[PHILO]; // phils[i] - какой-то филосов в виде отдельного потока
 
-//try to take a fork
+// try to take a fork
 void get_fork(int phil, int fork, char *hand)
 {
     pthread_mutex_lock(&forks[fork]);
     printf("Philosopher %d: got %s fork %d\n", phil, hand, fork);
 }
 
-//put doan a fork.
+// put doan a fork.
 void down_forks(int f1, int f2)
 {
     pthread_mutex_unlock(&forks[f1]);
@@ -43,13 +43,11 @@ int food_on_table()
 
 void *philosopher(void *num)
 {
-    int id;
-    int left_fork, right_fork, f;
-
-    id = (int)(intptr_t)num;
+    int id = (int)(intptr_t)num;
     printf("Philosopher %d sitting down to dinner.\n", id);
-    right_fork = id;
-    left_fork = id + 1;
+    int right_fork = id;
+    int left_fork = id + 1;
+    int f;
 
     if (left_fork == PHILO)
         left_fork = 0;
@@ -57,8 +55,7 @@ void *philosopher(void *num)
     int first_fork, second_fork;
     char *first_hand, *second_hand;
 
-    //философы всегда берут вилку с наименьшим номером.
-    if (right_fork < left_fork)
+    if (right_fork > left_fork)
     {
         first_fork = right_fork;
         second_fork = left_fork;
