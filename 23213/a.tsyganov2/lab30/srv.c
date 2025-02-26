@@ -36,24 +36,24 @@ int main() {
     exit(-1);
   }
   
-  while(1) {
-    if ((cl = accept(fd, NULL, NULL)) == -1) {
-      perror("accept error");
-      continue;
-    }
-    
-    while ((rc = read(cl, buf, sizeof(buf))) > 0) {
-      for (int i=0; i < rc; i++) {
-        buf[i] = toupper(buf[i]);
-      }
-      printf("%.*s", rc, buf);
-    }
-    if (rc == -1) {
-      perror("read failed");
-      unlink(socket_path);
-      exit(-1);
-    }
+  if ((cl = accept(fd, NULL, NULL)) == -1) {
+    perror("accept error");
+    unlink(socket_path);
+    exit(-1);
   }
+    
+  while ((rc = read(cl, buf, sizeof(buf))) > 0) {
+    for (int i=0; i < rc; i++) {
+      buf[i] = toupper(buf[i]);
+    }
+    printf("%.*s", rc, buf);
+  }
+  if (rc == -1) {
+    perror("read failed");
+    unlink(socket_path);
+    exit(-1);
+  }
+  
   
   unlink(socket_path);
   exit(0);
