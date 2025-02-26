@@ -44,9 +44,8 @@ int main() {
     
   while ((rc = read(cl, buf, sizeof(buf))) > 0) {
     for (int i=0; i < rc; i++) {
-      buf[i] = toupper(buf[i]);
+      putchar(toupper(buf[i]));
     }
-    printf("%.*s", rc, buf);
   }
   if (rc == -1) {
     perror("read failed");
