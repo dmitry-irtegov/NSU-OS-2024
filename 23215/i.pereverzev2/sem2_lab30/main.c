@@ -11,14 +11,14 @@
 #include <pthread.h>
 
 #define PORT "80"
-#define HOST "example.com"
+#define HOST "http://parallels.nsu.ru"
 #define REQUEST "GET / HTTP/1.1\r\nHost: " HOST "\r\nConnection: close\r\n\r\n"
 #define BUFFER_SIZE 4096
 
 #define HEIGHT 23
 #define PROMPT "Press space to scroll down"
 
-typedef struct {
+typedef struct grar_s {
     char* str;
     size_t curlen;
     size_t maxlen;
