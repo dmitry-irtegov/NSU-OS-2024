@@ -39,17 +39,65 @@ int main(int argc, char** argv) {
                 break;
         }
 
+        char xu;
+        switch (file_stat.st_mode & (S_ISUID | S_IXUSR)) {
+            case (S_ISUID | S_IXUSR):
+                xu = 's';
+                break;
+            case S_ISUID:
+                xu = 'S';
+                break;
+            case S_IXUSR:
+                xu = 'x';
+                break;
+            default:
+                xu = '-';
+                break;
+        }
+
+        char xg;
+        switch (file_stat.st_mode & (S_ISGID | S_IXGRP)) {
+            case (S_ISGID | S_IXGRP):
+                xg = 's';
+                break;
+            case S_ISGID:
+                xg = 'S';
+                break;
+            case S_IXGRP:
+                xg = 'x';
+                break;
+            default:
+                xg = '-';
+                break;
+        }
+
+        char xo;
+        switch (file_stat.st_mode & (S_ISVTX| S_IXOTH)) {
+            case (S_ISVTX | S_IXOTH):
+                xo = 't';
+                break;
+            case S_ISVTX:
+                xo = 'T';
+                break;
+            case S_IXOTH:
+                xo = 'x';
+                break;
+            default:
+                xo = '-';
+                break;
+        }
+
         printf("%c%c%c%c%c%c%c%c%c%c %3u ",
             ftype,
             file_stat.st_mode & S_IRUSR ? 'r' : '-',
             file_stat.st_mode & S_IWUSR ? 'w' : '-',
-            file_stat.st_mode & S_IXUSR ? 'x' : '-',
+            xu,
             file_stat.st_mode & S_IRGRP ? 'r' : '-',
             file_stat.st_mode & S_IWGRP ? 'w' : '-',
-            file_stat.st_mode & S_IXGRP ? 'x' : '-',
+            xg,
             file_stat.st_mode & S_IROTH ? 'r' : '-',
             file_stat.st_mode & S_IWOTH ? 'w' : '-',
-            file_stat.st_mode & S_IXOTH ? 'x' : '-',
+            xo,
             file_stat.st_nlink
         );
         
