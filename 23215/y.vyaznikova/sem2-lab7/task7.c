@@ -8,28 +8,97 @@
 #include <pthread.h>
 #include <errno.h>
 #include <limits.h>
+#include <semaphore.h>
 
-#ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
-
 #define BUF_SIZE 4096
+#define MAX_RETRIES 5
+#define RETRY_DELAY 1
+#define MAX_THREADS 100
+
+pthread_mutex_t fileopen_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t fileopen_cond = PTHREAD_COND_INITIALIZER;
+sem_t thread_semaphore;
+
+typedef struct {
+    pthread_t *threads;
+    size_t count;
+    size_t capacity;
+} ThreadPool;
+
+ThreadPool thread_pool;
+
+void init_thread_pool(ThreadPool *pool, size_t capacity) {
+    pool->threads = malloc(capacity * sizeof(pthread_t));
+    pool->count = 0;
+    pool->capacity = capacity;
+}
+
+void add_thread_to_pool(ThreadPool *pool, pthread_t thread) {
+    if (pool->count < pool->capacity) {
+        pool->threads[pool->count++] = thread;
+    } else {
+        fprintf(stderr, "Thread pool is full\n");
+    }
+}
+
+void wait_for_threads(ThreadPool *pool) {
+    for (size_t i = 0; i < pool->count; i++) {
+        pthread_join(pool->threads[i], NULL);
+    }
+}
+
+void free_thread_pool(ThreadPool *pool) {
+    free(pool->threads);
+}
+
+int safe_open(const char* path, int flags, mode_t mode) {
+    int fd;
+    pthread_mutex_lock(&fileopen_mutex);
+    while ((fd = open(path, flags, mode)) == -1) {
+        if (errno == EMFILE) {
+            pthread_cond_wait(&fileopen_cond, &fileopen_mutex);
+        } else {
+            perror("open");
+            pthread_mutex_unlock(&fileopen_mutex);
+            return -1;
+        }
+    }
+    pthread_mutex_unlock(&fileopen_mutex);
+    return fd;
+}
+
+DIR* safe_opendir(const char* path) {
+    DIR* dir;
+    pthread_mutex_lock(&fileopen_mutex);
+    while ((dir = opendir(path)) == NULL) {
+        if (errno == EMFILE) {
+            pthread_cond_wait(&fileopen_cond, &fileopen_mutex);
+        } else {
+            perror("opendir");
+            pthread_mutex_unlock(&fileopen_mutex);
+            return NULL;
+        }
+    }
+    pthread_mutex_unlock(&fileopen_mutex);
+    return dir;
+}
 
 void* copy_file(void* arg) {
     const char* src_path = ((char**)arg)[0];
     const char* dst_path = ((char**)arg)[1];
     free(arg);
 
-    int src_fd = open(src_path, O_RDONLY);
+    int src_fd = safe_open(src_path, O_RDONLY, 0);
     if (src_fd == -1) {
-        perror("open src");
+        sem_post(&thread_semaphore);
         return NULL;
     }
 
-    int dst_fd = open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int dst_fd = safe_open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (dst_fd == -1) {
-        perror("open dst");
         close(src_fd);
+        sem_post(&thread_semaphore);
         return NULL;
     }
 
@@ -45,14 +114,35 @@ void* copy_file(void* arg) {
 
     close(src_fd);
     close(dst_fd);
+    pthread_cond_signal(&fileopen_cond);
+    sem_post(&thread_semaphore);
     return NULL;
 }
 
-void copy_directory(const char* src_dir, const char* dst_dir) {
-    DIR* dir = opendir(src_dir);
+int create_thread_with_retry(pthread_t* thread, void* (*start_routine)(void*), void* arg) {
+    int retries = 0;
+    while (pthread_create(thread, NULL, start_routine, arg) != 0) {
+        if (errno == EAGAIN && retries < MAX_RETRIES) {
+            retries++;
+            sleep(RETRY_DELAY);
+        } else {
+            perror("pthread_create");
+            return -1;
+        }
+    }
+    pthread_detach(*thread);
+    return 0;
+}
+
+void* copy_directory_thread(void* arg) {
+    const char* src_dir = ((char**)arg)[0];
+    const char* dst_dir = ((char**)arg)[1];
+    free(arg);
+
+    DIR* dir = safe_opendir(src_dir);
     if (!dir) {
-        perror("opendir");
-        return;
+        sem_post(&thread_semaphore);
+        return NULL;
     }
 
     long name_max = pathconf(src_dir, _PC_NAME_MAX);
@@ -60,12 +150,7 @@ void copy_directory(const char* src_dir, const char* dst_dir) {
         name_max = 255;
     }
     size_t len = sizeof(struct dirent) + name_max + 1;
-    struct dirent* entry = malloc(len);
-    if (!entry) {
-        perror("malloc");
-        closedir(dir);
-        return;
-    }
+    struct dirent* entry = alloca(len);
 
     struct dirent* result;
     while (readdir_r(dir, entry, &result) == 0 && result != NULL) {
@@ -73,14 +158,14 @@ void copy_directory(const char* src_dir, const char* dst_dir) {
             continue;
         }
 
-        char src_path[PATH_MAX];
-        char dst_path[PATH_MAX];
+        char* src_path = alloca(strlen(src_dir) + strlen(entry->d_name) + 2);
+        char* dst_path = alloca(strlen(dst_dir) + strlen(entry->d_name) + 2);
         snprintf(src_path, PATH_MAX, "%s/%s", src_dir, entry->d_name);
         snprintf(dst_path, PATH_MAX, "%s/%s", dst_dir, entry->d_name);
 
         struct stat st;
-        if (stat(src_path, &st) == -1) {
-            perror("stat");
+        if (lstat(src_path, &st) == -1) {
+            perror("lstat");
             continue;
         }
 
@@ -89,29 +174,50 @@ void copy_directory(const char* src_dir, const char* dst_dir) {
                 perror("mkdir");
                 continue;
             }
-            copy_directory(src_path, dst_path);
-        } else if (S_ISREG(st.st_mode)) {
+            sem_wait(&thread_semaphore);
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
                 perror("malloc");
+                sem_post(&thread_semaphore);
                 continue;
             }
             args[0] = strdup(src_path);
             args[1] = strdup(dst_path);
-            if (pthread_create(&thread, NULL, copy_file, args) != 0) {
-                perror("pthread_create");
+            if (create_thread_with_retry(&thread, copy_directory_thread, args) != 0) {
                 free(args[0]);
                 free(args[1]);
                 free(args);
+                sem_post(&thread_semaphore);
             } else {
-                pthread_detach(thread);
+                add_thread_to_pool(&thread_pool, thread);
+            }
+        } else if (S_ISREG(st.st_mode)) {
+            sem_wait(&thread_semaphore);
+            pthread_t thread;
+            char** args = malloc(2 * sizeof(char*));
+            if (!args) {
+                perror("malloc");
+                sem_post(&thread_semaphore);
+                continue;
+            }
+            args[0] = strdup(src_path);
+            args[1] = strdup(dst_path);
+            if (create_thread_with_retry(&thread, copy_file, args) != 0) {
+                free(args[0]);
+                free(args[1]);
+                free(args);
+                sem_post(&thread_semaphore);
+            } else {
+                add_thread_to_pool(&thread_pool, thread);
             }
         }
     }
 
-    free(entry);
     closedir(dir);
+    pthread_cond_signal(&fileopen_cond);
+    sem_post(&thread_semaphore);
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -134,7 +240,31 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    copy_directory(src_dir, dst_dir);
+    sem_init(&thread_semaphore, 0, MAX_THREADS);
+
+    init_thread_pool(&thread_pool, MAX_THREADS * 10);
+
+    pthread_t thread;
+    char** args = malloc(2 * sizeof(char*));
+    if (!args) {
+        perror("malloc");
+        return EXIT_FAILURE;
+    }
+    args[0] = strdup(src_dir);
+    args[1] = strdup(dst_dir);
+    if (create_thread_with_retry(&thread, copy_directory_thread, args) != 0) {
+        free(args[0]);
+        free(args[1]);
+        free(args);
+        return EXIT_FAILURE;
+    } else {
+        add_thread_to_pool(&thread_pool, thread);
+    }
+
+    wait_for_threads(&thread_pool);
+
+    free_thread_pool(&thread_pool);
+    sem_destroy(&thread_semaphore);
 
     return EXIT_SUCCESS;
 }
