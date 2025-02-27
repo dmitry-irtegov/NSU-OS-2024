@@ -14,13 +14,6 @@ pthread_mutex_t fork_mutex;   // дополнитльный мьютекс
 pthread_cond_t cond_var;      // условная переменная для ожидания вилок
 pthread_t phils[PHILO];       // потоки-философы
 
-
-void get_fork(int phil, int fork, char *hand)
-{
-    pthread_mutex_lock(&forks[fork]);
-    printf("Philosopher %d: got %s fork %d\n", phil, hand, fork);
-}
-
 void down_forks(int f1, int f2)
 {
     pthread_mutex_unlock(&forks[f1]);
@@ -71,6 +64,7 @@ void *philosopher(void *num)
             {
                 if (pthread_mutex_trylock(&forks[right_fork]) == 0)
                 {
+                    printf("Philosopher %d: got forks %d, %d\n", id, left_fork, right_fork);
                     break;
                 }
                 else
