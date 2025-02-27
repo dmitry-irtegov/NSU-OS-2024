@@ -27,8 +27,8 @@ int main(int argc, char* argv[]) {
 
     pthread_mutex_init(&mutex, NULL);
 
-    
-    if (code = pthread_create(&thread, NULL, thread_body, NULL)) {
+    code = pthread_create(&thread, NULL, thread_body, NULL);
+    if (code) {
         char buf[256];
         strerror_r(code, buf, sizeof(buf));
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
