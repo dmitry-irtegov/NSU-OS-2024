@@ -124,6 +124,6 @@ down_forks (int id)
   pthread_mutex_lock (&forksLock);
   pthread_mutex_unlock (&forks[right_fork]);
   pthread_mutex_unlock (&forks[left_fork]);
+  pthread_cond_broadcast(&cond);
   pthread_mutex_unlock (&forksLock);
-  pthread_cond_signal(&cond);
 }
