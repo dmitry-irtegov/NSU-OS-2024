@@ -11,7 +11,7 @@
 #include <pthread.h>
 
 #define PORT "80"
-#define HOST "http://parallels.nsu.ru"
+#define HOST "example.com"
 #define REQUEST "GET / HTTP/1.1\r\nHost: " HOST "\r\nConnection: close\r\n\r\n"
 #define BUFFER_SIZE 4096
 
