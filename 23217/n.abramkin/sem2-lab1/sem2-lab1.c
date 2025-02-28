@@ -16,7 +16,6 @@ int main() {
 
     for (int i = 0; i < 10; i++) {
         printf("[Main Thread] Line %d\n", i + 1);
-        usleep(100000);
     }
 
     pthread_exit(NULL);
