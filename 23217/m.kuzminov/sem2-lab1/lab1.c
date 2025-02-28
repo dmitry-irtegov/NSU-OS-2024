@@ -7,6 +7,7 @@ void* thread_func(void* param) {
     for(int i = 0; i < 10; i++) {
         printf("%d:new thread\n", i);
     }
+    return NULL;
 }
 
 int main() {
