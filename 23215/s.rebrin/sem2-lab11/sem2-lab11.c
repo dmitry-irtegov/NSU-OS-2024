@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <sched.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 int turn = 0; // 0 - main 
@@ -15,8 +16,8 @@ void* thread_body(void* param) {
             pthread_mutex_lock(&mutex);
         }
         printf("left\n");
-        turn = 0;
         pthread_mutex_unlock(&mutex);
+        sched_yield();
     }
     return NULL;
 }
@@ -42,8 +43,8 @@ int main(int argc, char* argv[]) {
                 pthread_mutex_lock(&mutex);
             }
             printf("right\n");
-            turn = 1;
             pthread_mutex_unlock(&mutex);
+            sched_yield();
         }
     }
 
