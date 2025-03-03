@@ -4,13 +4,14 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <signal.h>
+#include <stdatomic.h>
 
 int num_steps;
 
 int stop = 0;
 
 void func(int sig) {
-    stop = 1;
+    atomic_store(&stop, 1);
     signal(SIGINT, func);
 }
 
@@ -28,7 +29,7 @@ void* compute_partial_sum(void* arg) {
     thread_data_t* data = (thread_data_t*)arg;
     double sum = 0.0;
     int i = data->num_thread;
-    while(!stop) {
+    while(atomic_load(&stop) == 0) {
         sum += 1.0 / ((double)i * 4.0 + 1.0);
         sum -= 1.0 / ((double)i * 4.0 + 3.0);
         i += data->count;
@@ -58,8 +59,6 @@ int main(int argc, char** argv) {
     signal(SIGINT, func);
 
     for (int i = 0;i < num_threads;i++) {
-
-        signal(SIGINT, func);
         thread_data[i].num_thread = i;
         thread_data[i].count = num_steps;
         if (pthread_create(&threads[i], NULL, compute_partial_sum, (void*)&thread_data[i])) {
@@ -72,8 +71,6 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
     }
-    
-    while(!stop);
 
     double pi = 0.0;
     for (int i = 0;i < num_threads;i++) {
