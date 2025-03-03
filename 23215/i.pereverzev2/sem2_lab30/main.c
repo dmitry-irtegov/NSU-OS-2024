@@ -10,9 +10,9 @@
 #include <termios.h>
 #include <pthread.h>
 
-#define PORT "8888"
-#define REQUEST1 "GET / HTTP/1.1\r\nHost: "  
-#define REQUEST2 "\r\nConnection: close\r\n\r\n"
+#define GET "GET "
+#define REQ2 " HTTP/1.1\r\nHost: "  
+#define REQ3 "\r\nConnection: close\r\n\r\n"
 #define BUFFER_SIZE 4096
 
 #define HEIGHT 23
@@ -106,6 +106,38 @@ void grar_getstr(grar_t* arr, char** start)
     pthread_mutex_unlock(&(arr->mutex));
 }
 
+typedef struct url_s{
+    char host[64];
+    char port[8];
+    char path[128];
+} url_t;
+
+url_t parse_url(const char *url) {
+    url_t parsed_url = {"", "", ""};
+    char url_copy[256];
+    strcpy(url_copy, url);
+
+    char *token;
+    token = strtok(url_copy, "/");
+    if (token != NULL) {
+        char *port_ptr = strchr(token, ':');
+        if (port_ptr != NULL) {
+            *port_ptr = '\0';
+            strcpy(parsed_url.host, token);
+            strcpy(parsed_url.port, port_ptr + 1);
+        } else {
+            strcpy(parsed_url.host, token);
+        }
+    }
+
+    token = strtok(NULL, "");
+    if (token != NULL) {
+        strcpy(parsed_url.path, token);
+    }
+
+    return parsed_url;
+}
+
 
 void* thread_printer(void* arg)
 {
@@ -163,7 +195,12 @@ int main(int argc, char* argv[]) {
     adrinf.ai_family = AF_UNSPEC;
     adrinf.ai_socktype = SOCK_STREAM;
 
-    if ((status = getaddrinfo(argv[1], PORT, &adrinf, &res)) != 0) {
+    url_t url = parse_url(argv[1]);
+    if(strcmp(url.port, "") == 0) {
+        strcpy(url.port, "80");
+    }
+
+    if ((status = getaddrinfo(url.host, url.port, &adrinf, &res)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 1;
     }
@@ -184,11 +221,15 @@ int main(int argc, char* argv[]) {
     }
 
     freeaddrinfo(res);
-    
-    char *req = calloc(sizeof(REQUEST1) + sizeof(REQUEST2) + strlen(argv[1]), sizeof(char));
-    strcpy(req, REQUEST1);
-    strcat(req, argv[1]);
-    strcat(req, REQUEST2);
+
+
+    char *req = calloc(sizeof(GET) + strlen(url.path) + sizeof(REQ2) 
+        + strlen(url.host) + sizeof(REQ3), sizeof(char));
+    strcpy(req, GET);
+    strcat(req, url.path);
+    strcat(req, REQ2);
+    strcat(req, url.host);
+    strcat(req, REQ3);
 
     ssize_t bytes_sent = send(socket_fd, req, strlen(req), 0);
     if (bytes_sent == -1) {
