@@ -9,8 +9,8 @@
 #include <errno.h>
 #include <limits.h>
 #include <semaphore.h>
+#include <alloca.h>
 
-#define PATH_MAX 4096
 #define BUF_SIZE 4096
 #define MAX_RETRIES 5
 #define RETRY_DELAY 1
@@ -59,7 +59,7 @@ int safe_open(const char* path, int flags, mode_t mode) {
         if (errno == EMFILE) {
             pthread_cond_wait(&fileopen_cond, &fileopen_mutex);
         } else {
-            perror("open");
+            fprintf(stderr, "Error: open failed for '%s': %s\n", path, strerror(errno));
             pthread_mutex_unlock(&fileopen_mutex);
             return -1;
         }
@@ -75,7 +75,7 @@ DIR* safe_opendir(const char* path) {
         if (errno == EMFILE) {
             pthread_cond_wait(&fileopen_cond, &fileopen_mutex);
         } else {
-            perror("opendir");
+            fprintf(stderr, "Error: opendir failed for '%s': %s\n", path, strerror(errno));
             pthread_mutex_unlock(&fileopen_mutex);
             return NULL;
         }
@@ -107,7 +107,7 @@ void* copy_file(void* arg) {
     while ((bytes_read = read(src_fd, buf, BUF_SIZE)) > 0) {
         bytes_written = write(dst_fd, buf, bytes_read);
         if (bytes_written != bytes_read) {
-            perror("write");
+            fprintf(stderr, "Error: write failed: %s\n", strerror(errno));
             break;
         }
     }
@@ -126,7 +126,12 @@ int create_thread_with_retry(pthread_t* thread, void* (*start_routine)(void*), v
             retries++;
             sleep(RETRY_DELAY);
         } else {
-            perror("pthread_create");
+            fprintf(stderr, "Error: pthread_create failed: %s\n", strerror(errno));
+            if (arg) {
+                free(((char**)arg)[0]);
+                free(((char**)arg)[1]);
+                free(arg);
+            }
             return -1;
         }
     }
@@ -165,20 +170,20 @@ void* copy_directory_thread(void* arg) {
 
         struct stat st;
         if (lstat(src_path, &st) == -1) {
-            perror("lstat");
+            fprintf(stderr, "Error: lstat failed for '%s': %s\n", src_path, strerror(errno));
             continue;
         }
 
         if (S_ISDIR(st.st_mode)) {
             if (mkdir(dst_path, 0755) == -1 && errno != EEXIST) {
-                perror("mkdir");
+                fprintf(stderr, "Error: mkdir failed for '%s': %s\n", dst_path, strerror(errno));
                 continue;
             }
             sem_wait(&thread_semaphore);
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
-                perror("malloc");
+                fprintf(stderr, "Error: malloc failed\n");
                 sem_post(&thread_semaphore);
                 continue;
             }
@@ -197,7 +202,7 @@ void* copy_directory_thread(void* arg) {
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
-                perror("malloc");
+                fprintf(stderr, "Error: malloc failed\n");
                 sem_post(&thread_semaphore);
                 continue;
             }
@@ -231,12 +236,12 @@ int main(int argc, char* argv[]) {
 
     struct stat st;
     if (stat(src_dir, &st) == -1 || !S_ISDIR(st.st_mode)) {
-        fprintf(stderr, "Source is not a directory\n");
+        fprintf(stderr, "Error: Source is not a directory\n");
         return EXIT_FAILURE;
     }
 
     if (mkdir(dst_dir, 0755) == -1 && errno != EEXIST) {
-        perror("mkdir");
+        fprintf(stderr, "Error: mkdir failed for '%s': %s\n", dst_dir, strerror(errno));
         return EXIT_FAILURE;
     }
 
@@ -247,7 +252,7 @@ int main(int argc, char* argv[]) {
     pthread_t thread;
     char** args = malloc(2 * sizeof(char*));
     if (!args) {
-        perror("malloc");
+        fprintf(stderr, "Error: malloc failed\n");
         return EXIT_FAILURE;
     }
     args[0] = strdup(src_dir);
