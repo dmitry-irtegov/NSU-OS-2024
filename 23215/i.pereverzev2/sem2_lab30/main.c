@@ -10,9 +10,9 @@
 #include <termios.h>
 #include <pthread.h>
 
-#define PORT "80"
-#define HOST "example.com"
-#define REQUEST "GET / HTTP/1.1\r\nHost: " HOST "\r\nConnection: close\r\n\r\n"
+#define PORT "8888"
+#define REQUEST1 "GET / HTTP/1.1\r\nHost: "  
+#define REQUEST2 "\r\nConnection: close\r\n\r\n"
 #define BUFFER_SIZE 4096
 
 #define HEIGHT 23
@@ -142,7 +142,12 @@ void* thread_printer(void* arg)
     return NULL;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if(argc < 2) {
+        fprintf(stderr, "error: no hostname was specified\n");
+        return 1;
+    }
+
     int status, socket_fd;
     enddata = 0;
     struct addrinfo adrinf, *res, *p;
@@ -158,7 +163,7 @@ int main() {
     adrinf.ai_family = AF_UNSPEC;
     adrinf.ai_socktype = SOCK_STREAM;
 
-    if ((status = getaddrinfo(HOST, PORT, &adrinf, &res)) != 0) {
+    if ((status = getaddrinfo(argv[1], PORT, &adrinf, &res)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 1;
     }
@@ -179,8 +184,13 @@ int main() {
     }
 
     freeaddrinfo(res);
+    
+    char *req = calloc(sizeof(REQUEST1) + sizeof(REQUEST2) + strlen(argv[1]), sizeof(char));
+    strcpy(req, REQUEST1);
+    strcat(req, argv[1]);
+    strcat(req, REQUEST2);
 
-    ssize_t bytes_sent = send(socket_fd, REQUEST, strlen(REQUEST), 0);
+    ssize_t bytes_sent = send(socket_fd, req, strlen(req), 0);
     if (bytes_sent == -1) {
         perror("unable to send");
         close(socket_fd);
