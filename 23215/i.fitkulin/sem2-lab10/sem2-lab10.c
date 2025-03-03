@@ -64,9 +64,6 @@ void *philosopher(void *num) {
         * philosophers may be able to eat their dishes and 
         * not deadlock.
         */
-       
-        if (id == 1)
-            sleep (sleep_seconds);
 
         printf ("Philosopher %d: get dish %d.\n", id, f);
 
