@@ -11,10 +11,10 @@ func printer(msg string) {
 }
 
 func main() {
-	done := make(chan bool)
+	done := make(chan struct{})
 	go func() {
 		printer("goroutine")
-		done <- true
+		done <- struct{}{}
 	}()
 	<-done
 	printer("main")
