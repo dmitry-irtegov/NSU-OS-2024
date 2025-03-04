@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 
 #define num_steps 2000000ull
 
@@ -29,14 +30,15 @@ void my_perror(char* text, int code) {
 
 void handler() {
     int code;
+    char* string = "pthread_mutex_lock failed in handler\n";
     if ((code = pthread_mutex_lock(&mutex_piece))) {
-        my_perror("pthread_mutex_lock", code);
-        exit(EXIT_FAILURE);
+        write(STDERR_FILENO, string, strlen(string));
+        _exit(EXIT_FAILURE);
     }
     flag = 1;
     if ((code = pthread_mutex_unlock(&mutex_piece))) {
-        my_perror("pthread_mitex_unlock", code);
-        exit(EXIT_FAILURE);
+        write(STDERR_FILENO, string, strlen(string));
+        _exit(EXIT_FAILURE);
     }
 }
 
