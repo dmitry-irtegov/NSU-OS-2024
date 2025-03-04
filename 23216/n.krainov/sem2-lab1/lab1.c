@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 void print_text(char* name) {
     for (int i = 1; i <= 10; i++) {
         printf("text%d %s\n", i, name);
     }
+    fflush(stdout);
 }
 
 void* thread_func(void* param) {
