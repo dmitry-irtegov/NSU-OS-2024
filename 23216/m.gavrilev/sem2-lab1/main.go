@@ -15,8 +15,8 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		printer("goroutine")
-		wg.Done()
 	}()
 	printer("main")
 	wg.Wait()
