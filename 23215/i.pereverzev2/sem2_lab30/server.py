@@ -2,7 +2,7 @@ import socket
 import time
 
 HOST = '127.0.0.1'
-PORT = 8888
+PORT = 8881
 RESPONSE_HEADER = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"
 
 def handle_client(conn, addr):
@@ -13,11 +13,15 @@ def handle_client(conn, addr):
         if request.startswith('GET'):
             conn.sendall(RESPONSE_HEADER.encode('ascii'))
             for i in range(25):
-                conn.sendall("String number {}\n".format(i + 1).encode('ascii'))
+                conn.sendall("String number {} 1".format(i + 26).encode('ascii'))
+                conn.sendall("String number {} 2 ".format(i + 26).encode('ascii'))
+                conn.sendall(" String number {} 3\n".format(i + 26).encode('ascii'))
+
 
             for i in range(50):
                 time.sleep(1)
-                conn.sendall("String number {}\n".format(i + 26).encode('ascii'))
+                conn.sendall("String number {} 1".format(i + 26).encode('ascii'))
+                conn.sendall(" String number {} 2\n".format(i + 26).encode('ascii'))
     except Exception as e:
         print('error handling client')
     finally:
