@@ -27,13 +27,13 @@ void* calculate_pi(void* arg) {
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        fprintf(stderr, "Использование: %s <количество_потоков>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <number_of_threads>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     int num_threads = atoi(argv[1]);
     if (num_threads <= 0) {
-        fprintf(stderr, "Ошибка: Количество потоков должно быть > 0\n");
+        fprintf(stderr, "Error: The number of threads should be > 0\n");
         return EXIT_FAILURE;
     }
 
