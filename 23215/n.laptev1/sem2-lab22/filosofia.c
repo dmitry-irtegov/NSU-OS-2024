@@ -82,7 +82,7 @@ void *philosopher(void *num)
         usleep(DELAY * (FOOD - f + 1));
 
         pthread_mutex_lock(&fork_mutex);
-        down_forks(left_fork, right_fork);
+        down_forks(left_fork, right_fork);//тут я и вызываю cond_broadcast
         pthread_mutex_unlock(&fork_mutex);
     }
 
@@ -95,7 +95,7 @@ int main(int argn, char **argv)
     pthread_mutex_init(&foodlock, NULL);
     pthread_mutex_init(&fork_mutex, NULL);
     pthread_cond_init(&cond_var, NULL);
-
+    #
     for (int i = 0; i < PHILO; i++)
     {
         pthread_mutex_init(&forks[i], NULL);
@@ -110,6 +110,8 @@ int main(int argn, char **argv)
     {
         pthread_join(phils[i], NULL);
     }
+
+    pthread_cond_destroy(&cond_var);
 
     return 0;
 }
