@@ -58,7 +58,7 @@ void grar_init(grar_t* arr)
     arr->curchar = 0;
     arr->str = (char*)calloc(BUFFER_SIZE, sizeof(char));
     if (arr->str == NULL) {
-        perror("grar_init: calloc failed");
+        perror("unable to calloc");
         exit(1);
     }
 }
@@ -141,6 +141,7 @@ url_t parse_url(const char *url) {
 
 void* thread_printer(void* arg)
 {
+    
     struct termios newt = oldt;
     newt.c_lflag &= ~ICANON;
     newt.c_lflag &= ~ECHO;
@@ -198,6 +199,9 @@ int main(int argc, char* argv[]) {
     url_t url = parse_url(argv[1]);
     if(strcmp(url.port, "") == 0) {
         strcpy(url.port, "80");
+    }
+    if(strcmp(url.path, "") == 0) {
+        strcpy(url.path, "/");
     }
 
     if ((status = getaddrinfo(url.host, url.port, &adrinf, &res)) != 0) {
