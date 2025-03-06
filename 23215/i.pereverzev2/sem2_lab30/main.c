@@ -14,6 +14,7 @@
 #define REQ2 " HTTP/1.1\r\nHost: "  
 #define REQ3 "\r\nConnection: close\r\n\r\n"
 #define BUFFER_SIZE 4096
+#define DEFAULT_PORT "80"
 
 #define HEIGHT 23
 #define PROMPT "Press space to scroll down"
@@ -51,7 +52,7 @@ void clear_prompt() {
 
 void grar_init(grar_t* arr)
 {
-    int mutex_init_result = pthread_mutex_init(&(arr->mutex), NULL);
+    pthread_mutex_init(&(arr->mutex), NULL);
     arr->curlen = 0;
     arr->maxlen = BUFFER_SIZE;
     arr->curpos = 0;
@@ -184,7 +185,6 @@ int main(int argc, char* argv[]) {
     int status, socket_fd;
     enddata = 0;
     struct addrinfo adrinf, *res, *p;
-    char ipstr[INET6_ADDRSTRLEN];
     char buffer[BUFFER_SIZE];
 
     if (tcgetattr(STDIN_FILENO, &oldt) == -1) {
@@ -192,13 +192,15 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+
+
     memset(&adrinf, 0, sizeof adrinf);
     adrinf.ai_family = AF_UNSPEC;
     adrinf.ai_socktype = SOCK_STREAM;
 
     url_t url = parse_url(argv[1]);
     if(strcmp(url.port, "") == 0) {
-        strcpy(url.port, "80");
+        strcpy(url.port, DEFAULT_PORT);
     }
     if(strcmp(url.path, "") == 0) {
         strcpy(url.path, "/");
@@ -245,7 +247,7 @@ int main(int argc, char* argv[]) {
     grar_t arr;
     grar_init(&arr);
     pthread_t thread;
-    int pthread_create_result = pthread_create(&thread, NULL, thread_printer, (void*)&arr);
+    pthread_create(&thread, NULL, thread_printer, (void*)&arr);
 
     ssize_t bytes_received;
     while ((bytes_received = recv(socket_fd, buffer, BUFFER_SIZE, 0)) > 0) {
