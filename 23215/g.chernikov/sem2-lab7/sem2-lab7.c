@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <semaphore.h>
+#include <sys/resource.h>
 
 
 typedef struct {
