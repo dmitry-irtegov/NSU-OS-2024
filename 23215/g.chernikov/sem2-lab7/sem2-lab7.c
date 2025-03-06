@@ -29,7 +29,7 @@ void* copy_file(void* param) {
     char* target = (char*)((params*)param)->target;
     int src_fd = -1;
     int trgt_fd = -1;
-    // printf("Copying file from %s to %s\n", source, target);
+    printf("Copying file from %s to %s\n", source, target);
 
 
     pthread_mutex_lock(&file_mutex);
@@ -60,7 +60,7 @@ void* copy_file(void* param) {
                 close(src_fd);
                 pthread_cond_signal(&file_cond);
             }
-            printf("waiting\n");
+            // printf("waiting\n");
             pthread_cond_wait(&file_cond, &file_mutex);
         }
     }
@@ -105,6 +105,7 @@ void* directory_explorer(void* parameters) {
     char* target = (char*)((params*)parameters)->target;
     DIR* dir = NULL;
 
+    pthread_mutex_lock(&file_mutex);
     while(dir == NULL) {
         dir = opendir(source);
         if (!dir && errno != EMFILE) {
@@ -116,6 +117,7 @@ void* directory_explorer(void* parameters) {
         }
     }
 
+    pthread_mutex_unlock(&file_mutex);
     long max_name = pathconf(source, _PC_NAME_MAX);
     long max_path = pathconf(source, _PC_PATH_MAX);
 
@@ -159,7 +161,7 @@ void* directory_explorer(void* parameters) {
             param->target = strdup(target_pwd);
             sem_wait(&thread_semaphore);
             int result;
-            if ((result = pthread_create(&thread, NULL, copy_file, param)) != 0) {
+            if ((result = pthread_create(&thread, NULL, directory_explorer, param)) != 0) {
                 fprintf(stderr, "Error creating thread: %s\n", strerror(result));
             }
             pthread_detach(thread);
@@ -190,14 +192,22 @@ void* directory_explorer(void* parameters) {
 }
 
 int main(int argc, char** argv) {
-    struct rlimit limit;
-    if (getrlimit(RLIMIT_NPROC, &limit) == 0) {
-        printf("Максимум потоков для пользователя: %llu\n", limit.rlim_cur);
+    
+    // struct rlimit limit;
+    // if (getrlimit(RLIMIT_NPROC, &limit) == 0) {
+    //     printf("Максимум потоков для пользователя: %llu\n", limit.rlim_cur);
+    // } else {
+    //     perror("Ошибка получения RLIMIT_NPROC");
+    // }
+
+    long max_threads = sysconf(_SC_NPROCESSORS_ONLN);
+    if (max_threads == -1) {
+        perror("Ошибка sysconf");
     } else {
-        perror("Ошибка получения RLIMIT_NPROC");
+        printf("Максимальное количество потоков: %ld\n", max_threads);
     }
 
-    sem_init(&thread_semaphore, 0, limit.rlim_cur);
+    sem_init(&thread_semaphore, 0, max_threads);
 
     if (argc != 3) {
         fprintf(stderr, "%s + Source + Target\n", argv[0]);
