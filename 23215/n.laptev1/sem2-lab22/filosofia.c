@@ -18,7 +18,7 @@ void down_forks(int f1, int f2)
 {
     pthread_mutex_unlock(&forks[f1]);
     pthread_mutex_unlock(&forks[f2]);
-    pthread_cond_broadcast(&cond_var);//оповещаем сразу всех философов 
+    pthread_cond_broadcast(&cond_var); // оповещаем сразу всех философов
 }
 
 int food_on_table()
@@ -35,7 +35,6 @@ int food_on_table()
     pthread_mutex_unlock(&foodlock);
     return myfood;
 }
-
 
 void *philosopher(void *num)
 {
@@ -57,7 +56,7 @@ void *philosopher(void *num)
         // при попытке взять вилку философ захватывает мутекс
         pthread_mutex_lock(&fork_mutex);
 
-        //проверяем доступность обеих вилок
+        // проверяем доступность обеих вилок
         for (;;)
         {
             if (pthread_mutex_trylock(&forks[left_fork]) == 0)
@@ -82,7 +81,7 @@ void *philosopher(void *num)
         usleep(DELAY * (FOOD - f + 1));
 
         pthread_mutex_lock(&fork_mutex);
-        down_forks(left_fork, right_fork);//тут я и вызываю cond_broadcast
+        down_forks(left_fork, right_fork); // тут я и вызываю cond_broadcast
         pthread_mutex_unlock(&fork_mutex);
     }
 
@@ -95,7 +94,7 @@ int main(int argn, char **argv)
     pthread_mutex_init(&foodlock, NULL);
     pthread_mutex_init(&fork_mutex, NULL);
     pthread_cond_init(&cond_var, NULL);
-    #
+
     for (int i = 0; i < PHILO; i++)
     {
         pthread_mutex_init(&forks[i], NULL);
