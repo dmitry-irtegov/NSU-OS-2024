@@ -264,5 +264,4 @@ int main(int argc, char* argv[]) {
     sem_destroy(&thread_semaphore);
 
     pthread_exit(NULL);
-    return EXIT_SUCCESS;
 }
