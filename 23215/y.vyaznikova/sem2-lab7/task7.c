@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <semaphore.h>
+#include <alloca.h>
 
 #define BUF_SIZE 4096
 #define MAX_RETRIES 5
@@ -154,24 +155,20 @@ void* copy_directory_thread(void* arg) {
             continue;
         }
 
-        char* src_path = malloc(strlen(src_dir) + strlen(entry->d_name) + 2);
-        char* dst_path = malloc(strlen(dst_dir) + strlen(entry->d_name) + 2);
+        char* src_path = alloca(strlen(src_dir) + strlen(entry->d_name) + 2);
+        char* dst_path = alloca(strlen(dst_dir) + strlen(entry->d_name) + 2);
         snprintf(src_path, PATH_MAX, "%s/%s", src_dir, entry->d_name);
         snprintf(dst_path, PATH_MAX, "%s/%s", dst_dir, entry->d_name);
 
         struct stat st;
         if (lstat(src_path, &st) == -1) {
             fprintf(stderr, "Error: lstat failed for '%s': %s\n", src_path, strerror(errno));
-            free(src_path);
-            free(dst_path);
             continue;
         }
 
         if (S_ISDIR(st.st_mode)) {
             if (mkdir(dst_path, 0755) == -1 && errno != EEXIST) {
                 fprintf(stderr, "Error: mkdir failed for '%s': %s\n", dst_path, strerror(errno));
-                free(src_path);
-                free(dst_path);
                 continue;
             }
             sem_wait(&thread_semaphore);
@@ -180,8 +177,6 @@ void* copy_directory_thread(void* arg) {
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
                 sem_post(&thread_semaphore);
-                free(src_path);
-                free(dst_path);
                 continue;
             }
             args[0] = strdup(src_path);
@@ -201,8 +196,6 @@ void* copy_directory_thread(void* arg) {
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
                 sem_post(&thread_semaphore);
-                free(src_path);
-                free(dst_path);
                 continue;
             }
             args[0] = strdup(src_path);
@@ -216,8 +209,6 @@ void* copy_directory_thread(void* arg) {
                 add_thread_to_pool(&thread_pool, thread);
             }
         }
-        free(src_path);
-        free(dst_path);
     }
 
     closedir(dir);
