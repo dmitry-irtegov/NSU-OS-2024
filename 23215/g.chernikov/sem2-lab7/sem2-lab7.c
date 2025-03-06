@@ -11,26 +11,22 @@
 #include <semaphore.h>
 #include <sys/resource.h>
 
-
 typedef struct {
     char* source;
     char* target;
 } params;
 
-sem_t thread_semaphore;
 
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t file_cond = PTHREAD_COND_INITIALIZER;
 
 void* copy_file(void* param) {
 
-    
     char* source = (char*)((params*)param)->source;
     char* target = (char*)((params*)param)->target;
     int src_fd = -1;
     int trgt_fd = -1;
     printf("Copying file from %s to %s\n", source, target);
-
 
     pthread_mutex_lock(&file_mutex);
     while(src_fd < 0 || trgt_fd < 0) {
@@ -60,7 +56,7 @@ void* copy_file(void* param) {
                 close(src_fd);
                 pthread_cond_signal(&file_cond);
             }
-            // printf("waiting\n");
+            printf("waiting\n");
             pthread_cond_wait(&file_cond, &file_mutex);
         }
     }
@@ -91,8 +87,6 @@ void* copy_file(void* param) {
     free(((params*)param)->source);
     free(((params*)param)->target);
     free(param);
-
-    sem_post(&thread_semaphore);
 
     pthread_exit(0);
 }
@@ -159,7 +153,6 @@ void* directory_explorer(void* parameters) {
             params* param = malloc(sizeof(params));
             param->source = strdup(source_pwd);
             param->target = strdup(target_pwd);
-            sem_wait(&thread_semaphore);
             int result;
             if ((result = pthread_create(&thread, NULL, directory_explorer, param)) != 0) {
                 fprintf(stderr, "Error creating thread: %s\n", strerror(result));
@@ -171,7 +164,6 @@ void* directory_explorer(void* parameters) {
             params* param = malloc(sizeof(params));
             param->source = strdup(source_pwd);
             param->target = strdup(target_pwd);
-            sem_wait(&thread_semaphore);
             int result;
             if ((result = pthread_create(&thread, NULL, copy_file, param)) != 0) {
                 fprintf(stderr, "Error creating thread: %s\n", strerror(result));
@@ -187,27 +179,10 @@ void* directory_explorer(void* parameters) {
 
     closedir(dir);
     pthread_cond_signal(&file_cond);
-    sem_post(&thread_semaphore);
     pthread_exit(0);
 }
 
 int main(int argc, char** argv) {
-    
-    // struct rlimit limit;
-    // if (getrlimit(RLIMIT_NPROC, &limit) == 0) {
-    //     printf("Максимум потоков для пользователя: %llu\n", limit.rlim_cur);
-    // } else {
-    //     perror("Ошибка получения RLIMIT_NPROC");
-    // }
-
-    long max_threads = sysconf(_SC_NPROCESSORS_ONLN);
-    if (max_threads == -1) {
-        perror("Ошибка sysconf");
-    } else {
-        printf("Максимальное количество потоков: %ld\n", max_threads);
-    }
-
-    sem_init(&thread_semaphore, 0, max_threads);
 
     if (argc != 3) {
         fprintf(stderr, "%s + Source + Target\n", argv[0]);
