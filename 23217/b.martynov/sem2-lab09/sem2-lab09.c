@@ -26,7 +26,7 @@ void* childFunc(void* arg) {
     for (long long i = a; ; i+=cnt) {
         tmp += 1.0/(i*4.0 + 1.0);
         tmp -= 1.0/(i*4.0 + 3.0);
-        if ((i % ITERS_CHECK < 2*cnt) && flag) {
+        if (flag && (i > ITERS_CHECK)) {
             break;
         }
     }
