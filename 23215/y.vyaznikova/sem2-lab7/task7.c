@@ -8,49 +8,14 @@
 #include <pthread.h>
 #include <errno.h>
 #include <limits.h>
-#include <semaphore.h>
 #include <alloca.h>
 
 #define BUF_SIZE 4096
 #define MAX_RETRIES 5
 #define RETRY_DELAY 1
-#define MAX_THREADS 100
 
 pthread_mutex_t fileopen_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t fileopen_cond = PTHREAD_COND_INITIALIZER;
-sem_t thread_semaphore;
-
-typedef struct {
-    pthread_t *threads;
-    size_t count;
-    size_t capacity;
-} ThreadPool;
-
-ThreadPool thread_pool;
-
-void init_thread_pool(ThreadPool *pool, size_t capacity) {
-    pool->threads = malloc(capacity * sizeof(pthread_t));
-    pool->count = 0;
-    pool->capacity = capacity;
-}
-
-void add_thread_to_pool(ThreadPool *pool, pthread_t thread) {
-    if (pool->count < pool->capacity) {
-        pool->threads[pool->count++] = thread;
-    } else {
-        fprintf(stderr, "Thread pool is full\n");
-    }
-}
-
-void wait_for_threads(ThreadPool *pool) {
-    for (size_t i = 0; i < pool->count; i++) {
-        pthread_join(pool->threads[i], NULL);
-    }
-}
-
-void free_thread_pool(ThreadPool *pool) {
-    free(pool->threads);
-}
 
 int safe_open(const char* path, int flags, mode_t mode) {
     int fd;
@@ -91,14 +56,12 @@ void* copy_file(void* arg) {
 
     int src_fd = safe_open(src_path, O_RDONLY, 0);
     if (src_fd == -1) {
-        sem_post(&thread_semaphore);
         return NULL;
     }
 
     int dst_fd = safe_open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (dst_fd == -1) {
         close(src_fd);
-        sem_post(&thread_semaphore);
         return NULL;
     }
 
@@ -115,7 +78,6 @@ void* copy_file(void* arg) {
     close(src_fd);
     close(dst_fd);
     pthread_cond_signal(&fileopen_cond);
-    sem_post(&thread_semaphore);
     return NULL;
 }
 
@@ -145,7 +107,6 @@ void* copy_directory_thread(void* arg) {
 
     DIR* dir = safe_opendir(src_dir);
     if (!dir) {
-        sem_post(&thread_semaphore);
         return NULL;
     }
 
@@ -171,12 +132,11 @@ void* copy_directory_thread(void* arg) {
                 fprintf(stderr, "Error: mkdir failed for '%s': %s\n", dst_path, strerror(errno));
                 continue;
             }
-            sem_wait(&thread_semaphore);
+
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
-                sem_post(&thread_semaphore);
                 continue;
             }
             args[0] = strdup(src_path);
@@ -185,17 +145,14 @@ void* copy_directory_thread(void* arg) {
                 free(args[0]);
                 free(args[1]);
                 free(args);
-                sem_post(&thread_semaphore);
             } else {
-                add_thread_to_pool(&thread_pool, thread);
+                pthread_detach(thread);
             }
         } else if (S_ISREG(st.st_mode)) {
-            sem_wait(&thread_semaphore);
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
-                sem_post(&thread_semaphore);
                 continue;
             }
             args[0] = strdup(src_path);
@@ -204,17 +161,15 @@ void* copy_directory_thread(void* arg) {
                 free(args[0]);
                 free(args[1]);
                 free(args);
-                sem_post(&thread_semaphore);
             } else {
-                add_thread_to_pool(&thread_pool, thread);
+                pthread_detach(thread);
             }
         }
     }
 
     closedir(dir);
     pthread_cond_signal(&fileopen_cond);
-    sem_post(&thread_semaphore);
-    return NULL;
+    pthread_exit(0);
 }
 
 int main(int argc, char* argv[]) {
@@ -237,10 +192,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    sem_init(&thread_semaphore, 0, MAX_THREADS);
-
-    init_thread_pool(&thread_pool, MAX_THREADS * 10);
-
     pthread_t thread;
     char** args = malloc(2 * sizeof(char*));
     if (!args) {
@@ -254,14 +205,7 @@ int main(int argc, char* argv[]) {
         free(args[1]);
         free(args);
         return EXIT_FAILURE;
-    } else {
-        add_thread_to_pool(&thread_pool, thread);
     }
-
-    wait_for_threads(&thread_pool);
-
-    free_thread_pool(&thread_pool);
-    sem_destroy(&thread_semaphore);
 
     pthread_exit(NULL);
 }
