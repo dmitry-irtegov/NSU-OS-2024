@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"net"
 	"os"
 	"strings"
-	"syscall"
 )
 
 const maxLines = 25
@@ -62,11 +62,11 @@ func main() {
 	lineCount := 0
 	for {
 		// preparing fd for select()
-		fds := &syscall.FdSet{}
+		fds := &unix.FdSet{}
 		fds.Bits[fd/64] |= 1 << (fd % 64) // socket
 		fds.Bits[0] |= 1 << 0             // stdin
 
-		_, err := syscall.Select(int(fd)+1, fds, nil, nil, nil)
+		_, err := unix.Select(int(fd)+1, fds, nil, nil, nil)
 		if err != nil {
 			fmt.Println("Error selecting fd:", err)
 			return
