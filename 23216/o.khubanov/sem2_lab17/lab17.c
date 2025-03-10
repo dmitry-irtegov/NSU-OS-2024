@@ -81,7 +81,7 @@ void bubble_sort() {
 }
 
 // Функция работы потока сортировки
-void *sort_thread(void *arg) {
+void *sort_thread() {
     while (1) {
         sleep(5);
         pthread_mutex_lock(&mutex);
