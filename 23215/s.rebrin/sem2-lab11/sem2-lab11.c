@@ -51,13 +51,11 @@ int main(int argc, char* argv[]) {
     int code;
     int mc;
 
-    // Инициализация атрибутов мьютекса
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
 
     for (int i = 0; i < M; i++) {
-        // Инициализация мьютекса с атрибутом PTHREAD_MUTEX_ERRORCHECK
         mc = pthread_mutex_init(&mutex[i], &attr);
 
         if (mc != 0) {
