@@ -177,7 +177,7 @@ void* copy_directory_thread(void* arg) {
                 free(args[1]);
                 free(args);
             } else {
-                pthread_join(thread, NULL);
+                pthread_detach(thread);
             }
         } else if (S_ISREG(st.st_mode)) {
             pthread_t thread;
@@ -204,7 +204,7 @@ void* copy_directory_thread(void* arg) {
                 free(args[1]);
                 free(args);
             } else {
-                pthread_join(thread, NULL);
+                pthread_detach(thread);
             }
         }
 
@@ -263,6 +263,5 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    pthread_join(thread, NULL);
-    return EXIT_SUCCESS;
+    pthread_exit(NULL);
 }
