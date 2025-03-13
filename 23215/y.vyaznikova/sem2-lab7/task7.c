@@ -8,7 +8,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <limits.h>
-#include <alloca.h>
 
 #define BUF_SIZE 4096
 #define MAX_RETRIES 5
@@ -52,17 +51,22 @@ DIR* safe_opendir(const char* path) {
 void* copy_file(void* arg) {
     const char* src_path = ((char**)arg)[0];
     const char* dst_path = ((char**)arg)[1];
-    free(arg);
 
     int src_fd = safe_open(src_path, O_RDONLY, 0);
     if (src_fd == -1) {
-        return NULL;
+        free(((char**)arg)[0]);
+        free(((char**)arg)[1]);
+        free(arg);
+        pthread_exit(NULL);
     }
 
     int dst_fd = safe_open(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (dst_fd == -1) {
         close(src_fd);
-        return NULL;
+        free(((char**)arg)[0]);
+        free(((char**)arg)[1]);
+        free(arg);
+        pthread_exit(NULL);
     }
 
     char buf[BUF_SIZE];
@@ -78,7 +82,11 @@ void* copy_file(void* arg) {
     close(src_fd);
     close(dst_fd);
     pthread_cond_signal(&fileopen_cond);
-    return NULL;
+
+    free(((char**)arg)[0]);
+    free(((char**)arg)[1]);
+    free(arg);
+    pthread_exit(NULL);
 }
 
 int create_thread_with_retry(pthread_t* thread, void* (*start_routine)(void*), void* arg) {
@@ -103,11 +111,13 @@ int create_thread_with_retry(pthread_t* thread, void* (*start_routine)(void*), v
 void* copy_directory_thread(void* arg) {
     const char* src_dir = ((char**)arg)[0];
     const char* dst_dir = ((char**)arg)[1];
-    free(arg);
 
     DIR* dir = safe_opendir(src_dir);
     if (!dir) {
-        return NULL;
+        free(((char**)arg)[0]);
+        free(((char**)arg)[1]);
+        free(arg);
+        pthread_exit(NULL);
     }
 
     struct dirent* entry;
@@ -116,20 +126,30 @@ void* copy_directory_thread(void* arg) {
             continue;
         }
 
-        char* src_path = alloca(strlen(src_dir) + strlen(entry->d_name) + 2);
-        char* dst_path = alloca(strlen(dst_dir) + strlen(entry->d_name) + 2);
+        char* src_path = malloc(strlen(src_dir) + strlen(entry->d_name) + 2);
+        char* dst_path = malloc(strlen(dst_dir) + strlen(entry->d_name) + 2);
+        if (!src_path || !dst_path) {
+            fprintf(stderr, "Error: malloc failed\n");
+            free(src_path);
+            free(dst_path);
+            continue;
+        }
         snprintf(src_path, PATH_MAX, "%s/%s", src_dir, entry->d_name);
         snprintf(dst_path, PATH_MAX, "%s/%s", dst_dir, entry->d_name);
 
         struct stat st;
         if (lstat(src_path, &st) == -1) {
             fprintf(stderr, "Error: lstat failed for '%s': %s\n", src_path, strerror(errno));
+            free(src_path);
+            free(dst_path);
             continue;
         }
 
         if (S_ISDIR(st.st_mode)) {
             if (mkdir(dst_path, 0755) == -1 && errno != EEXIST) {
                 fprintf(stderr, "Error: mkdir failed for '%s': %s\n", dst_path, strerror(errno));
+                free(src_path);
+                free(dst_path);
                 continue;
             }
 
@@ -137,39 +157,68 @@ void* copy_directory_thread(void* arg) {
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
+                free(src_path);
+                free(dst_path);
                 continue;
             }
             args[0] = strdup(src_path);
             args[1] = strdup(dst_path);
+            if (!args[0] || !args[1]) {
+                fprintf(stderr, "Error: strdup failed\n");
+                free(args[0]);
+                free(args[1]);
+                free(args);
+                free(src_path);
+                free(dst_path);
+                continue;
+            }
             if (create_thread_with_retry(&thread, copy_directory_thread, args) != 0) {
                 free(args[0]);
                 free(args[1]);
                 free(args);
             } else {
-                pthread_detach(thread);
+                pthread_join(thread, NULL);
             }
         } else if (S_ISREG(st.st_mode)) {
             pthread_t thread;
             char** args = malloc(2 * sizeof(char*));
             if (!args) {
                 fprintf(stderr, "Error: malloc failed\n");
+                free(src_path);
+                free(dst_path);
                 continue;
             }
             args[0] = strdup(src_path);
             args[1] = strdup(dst_path);
+            if (!args[0] || !args[1]) {
+                fprintf(stderr, "Error: strdup failed\n");
+                free(args[0]);
+                free(args[1]);
+                free(args);
+                free(src_path);
+                free(dst_path);
+                continue;
+            }
             if (create_thread_with_retry(&thread, copy_file, args) != 0) {
                 free(args[0]);
                 free(args[1]);
                 free(args);
             } else {
-                pthread_detach(thread);
+                pthread_join(thread, NULL);
             }
         }
+
+        free(src_path);
+        free(dst_path);
     }
 
     closedir(dir);
     pthread_cond_signal(&fileopen_cond);
-    pthread_exit(0);
+
+    free(((char**)arg)[0]);
+    free(((char**)arg)[1]);
+    free(arg);
+    pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[]) {
@@ -200,6 +249,13 @@ int main(int argc, char* argv[]) {
     }
     args[0] = strdup(src_dir);
     args[1] = strdup(dst_dir);
+    if (!args[0] || !args[1]) {
+        fprintf(stderr, "Error: strdup failed\n");
+        free(args[0]);
+        free(args[1]);
+        free(args);
+        return EXIT_FAILURE;
+    }
     if (create_thread_with_retry(&thread, copy_directory_thread, args) != 0) {
         free(args[0]);
         free(args[1]);
@@ -207,5 +263,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    pthread_exit(NULL);
+    pthread_join(thread, NULL);
+    return EXIT_SUCCESS;
 }
