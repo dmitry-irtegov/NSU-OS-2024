@@ -16,11 +16,13 @@ int main()
 {
     pthread_t thread;
  
-    if (pthread_create(&thread, NULL, thread_function, NULL) != 0) 
+    if (pthread_create(&thread, NULL, thread_function, NULL) != 0)
     {
         perror("error pthread create");
         return 1;
     }
+
+    pthread_join(thread, NULL);
 
     printf("Parent\n");
     for (int i = 0; i < 10; i++) 
@@ -28,7 +30,5 @@ int main()
         printf("text %d\n", i + 1);
     }
 
-    pthread_exit(NULL);
-    
     return 0;
 }
