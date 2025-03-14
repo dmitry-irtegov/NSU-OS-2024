@@ -47,7 +47,7 @@ void free_after_bad_malloc(int j, pthread_t* t, pthread_attr_t *attr, data** dat
         free(datas[i]);
     }
 
-    res = pthread_attr_destroy(&attr);
+    res = pthread_attr_destroy(attr);
     if (res) handler("attr destroy with error", res);
     exit(EXIT_FAILURE);
 }
