@@ -15,14 +15,10 @@ void * thread_body(void * param) {
 
 int main(int argc, char *argv[]) {
     pthread_t thread;
-    int code;
-    
-    code = pthread_create(&thread, NULL, thread_body, NULL);
-    if (code != 0) {
-        char buf[256];
-        strerror_r(code, buf, sizeof buf);
-        fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
-        exit(1);
+
+    if (pthread_create(&thread, NULL, thread_body, NULL) != 0) {
+        perror("error pthread create");
+        return 1;
     }
     
     // Ожидаем завершения дочернего потока
