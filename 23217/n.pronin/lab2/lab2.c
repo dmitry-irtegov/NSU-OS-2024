@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
-#include <errno.h>
 #include <unistd.h>
+#include <errno.h>
+
 
 void * thread_body(void * param) {
     for (int i = 0; i < 10; i++) {
