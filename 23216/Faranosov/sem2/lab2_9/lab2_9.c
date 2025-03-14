@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
             char buf[256];
             strerror_r(check, buf, 256);
             fprintf(stderr, "create error: %s", buf);
-            free_after_bad_malloc(j, threads, datas);
+            free_after_bad_malloc(j, threads, &attr, datas);
         }
 
     }
