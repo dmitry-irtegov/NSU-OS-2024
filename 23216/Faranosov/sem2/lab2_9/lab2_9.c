@@ -36,7 +36,7 @@ void* func(void* param) {
     }
 }
 
-void free_after_bad_malloc(int j, pthread_t* t, pthread_attr_t *attr, data** datas) {
+void free_after_bad_malloc(int j, pthread_t* t, data** datas) {
     int res = 0;
     for (int i = 0; i < j; i++) {
         res = pthread_cancel(t[i]);
