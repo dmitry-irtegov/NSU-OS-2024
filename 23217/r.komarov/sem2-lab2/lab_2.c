@@ -16,6 +16,11 @@ int main() {
         return 1;
     }
 
+    if (pthread_join(thread_id, NULL) != 0) {
+        perror("thread completion waiting error");
+        return 1;
+    }
+
     for (int i = 1; i <= 10; i++) {
         printf("parent: %d\n", i);
     }
