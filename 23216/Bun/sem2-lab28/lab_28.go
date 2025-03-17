@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"golang.org/x/sys/unix"
-	"golang.org/x/term"
+	
 	"net"
 	"os"
 	"strings"
@@ -86,7 +86,6 @@ func main() {
 			if lineCount >= maxLines {
 				fmt.Print("Press space to scroll down... ")
 				
-				oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 				// waiting enter space
 				for {
 					input := make([]byte, 1)
@@ -99,11 +98,7 @@ func main() {
 						break
 					}
 				}
-				err = term.Restore(int(os.Stdin.Fd()), oldState)
-				if err != nil {
-					fmt.Println("Error restoring terminal:", err)
-					return
-				}
+				
 				lineCount = 0
 				fmt.Print("\r\033[K")
 			}
