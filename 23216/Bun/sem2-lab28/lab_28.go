@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 	"net"
 	"os"
 	"strings"
@@ -34,7 +35,7 @@ func main() {
 	}(conn)
 
 	// send HTTP-request
-	request := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host)
+	request := fmt.Sprintf("GET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n", path, host)
 	_, err = conn.Write([]byte(request))
 	if err != nil {
 		fmt.Println("Error sending request:", err)
@@ -84,7 +85,8 @@ func main() {
 
 			if lineCount >= maxLines {
 				fmt.Print("Press space to scroll down... ")
-
+				
+				oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 				// waiting enter space
 				for {
 					input := make([]byte, 1)
@@ -94,11 +96,16 @@ func main() {
 						return
 					}
 					if input[0] == ' ' {
-						lineCount = 0
-						fmt.Print("\r\033[K") // clean line
 						break
 					}
 				}
+				err = term.Restore(int(os.Stdin.Fd()), oldState)
+				if err != nil {
+					fmt.Println("Error restoring terminal:", err)
+					return
+				}
+				lineCount = 0
+				fmt.Print("\r\033[K")
 			}
 		}
 	}
