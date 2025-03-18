@@ -195,6 +195,7 @@ int main(int argc, char** argv) {
     printf("cntThr == %d\n", cntThr);
 #endif
 
+    init();
 
     threads = NULL;
     threads = malloc(sizeof(pthread_t) * cntThr);
