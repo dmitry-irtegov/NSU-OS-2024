@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"golang.org/x/sys/unix"
-	
 	"net"
 	"os"
 	"strings"
@@ -64,44 +63,44 @@ func main() {
 	for {
 		// preparing fd for select()
 		fds := &unix.FdSet{}
-		fds.Bits[fd/64] |= 1 << (fd % 64) // socket
-		fds.Bits[0] |= 1 << 0             // stdin
+		fds.Bits[fd/64] |= 1 << (fd % 64)
+		fds.Bits[0] |= 1 << 0
 
 		_, err := unix.Select(int(fd)+1, fds, nil, nil, nil)
 		if err != nil {
-			fmt.Println("Error selecting fd:", err)
+			fmt.Println("\nError selecting fd:", err)
 			return
 		}
 
-		if fds.Bits[fd/64]&(1<<(fd%64)) != 0 {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Println("\nConnection closed.")
-				break
-			}
+		if fds.Bits[fd/64]&(1<<(fd%64)) == 0 {
+			fmt.Println("Error selecting fd")
+			return
+		}
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Connection closed.")
+			break
+		}
 
-			fmt.Print(line)
-			lineCount++
+		fmt.Print(line)
+		lineCount++
 
-			if lineCount >= maxLines {
-				fmt.Print("Press space to scroll down... ")
-				
-				// waiting enter space
-				for {
-					input := make([]byte, 1)
-					_, err := os.Stdin.Read(input)
-					if err != nil {
-						fmt.Println("Error reading input:", err)
-						return
-					}
-					if input[0] == ' ' {
-						break
-					}
+		if lineCount >= maxLines {
+			fmt.Print("Press space to scroll down... ")
+			// waiting enter space
+			for {
+				input := make([]byte, 1)
+				_, err := os.Stdin.Read(input)
+				if err != nil {
+					fmt.Println("Error reading input:", err)
+					return
 				}
-				
-				lineCount = 0
-				fmt.Print("\r\033[K")
+				if input[0] == ' ' {
+					break
+				}
 			}
+			lineCount = 0
+			fmt.Print("\r\033[K")
 		}
 	}
 	fmt.Println("Success.")
