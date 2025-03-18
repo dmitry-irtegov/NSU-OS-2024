@@ -21,6 +21,8 @@ int maxIt;
 int cntSleep;
 pthread_cond_t mainCond;
 pthread_cond_t thrsCond;
+int max_i;
+int step_of_check;
 
 
 void handler(char str[], int num) {
@@ -38,23 +40,27 @@ void* func(void* param) {
     printf("Thread start_i == %d, end_i == %d\n", data->start_i, data->end_i);
 #endif
     int start = data->start_i;
-    int finish = start + 100;
+    int finish = start + step_of_check;
     int needWork = 1;
 
     while (needWork) {
 
-        for (int i = start; i < finish; i += data->step) {
+        for (int i = start; i < finish && i < max_i; i += data->step) {
             data->res += 1.0 / (i * 4.0 + 1.0);
             data->res -= 1.0 / (i * 4.0 + 3.0);
         }
 
 
+
         start = finish;
-        finish = start + 200;
+        finish = start + step_of_check;
 
 
         needWork = isWork;
-
+        
+        if (start > max_i) {
+            needWork = 0;
+        }
 
     }
 
@@ -137,7 +143,8 @@ void sig_handler() {
 void init() {
 
     int check = 0;
-
+    max_i = 200000000;
+    step_of_check = 100;
 
     check = pthread_mutex_init(&mainMutex, NULL);
     if (check != 0) {
@@ -196,6 +203,8 @@ int main(int argc, char** argv) {
 #endif
 
     init();
+
+    cntThr = cntThr > step_of_check - 1 ? step_of_check - 1 : cntThr;
 
     threads = NULL;
     threads = malloc(sizeof(pthread_t) * cntThr);
