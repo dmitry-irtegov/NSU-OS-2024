@@ -8,6 +8,9 @@
 #define PRODUCERS_COUNT 2
 #define THREADS_MSG_COUNT 20
 
+void my_assert(int expr) {
+    assert(expr);
+}
 
 Queue queue;
 unsigned int bytes_received[CONSUMERS_COUNT] = {0};
@@ -90,11 +93,11 @@ int main() {
     pthread_t ths[PRODUCERS_COUNT + CONSUMERS_COUNT];
 
     for (uint64_t i = 0; i < PRODUCERS_COUNT; i++) {
-        assert(0 == pthread_create(&ths[i], NULL, producer, (void*) i));
+        my_assert(0 == pthread_create(&ths[i], NULL, producer, (void*) i));
     }
     
     for (uint64_t i = 0; i < CONSUMERS_COUNT; i++) {
-        assert(0 == pthread_create(&ths[PRODUCERS_COUNT + i], NULL, consumer, 
+        my_assert(0 == pthread_create(&ths[PRODUCERS_COUNT + i], NULL, consumer, 
                     (void*) i));
     }
 
