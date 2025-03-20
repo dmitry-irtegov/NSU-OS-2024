@@ -1,34 +1,38 @@
-#include <stdio.h>  
+#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
 
+void my_assert(int val) {
+    if (val != 0) {
+        fprintf(stderr, "Assertion failed: value is not zero (value = %d)\n", val);
+        abort();
+    }
+}
 
 pthread_mutex_t mutex[3];
-
 volatile int flag = 0;
 
 void* thread_body() {
-
-    assert(pthread_mutex_lock(&mutex[2]) == 0);
+    my_assert(pthread_mutex_lock(&mutex[2]));
 
     flag = 1;
 
     for (int i = 0; i < 10; i++) {
-        assert(pthread_mutex_lock(&mutex[1]) == 0);
-        assert(pthread_mutex_unlock(&mutex[2]) == 0);
-        assert(pthread_mutex_lock(&mutex[0]) == 0);
+        my_assert(pthread_mutex_lock(&mutex[1]));
+        my_assert(pthread_mutex_unlock(&mutex[2]));
+        my_assert(pthread_mutex_lock(&mutex[0]));
 
         printf("child\n");
 
-        assert(pthread_mutex_unlock(&mutex[1]) == 0);
-        assert(pthread_mutex_lock(&mutex[2]) == 0);
-        assert(pthread_mutex_unlock(&mutex[0]) == 0);
+        my_assert(pthread_mutex_unlock(&mutex[1]));
+        my_assert(pthread_mutex_lock(&mutex[2]));
+        my_assert(pthread_mutex_unlock(&mutex[0]));
     }
 
-    assert(pthread_mutex_unlock(&mutex[2]) == 0);
+    my_assert(pthread_mutex_unlock(&mutex[2]));
 
     return NULL;
 }
@@ -49,32 +53,32 @@ int main() {
     }
     pthread_mutexattr_destroy(&mutex_attr);
 
-    assert(pthread_mutex_lock(&mutex[0]) == 0);
-    assert(pthread_mutex_lock(&mutex[1]) == 0);
-
+    my_assert(pthread_mutex_lock(&mutex[0]));
+    my_assert(pthread_mutex_lock(&mutex[1]));
+    
     pthread_create(&thread, NULL, thread_body, NULL);
 
     while (!flag) { sched_yield(); }
 
     for (int i = 0; i < 10; i++) {
         printf("parent\n");
-        assert(pthread_mutex_unlock(&mutex[1]) == 0);
-        assert(pthread_mutex_lock(&mutex[2]) == 0);
-        assert(pthread_mutex_unlock(&mutex[0]) == 0);
+        my_assert(pthread_mutex_unlock(&mutex[1]));
+        my_assert(pthread_mutex_lock(&mutex[2]));
+        my_assert(pthread_mutex_unlock(&mutex[0]));
 
-        assert(pthread_mutex_lock(&mutex[1]) == 0);
-        assert(pthread_mutex_unlock(&mutex[2]) == 0);
-        assert(pthread_mutex_lock(&mutex[0]) == 0);
+        my_assert(pthread_mutex_lock(&mutex[1]));
+        my_assert(pthread_mutex_unlock(&mutex[2]));
+        my_assert(pthread_mutex_lock(&mutex[0]));
     }
 
-    assert(pthread_mutex_unlock(&mutex[1]) == 0);
-    assert(pthread_mutex_unlock(&mutex[0]) == 0);
+    my_assert(pthread_mutex_unlock(&mutex[1]));
+    my_assert(pthread_mutex_unlock(&mutex[0]));
 
     pthread_join(thread, NULL);
     
     for (int i = 0; i < 3; i++) {
-        assert(pthread_mutex_destroy(&mutex[i]) == 0);
+        my_assert(pthread_mutex_destroy(&mutex[i]));
     }
 
     pthread_exit(NULL);
-} 
+}
