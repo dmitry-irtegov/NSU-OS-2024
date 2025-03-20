@@ -48,7 +48,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < number_of_threads; i++) {
         int *p = (int *)malloc(sizeof(int));
         *p = i;
-        assert(pthread_create(&threads[i], NULL, pi_calculation, (void *)p) == 0);
+        if (pthread_create(&threads[i], NULL, pi_calculation, (void *)p) != 0) {
+            fprintf(stderr, "can't create thread\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     double pi = 0;
