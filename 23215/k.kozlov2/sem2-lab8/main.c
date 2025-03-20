@@ -55,19 +55,18 @@ int main(int argc, char *argv[]) {
     }
 
     double pi = 0;
-    double **part_sum = (double **)malloc(sizeof(double *));
+    double *part_sum;
 
     for (int i = 0; i < number_of_threads; i++) {
-        pthread_join(threads[i], (void **)part_sum);
-        pi += **(double **)part_sum;
-        free(*part_sum);
+        pthread_join(threads[i], (void **)&part_sum);
+        pi += *(double *)part_sum;
+        free(part_sum);
     }
 
     pi *= 4.0;
     printf("pi done - %.15g \n", pi); 
 
     free(threads);
-    free(part_sum);
 
     exit(EXIT_SUCCESS);
 }
