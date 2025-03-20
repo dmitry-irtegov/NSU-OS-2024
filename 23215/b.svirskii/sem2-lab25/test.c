@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -59,7 +60,7 @@ char* msgs[PRODUCERS_COUNT][THREADS_MSG_COUNT] = {
 };
 
 void* producer(void* arg) {
-    unsigned int producer_num = (unsigned int) arg;
+    uint64_t producer_num = (uint64_t) arg;
     unsigned int bytes_putted;
     for (int i = 0; i < THREADS_MSG_COUNT; i++) {
         printf("%s produced\n", msgs[producer_num][i]);
@@ -88,11 +89,11 @@ int main() {
     
     pthread_t ths[PRODUCERS_COUNT + CONSUMERS_COUNT];
 
-    for (int i = 0; i < PRODUCERS_COUNT; i++) {
+    for (uint64_t i = 0; i < PRODUCERS_COUNT; i++) {
         assert(0 == pthread_create(&ths[i], NULL, producer, (void*) i));
     }
     
-    for (int i = 0; i < CONSUMERS_COUNT; i++) {
+    for (uint64_t i = 0; i < CONSUMERS_COUNT; i++) {
         assert(0 == pthread_create(&ths[PRODUCERS_COUNT + i], NULL, consumer, 
                     (void*) i));
     }
