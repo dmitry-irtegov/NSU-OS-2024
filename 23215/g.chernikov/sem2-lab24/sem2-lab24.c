@@ -64,6 +64,7 @@ int main() {
 
     pthread_create(&threadA, NULL, create_A, NULL);
     pthread_create(&threadB, NULL, create_B, NULL);
+    pthread_create(&threadC, NULL, create_C, NULL);
     pthread_create(&threadAB, NULL, create_AB, NULL);
     pthread_create(&thread_widget, NULL, create_widget, NULL);
 
