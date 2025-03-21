@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -66,11 +67,12 @@ void* producer(void* arg) {
     uint64_t producer_num = (uint64_t) arg;
     unsigned int bytes_putted;
     for (int i = 0; i < THREADS_MSG_COUNT; i++) {
-        printf("%s produced\n", msgs[producer_num][i]);
-        assert((bytes_putted = mymsgput(&queue, msgs[producer_num][i]))
+        my_assert((bytes_putted = mymsgput(&queue, msgs[producer_num][i]))
                 == strlen(msgs[producer_num][i]));
         bytes_produced[producer_num] += bytes_putted;
+        printf("%s produced\n", msgs[producer_num][i]);
     }
+    printf("%lu producer finished\n", producer_num);
     return NULL;
 }
 
@@ -82,8 +84,9 @@ void* consumer(void* arg) {
         count_bytes = mymsgget(&queue, buff, BUFF_SIZE);
         bytes_received[consumer_num] += count_bytes;
         buff[count_bytes] = '\0';
-        printf("%s consumed\n", buff);
+        printf("%s consumed %d\n", buff, count_bytes);
     } while (count_bytes > 0);
+    printf("%lu consumer finished\n", consumer_num);
     return NULL;
 }
 
@@ -101,9 +104,14 @@ int main() {
                     (void*) i));
     }
 
-    sleep(1);
 
+    sleep(1);
+    
     mymsgdrop(&queue);
+    
+    for (int i = 0; i < PRODUCERS_COUNT + CONSUMERS_COUNT; i++) {
+        pthread_join(ths[i], NULL);
+    }
     
     unsigned long all_bytes_produced = 0;
 
@@ -118,7 +126,7 @@ int main() {
     }
 
     assert(all_bytes_consumed == all_bytes_produced);
-
+    
     mymsgdestroy(&queue);
     
     return 0;

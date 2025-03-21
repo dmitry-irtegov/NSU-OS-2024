@@ -1,2 +1,2 @@
 all:
-	gcc -Wall queue.c test.c -o test
+	gcc -Wall -pthread queue.c test.c -o test

@@ -5,11 +5,15 @@
 
 
 typedef struct {
-    char msgs[MSG_COUNT][BUFF_SIZE];
-    sem_t avail_msg, avail_space;
+    char msgs[MSG_COUNT][BUFF_SIZE + 1];
     unsigned int next_free_index, next_msg_index;
     pthread_mutex_t lock;
-    unsigned char is_dropped;
+    
+    sem_t avail_msg, avail_space;
+    sem_t curr_wait_msg, curr_wait_space;
+    
+    volatile unsigned char is_dropped;
+    pthread_spinlock_t flag_lock;
 } Queue;
 
 void mymsginit(Queue* queue);
