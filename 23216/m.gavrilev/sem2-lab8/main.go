@@ -8,7 +8,7 @@ import (
 
 func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64) {
 
-	pi := 0
+	var pi float64
 
 	for i := start; i < limit; i += number_of_thread {
 
