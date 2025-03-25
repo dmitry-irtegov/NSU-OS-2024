@@ -14,7 +14,7 @@ const maxLines = 25
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run lab_28.go <URL>")
-		return
+		os.Exit(1)
 	}
 	url := os.Args[1]
 
@@ -23,7 +23,7 @@ func main() {
 	conn, err := net.Dial("tcp", host+":80")
 	if err != nil {
 		fmt.Println("Error connecting:", err)
-		return
+		os.Exit(1)
 	}
 	defer func(conn net.Conn) {
 		err := conn.Close()
@@ -49,14 +49,14 @@ func main() {
 	rawConn, err := conn.(*net.TCPConn).SyscallConn()
 	if err != nil {
 		fmt.Println("Error getting raw connection:", err)
-		return
+		os.Exit(1)
 	}
 	err = rawConn.Control(func(s uintptr) {
 		fd = s
 	})
 	if err != nil {
 		fmt.Println("Error of func Control", err)
-		return
+		os.Exit(1)
 	}
 
 	lineCount := 0
@@ -69,7 +69,7 @@ func main() {
 		_, err := unix.Select(int(fd)+1, fds, nil, nil, nil)
 		if err != nil {
 			fmt.Println("\nError selecting fd:", err)
-			return
+			os.Exit(1)
 		}
 
 		if fds.Bits[fd/64]&(1<<(fd%64)) == 0 {
