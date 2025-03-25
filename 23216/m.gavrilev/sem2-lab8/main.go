@@ -8,14 +8,12 @@ import (
 )
 
 func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64) {
-        var pi float64
-
+        pi := .0
         for i := start; i < limit; i += number_of_thread {
 
                 pi += float64(1.0 / (float64(i*4.0) + 1.0))
                 pi -= float64(1.0 / (float64(i*4.0) + 3.0))
         }
-
         pi = pi * 4.0
         // fmt.Println("part of pi - ", pi)
         chanPi <- pi
@@ -39,8 +37,8 @@ func main() {
                 fmt.Println("illegal argument for number_of_threads (write more than 0)")
                 return
         }
+	
         chanPi := make(chan float64)
-
         for i := 0; i < number_of_thread; i++ {
                 wg.Add(1)
 		go func(i int) {
@@ -48,13 +46,13 @@ func main() {
                         calculatePi(i, number_of_thread, num_steps, chanPi)
                 }(i)
         }
+	
 	go func () {
 		wg.Wait()
         	close(chanPi)
 	}()
         
-	
-	var pi float64
+	pi := .0
         for tmp := range chanPi  {
                 pi += tmp
         }
