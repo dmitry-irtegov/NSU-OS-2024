@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -I./src
+CFLAGS = -Wall -Wextra -I./src -lnsl -lsocket
 SRC = src/main.c src/cache.c src/proxy.c src/utils.o
 OBJ = $(SRC:.c=.o)
 TARGET = simple-proxy

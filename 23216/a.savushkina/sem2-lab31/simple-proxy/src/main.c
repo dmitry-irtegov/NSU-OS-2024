@@ -4,8 +4,11 @@
 #include <unistd.h>
 #include <poll.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include "proxy.h"
 #include "cache.h"
+
 
 #define PORT 8080
 #define MAX_CLIENTS 100
