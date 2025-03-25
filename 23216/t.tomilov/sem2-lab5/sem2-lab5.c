@@ -75,7 +75,7 @@ int main(){
 	if ((errID = sem_destroy(&sem)) != 0){
 		err_handler("ERROR: failed to destroy the semaphore.", errID);
 		free(str);
-        exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
 
 	free(str);
