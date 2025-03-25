@@ -56,5 +56,5 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    pthread_exit(NULL);
+    exit(EXIT_SUCCESS);
 }
