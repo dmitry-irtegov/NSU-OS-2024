@@ -8,7 +8,6 @@ import (
 )
 
 func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64) {
-
         var pi float64
 
         for i := start; i < limit; i += number_of_thread {
@@ -50,11 +49,10 @@ func main() {
                 }(i)
         }
 
-        var pi float64
-
         wg.Wait()
         close(chanPi)
-
+	
+	var pi float64
         for tmp := range chanPi  {
                 pi += tmp
         }
