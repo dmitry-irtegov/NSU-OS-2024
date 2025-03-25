@@ -15,7 +15,6 @@ typedef struct Args{
 }Args;
 
 void* pi_serial(void* data){
-	pthread_mutex_lock(&mutex);
 	Args* args = (Args*) data;
 	double result = 0;
 	for (int i = args->start; i < args->end; i++){
@@ -24,7 +23,6 @@ void* pi_serial(void* data){
 	}
 	inter_res[args->thread_id] = result;
 	args->done = 1;
-	pthread_mutex_unlock(&mutex);
 	pthread_exit(NULL);
 }
 
