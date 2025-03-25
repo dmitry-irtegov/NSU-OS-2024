@@ -35,5 +35,5 @@ int main() {
     }
     print_text("parent");
 
-    pthread_exit(NULL);
+    exit(EXIT_SUCCESS);
 }
