@@ -69,7 +69,7 @@ int main() {
                 exit(EXIT_FAILURE);
             }
             printf("New connection, socket fd is %d, ip is: %u, port: %d\n",
-                   client_fd, address.sin_addr.s_addr, ntohs(address.sin_port));
+                   client_fd, htonl(address.sin_addr.s_addr), ntohs(address.sin_port));
 
             for (i = 1; i < MAX_CLIENTS; i++) {
                 if (fds[i].fd < 0) {
