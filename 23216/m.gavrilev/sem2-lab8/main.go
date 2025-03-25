@@ -8,7 +8,7 @@ import (
 
 func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64) {
 
-	var pi float64 = 0
+	pi := 0
 
 	for i := start; i < limit; i += number_of_thread {
 
@@ -23,6 +23,7 @@ func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64
 
 func main() {
 	num_steps := 20000000
+	var wg sync.WaitGroup
 
 	if len(os.Args) < 2 {
 		fmt.Println("write number of threads")
@@ -41,16 +42,24 @@ func main() {
 	chanPi := make(chan float64, number_of_thread)
 
 	for i := 0; i < number_of_thread; i++ {
+		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
 			calculatePi(i, number_of_thread, num_steps, chanPi)
 		}(i)
 	}
 
-	pi := 0
+	var pi float64
 
-	for i := 0; i < number_of_thread; i++ {
-		tmp := <-chanPi
-		pi += tmp
+	wg.Wait()
+
+	for {
+		select {
+		case tmp := <-chanPi:
+			pi += tmp
+		case <-chanPi:
+			break
+		}
 	}
 
 	fmt.Println("pi done - ", pi)
