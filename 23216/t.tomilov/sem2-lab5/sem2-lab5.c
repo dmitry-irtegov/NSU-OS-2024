@@ -3,22 +3,23 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
+#include <semaphore.h>
 
-pthread_mutex_t mtx;
+sem_t sem;
 
 void err_handler(char* msg, int errID){
 	fprintf(stderr, "%s %s\n", msg, strerror(errID));
 }
 
 void cancel(){
-	printf("\ncancel\n");
-	pthread_mutex_unlock(&mtx);
+	write(1, "\ncancel\n", strlen("\ncancel\n"));
+	sem_post(&sem);
 }
 
 void* pthreadFunc(void* data){
 	char* str = *((char**) data);
-	pthread_mutex_lock(&mtx);
 	pthread_cleanup_push(cancel, NULL);
+	sem_wait(&sem);
 	while(1){
 		write(1, str, strlen(str));
 	}
@@ -28,7 +29,6 @@ void* pthreadFunc(void* data){
 int main(){
 	pthread_t thread;
 	pthread_attr_t attr;
-	pthread_mutexattr_t mtxattr;
 	int errID = 0;
 
 	char* str = NULL;
@@ -39,13 +39,8 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 
-	if ((errID = pthread_mutexattr_init(&mtxattr)) != 0){
-		err_handler("ERROR: failed to init mutexattr.", errID);
-		exit(EXIT_FAILURE);
-	}
-
-	if ((errID = pthread_mutex_init(&mtx, &mtxattr)) != 0){
-		err_handler("ERROR: failed to init mutex.", errID);
+	if ((errID = sem_init(&sem, 0, 1)) != 0){
+		err_handler("ERROR: failed to init semaphor.", errID);
 		exit(EXIT_FAILURE);
 	}
 
@@ -68,11 +63,8 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 
-	errID = pthread_mutex_lock(&mtx);
-	while (errID != 0){
-		errID = pthread_mutex_lock(&mtx);
-	}
-	pthread_mutex_unlock(&mtx);
+	sem_wait(&sem);
+	sem_post(&sem);
 
 	if ((errID = pthread_attr_destroy(&attr)) != 0) {
         err_handler("ERROR: failed to destroy the attr.", errID);
@@ -80,8 +72,8 @@ int main(){
         exit(EXIT_FAILURE);
 	}
 
-	if ((errID = pthread_mutexattr_destroy(&mtxattr)) != 0) {
-        err_handler("ERROR: failed to destroy the mutexattr.", errID);
+	if ((errID = sem_destroy(&sem)) != 0){
+		err_handler("ERROR: failed to destroy the semaphore.", errID);
 		free(str);
         exit(EXIT_FAILURE);
 	}
