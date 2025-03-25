@@ -22,15 +22,14 @@ func calculatePi(start int, number_of_thread int, limit int, chanPi chan float64
 }
 
 func main() {
-	var num_steps int = 20000000
+	num_steps := 20000000
 
 	if len(os.Args) < 2 {
 		fmt.Println("write number of threads")
 		return
 	}
 
-	var number_of_thread, err = strconv.Atoi(os.Args[1])
-
+	number_of_thread, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		fmt.Println("error with parsing to int: number_of_thread", err)
 		return
@@ -47,7 +46,7 @@ func main() {
 		}(i)
 	}
 
-	var pi float64
+	pi := 0
 
 	for i := 0; i < number_of_thread; i++ {
 		tmp := <-chanPi
