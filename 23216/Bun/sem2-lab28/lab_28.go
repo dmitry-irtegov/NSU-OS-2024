@@ -73,8 +73,7 @@ func main() {
 		}
 
 		if fds.Bits[fd/64]&(1<<(fd%64)) == 0 {
-			fmt.Println("Error selecting fd")
-			return
+			panic("Error selecting fd")
 		}
 		line, err := reader.ReadString('\n')
 		if err != nil {
