@@ -39,7 +39,7 @@ func main() {
                 fmt.Println("illegal argument for number_of_threads (write more than 0)")
                 return
         }
-        chanPi := make(chan float64, number_of_thread)
+        chanPi := make(chan float64)
 
         for i := 0; i < number_of_thread; i++ {
                 wg.Add(1)
@@ -48,9 +48,11 @@ func main() {
                         calculatePi(i, number_of_thread, num_steps, chanPi)
                 }(i)
         }
-
-        wg.Wait()
-        close(chanPi)
+	go func () {
+		wg.Wait()
+        	close(chanPi)
+	}()
+        
 	
 	var pi float64
         for tmp := range chanPi  {
