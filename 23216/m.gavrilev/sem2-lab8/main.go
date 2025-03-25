@@ -53,13 +53,10 @@ func main() {
         var pi float64
 
         wg.Wait()
-
-        for i := 0; i < number_of_thread; i++  {
-                tmp := <-chanPi
-                pi += tmp
-        }
-
         close(chanPi)
 
+        for tmp := range chanPi  {
+                pi += tmp
+        }
         fmt.Println("pi done - ", pi)
 }
