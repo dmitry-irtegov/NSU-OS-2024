@@ -14,3 +14,4 @@ void mymsgdrop(queue *);
 void mymsgdestroy(queue *);
 int mymsgput(queue *, char *msg);
 int mymsgget(queue *, char *buf, size_t bufsize);
+

@@ -86,3 +86,4 @@ int mymsgget(queue *q, char *buf, size_t bufsize) {
 	sem_post(&q->headsem);
 	return strlen(buf) + 1;
 }
+
