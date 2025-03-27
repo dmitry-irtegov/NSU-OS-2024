@@ -9,23 +9,20 @@
 
 void *producer(void *pq) {
     queue *q = (queue *)pq;
-    int i = 0;
 
+    int i = 0;
     for (i = 0; i < 1000; i++) {
         char buf[40];
-
         sprintf(buf, "Message %d from thread %lu", i, pthread_self());
         if (!mymsgput(q, buf)) 
             return NULL;
     }
-
     return NULL;
 }
 
 void *consumer(void *pq) {
     queue *q = (queue *)pq;
     int i = 0;
-
     do {
         char buf[41];
         i = mymsgget(q, buf, sizeof(buf));
@@ -34,7 +31,6 @@ void *consumer(void *pq) {
         else 
             printf("Received by thread %lu: %s\n", pthread_self(), buf);
     } while (1);
-
     return NULL;
 }
 
@@ -42,12 +38,10 @@ int main(int argc, char **argv) {
     int nproducers, nconsumers;
     queue q;
     int i;
-
     if (argc < 3) {
         fprintf(stderr, "Usage: %s nproducers nconsumers\n", argv[0]);
         return 0;
     }
-
     nproducers = atoi(argv[1]);
     nconsumers = atoi(argv[2]);
 
@@ -85,9 +79,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < nconsumers; j++) {
         pthread_join(consumers[j], NULL);
     }
-
     mymsgdestroy(&q);
     printf("All threads quit and queue destroyed\n");
-
     return 0;
 }
