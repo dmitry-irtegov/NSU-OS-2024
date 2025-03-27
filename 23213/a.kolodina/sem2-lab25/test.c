@@ -57,38 +57,37 @@ int main(int argc, char **argv) {
 	}
 
 	pthread_t producers[nproducers];
-    pthread_t consumers[nconsumers];
+	pthread_t consumers[nconsumers];
 	mymsginit(&q);
 	int code;
-    for (int i = 0; i < nproducers; i++) {
-        code = pthread_create(&producers[i], NULL, producer, &q);
+	for (int i = 0; i < nproducers; i++) {
+		code = pthread_create(&producers[i], NULL, producer, &q);
 		if (code != 0) {
 			fprintf(stderr, "%s\n", strerror(code));
 			exit(1);
 		}
-    }
-    for (int j = 0; j < nconsumers; j++) {
-        code = pthread_create(&consumers[j], NULL, consumer, &q);
+	}
+	for (int j = 0; j < nconsumers; j++) {
+		code = pthread_create(&consumers[j], NULL, consumer, &q);
 		if (code != 0) {
 			fprintf(stderr, "%s\n", strerror(code));
 			exit(1);
 		}
-    }
+	}
 
 	sleep(10);
 
 	mymsgdrop(&q);
 
-    for (int i = 0; i < nproducers; i++) {
-        pthread_join(producers[i], NULL);
-    }
-    for (int j = 0; j < nconsumers; j++) {
-        pthread_join(consumers[j], NULL);
-    }
+	for (int i = 0; i < nproducers; i++) {
+		pthread_join(producers[i], NULL);
+	}
+	for (int j = 0; j < nconsumers; j++) {
+		pthread_join(consumers[j], NULL);
+	}
 
 	mymsgdestroy(&q);
 	printf("All threads quit and queue destroyed\n");
 
 	return 0;
 }
-
