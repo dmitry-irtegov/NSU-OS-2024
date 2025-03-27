@@ -1,12 +1,12 @@
 struct queue_record {
-	struct queue_record *next, *prev;
-	char buf[81];
+    struct queue_record *next, *prev;
+    char buf[81];
 };
 
 typedef struct myqueue {
-	struct queue_record *head, *tail;
-	sem_t headsem, tailsem, queuesem;
-	int beingdestroyed;
+    struct queue_record *head, *tail;
+    sem_t headsem, tailsem, queuesem;
+    int beingdestroyed;
 } queue;
 
 void mymsginit(queue *);
