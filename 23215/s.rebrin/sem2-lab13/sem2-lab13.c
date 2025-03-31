@@ -3,17 +3,20 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdatomic.h>
+
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int turn = 0;
 void* thread_body(void* param) {
 	for (int i = 0; i < 10; i++) {
+		sleep(1);
 		pthread_mutex_lock(&mutex);
-		while (turn != 1) {
+		while (atomic_load(&turn) != 1) {
 			pthread_cond_wait(&cond, &mutex);
 		}
 		printf("left\n");
-		turn = 0;
+		atomic_store(&turn, 0);
 		pthread_cond_signal(&cond);
 		pthread_mutex_unlock(&mutex);
 	}
@@ -33,12 +36,12 @@ int main(int argc, char* argv[]) {
 	else {
 		for (int i = 0; i < 10; i++) {
 			pthread_mutex_lock(&mutex);
-			while (turn != 0) {
-				pthread_cond_wait(&cond, &mutex);
-			}
-			printf("right\n");
-			turn = 1;
-			pthread_cond_signal(&cond);
+				while (atomic_load(&turn) != 0) {
+					pthread_cond_wait(&cond, &mutex);
+				}
+				printf("right\n");
+				atomic_store(&turn, 1);
+				pthread_cond_signal(&cond);
 			pthread_mutex_unlock(&mutex);
 		}
 	}
