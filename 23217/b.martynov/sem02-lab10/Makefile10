@@ -1,0 +1,2 @@
+my: sem2-lab10.c
+	cc sem2-lab10.c -mt -o sem2-lab10.out
