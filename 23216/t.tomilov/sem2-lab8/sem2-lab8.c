@@ -9,7 +9,7 @@ typedef struct Args {
     double res;
 } Args;
 
-void err_hander(char *msg, int errID) {
+void err_handler(char *msg, int errID) {
     fprintf(stderr, "%s %s\n", msg, strerror(errID));
 }
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     }
 
     if ((errID = pthread_attr_init(&attr) != 0)) {
-        err_hander("ERROR: failed to init attr.", errID);
+        err_handler("ERROR: failed to init attr.", errID);
         free(threads);
         free(args);
         exit(EXIT_FAILURE);
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < num_threads; i++) {
         if ((errID = pthread_create(&(threads[i]), &attr, &pi_serial, (void *) &args[i])) != 0) {
-            err_hander("ERROR: failed to create thread.", errID);
+            err_handler("ERROR: failed to create thread.", errID);
             free(threads);
             free(args);
             exit(EXIT_FAILURE);
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < num_threads; i++) {
         if ((errID = pthread_join(threads[i], NULL)) != 0) {
-            err_hander("ERROR: failed to join thread.", errID);
+            err_handler("ERROR: failed to join thread.", errID);
             free(args);
             exit(EXIT_FAILURE);
         }
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     }
 
     if ((errID = pthread_attr_destroy(&attr)) != 0) {
-        err_hander("ERROR: failed to destroy attr.", errID);
+        err_handler("ERROR: failed to destroy attr.", errID);
         free(threads);
         free(args);
         exit(EXIT_FAILURE);
