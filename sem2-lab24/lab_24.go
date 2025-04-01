@@ -46,8 +46,8 @@ func produceC(ch chan<- struct{}) {
 
 func assembleModule(aChan <-chan struct{}, bChan <-chan struct{}, moduleChan chan<- struct{}) {
 	for {
-		<-aChan // wait A
-		<-bChan // wait B
+		<-aChan 
+		<-bChan 
 		fmt.Println("Module assembled")
 		moduleChan <- struct{}{}
 	}
