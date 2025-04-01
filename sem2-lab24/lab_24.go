@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+
 	aChan := make(chan struct{})
 	bChan := make(chan struct{})
 	cChan := make(chan struct{})
@@ -45,18 +46,34 @@ func produceC(ch chan<- struct{}) {
 }
 
 func assembleModule(aChan <-chan struct{}, bChan <-chan struct{}, moduleChan chan<- struct{}) {
+	var hasA, hasB bool
 	for {
-		<-aChan 
-		<-bChan 
-		fmt.Println("Module assembled")
-		moduleChan <- struct{}{}
+		select {
+		case <-aChan:
+			hasA = true
+		case <-bChan:
+			hasB = true
+		}
+		if hasA && hasB {
+			fmt.Println("Module assembled")
+			moduleChan <- struct{}{}
+			hasA, hasB = false, false
+		}
 	}
 }
 
 func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}) {
+	var hasModule, hasC bool
 	for {
-		<-moduleChan
-		<-cChan
-		fmt.Println("Widget assembled")
+		select {
+		case <-moduleChan:
+			hasModule = true
+		case <-cChan:
+			hasC = true
+		}
+		if hasModule && hasC {
+			fmt.Println("Widget assembled")
+			hasModule, hasC = false, false
+		}
 	}
 }
