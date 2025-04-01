@@ -68,7 +68,7 @@ typedef struct {
 #define SENDING_REQ 5 //output
 
 #define HTTP_PORT 80
-#define PROXY_PORT 8080
+#define PROXY_PORT 8081
 
 CacheEntry* getPage(Buffer* key);
 

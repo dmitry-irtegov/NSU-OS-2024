@@ -312,8 +312,29 @@ int processSendingReq(int index) {
     }
 }
 
-int checkEndOfServerAnswer() {
-    return 1;
+int checkEndOfServerAnswer(Buffer* buffer) {
+    char* hasContentLength = strstr(buffer->buffer, "Content-Length:");
+
+    if (!hasContentLength) {
+        return 0;
+    }
+
+    hasContentLength += strlen("Content-Length: ");
+
+    int lenBody = atoi(hasContentLength);
+    
+    char* startBody = strstr(buffer->buffer, "\r\n\r\n");
+
+    if (startBody == NULL) {
+        return 0;
+    }
+
+    int d = startBody + 4 - buffer->buffer;
+    if (d + lenBody == buffer->count) {
+        return 1;
+    }
+
+    return 0;
 }
 
 int processServerAnswer(int index) {
@@ -326,18 +347,23 @@ int processServerAnswer(int index) {
                 return 1;
             }
 
-            entry->val->count = 0;
-            while ((count = read(proxy.loaders[i].fd, entry->val->buffer + entry->val->count, entry->val->len))) {
+            while ((count = read(proxy.loaders[i].fd, entry->val->buffer + entry->val->count, entry->val->len - entry->val->count))) {
+                if (count == -1) {
+                    if (errno == EAGAIN) {
+                        break;
+                    }
+                    return 1;
+                }
                 entry->val->count += count;
                 
                 if (entry->val->count == entry->val->len) {
                     entry->val->len *= 2;
                     entry->val->buffer = realloc(entry->val->buffer, entry->val->len);
                 }
-                count = 0;
             }
 
-            if (checkEndOfServerAnswer()) {
+            if (checkEndOfServerAnswer(entry->val)) {
+                puts("victory");
                 entry->status = 1;
                 close(proxy.pfds[index].fd);
                 proxy.pfds[index].fd = -1;
@@ -360,8 +386,9 @@ int processAnswer(int index) {
             if (entry->status == 1) {
                 ssize_t cnt = write(proxy.requests[i].fd, entry->val->buffer + proxy.requests[i].curIndex, entry->val->count - proxy.requests[i].curIndex);
                 if (cnt == -1) {
-                    exit(1);
-                    return 1;
+                    if (errno != EAGAIN) {
+                        return 1;
+                    }
                 }
 
                 proxy.requests[i].curIndex += cnt;
