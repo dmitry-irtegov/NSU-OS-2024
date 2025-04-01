@@ -7,12 +7,12 @@ TARGET = simple-proxy
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-		$(CC) -o $@ $(OBJ) -lnsl -lsocket
+        $(CC) -o $@ $(OBJ) -lnsl -lsocket
 
 %.o: %.c
-		$(CC) $(CFLAGS) -c $< -o $@
+        $(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-		rm -f $(OBJ) $(TARGET)
+        rm -f $(OBJ) $(TARGET)
 
 .PHONY: all clean
