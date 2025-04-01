@@ -25,16 +25,13 @@ char *extract_host(char *request) {
     return host;
 }
 
-int should_keep_alive(char *request) {
-    char *connection_header = strstr(request, "Connection: ");
-    if (!connection_header) {
+int should_keep_connection(char *request) {
+    char *protocol_get = strstr(request, "GET");
+    char *protocol_head = strstr(request, "HEAD");
+    if (!protocol_get && !protocol_head){
         return 0;
     }
-    connection_header += 12; 
-    if (strncmp(connection_header, "keep-alive", 10) == 0) {
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 int should_cache_response(char *request) {

@@ -12,9 +12,7 @@ int main() {
     struct sockaddr_in proxy_addr;
     char buffer[BUFFER_SIZE];
     char *requests[] = {
-        "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n",
-        // "GET / HTTP/1.1\r\nHost: github.com\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n",
-        // "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n"
+        "POST / HTTP/1.0\r\nHost: github.com\r\nCache-Control: public, max-age=3600\r\n\r\n",
     };
     int num_requests = sizeof(requests) / sizeof(requests[0]);
 

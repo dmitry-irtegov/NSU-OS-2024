@@ -14,12 +14,12 @@
 int handle_client_request(int client_fd);
 void process_request(int client_fd, char *request);
 char *extract_host(char *request);
-int should_keep_alive(char *request);
 int should_cache_response(char *request);
 
 int handle_client_request(int client_fd) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
+    char incorrect_method[44] = "Incorrect http method. Use only get or head\n";
 
     while ((bytes_read = read(client_fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes_read] = '\0';
@@ -27,10 +27,11 @@ int handle_client_request(int client_fd) {
             printf("Received close connection command\n");
             return 0;
         }
-        process_request(client_fd, buffer);
-        if (!should_keep_alive(buffer)) {
+        if (!should_keep_connection(buffer)){
+            write(client_fd, incorrect_method, strlen(incorrect_method));
             return 0;
         }
+        process_request(client_fd, buffer);
     }
 
     if (bytes_read == 0) {
@@ -101,7 +102,6 @@ void process_request(int client_fd, char *request) {
         if (response_length < 0) {
             perror("recv error");
         }
-
         close(remote_fd);
         free(host);
     }
