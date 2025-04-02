@@ -129,7 +129,7 @@ int registerConnect(Loader loader) {
         return -1;
     } 
 
-    if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) || errno != EINPROGRESS) {
+    if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) && errno != EINPROGRESS) {
         return -1;
     }
 
