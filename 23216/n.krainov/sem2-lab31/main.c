@@ -8,7 +8,7 @@
 
 ProxyState proxy;
 
-int initProxy() {
+int initProxy(int port) {
     proxy.countPFDs = 0;
     proxy.lenPFDs = 10;
     proxy.countLoaders = 0;
@@ -68,7 +68,7 @@ int initProxy() {
   
     servaddr.sin_family = AF_INET; 
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-    servaddr.sin_port = htons(PROXY_PORT);  
+    servaddr.sin_port = htons(port);  
     
     if ((bind(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0) { 
         return 1;
@@ -81,14 +81,22 @@ int initProxy() {
     return 0;
 }
 
-//регистрируем прием входящих соединений,
-int main() {
-    if (initProxy()) {
+//ПРОКСИ ЕЩЕ НЕ ЗАВЕРШЕН
+//если ты пришел смотреть как делать его, то лучше подожди, когда будет готово
+//Или почитай комментарии, что доделывать надо
+int main(int argc, char** argv) {
+    int port;
+    if (argc < 2 || (port = atoi(argv[1])) <= 1024) {
+        fprintf(stderr, "incorrect port\n");
+        exit(1);
+    }
+
+    if (initProxy(port)) { 
         perror("initProxy failed");
         exit(1);
     }
 
-    if (workLoop()) {
+    if (workLoop()) { //надо бы и успешное окончание работы предусмотреть
         perror("error in workloop");
         exit(2);
     }
