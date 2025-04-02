@@ -27,12 +27,13 @@ unsigned int getHash(char* key, int len) {
         h = (h * k + key[i]) % 1000000007; 
     }
 
-    return h % proxy.cache.cap;
+    return h % proxy.cache.cap; //так я хэш получаю или индекс?
 }
 
 CacheEntry* getPage(Buffer* key) {
     unsigned int index = getHash(key->buffer, key->count);
     
+    //расширение надо делать. Обязательно
     //resize
 
     for (unsigned int i = index; ; i = (i + 1) % proxy.cache.cap) {
@@ -45,6 +46,8 @@ CacheEntry* getPage(Buffer* key) {
         }
 
         if (strncmp(proxy.cache.buffers[i].key->buffer, key->buffer, key->count) == 0) {
+            //надо реализовать следующую механику:
+            //если страница из тех, что кэшироваться НЕ ДОЛЖНА, то её надо просто после полной передачи к чертям выпилить. Криво, но действенно
             return &proxy.cache.buffers[i];
         }
     }
@@ -68,3 +71,5 @@ void putInCache(Buffer* key, Buffer* val) {
     }
 
 }
+
+//а где remove?

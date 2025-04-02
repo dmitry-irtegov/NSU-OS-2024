@@ -15,17 +15,24 @@
 
 extern ProxyState proxy;
 
+//вообще надо бы принтовать, что происходит (кто постучался к нам, куда он пошел и так далее)
+//может раскидать разные этапы по разным файлам? Сейчас это крайне трудночитабельно
+//надо подумать, когда надо умереть, а когда просто кидать ошибку. Вроде при неуспехе маллока можно почистить кэш. Но тогда в чем смысл?
+
 int registerRequest(int fd) {
     int newConn = accept(fd, NULL, NULL);
-    if (newConn == -1) return 1;
-    
+    if (newConn == -1) {
+        perror("accept failed");
+        return 2;
+    }
+
     if (fcntl(newConn, F_SETFL, O_NONBLOCK) == -1) {
         return 1;
     }
 
     if (proxy.countPFDs == proxy.lenPFDs) {
         proxy.pfds = realloc(proxy.pfds, proxy.lenPFDs * 2);
-        if (proxy.pfds == NULL) {
+        if (proxy.pfds == NULL) { //возможно, стоит делать иначе - говорить, что расширить
             return 1;
         }
 
@@ -35,7 +42,7 @@ int registerRequest(int fd) {
         proxy.types[proxy.countPFDs] = REQUEST;
 
     } else {
-        for (int i = 1; i < proxy.lenPFDs; i++) {
+        for (int i = 1; i < proxy.lenPFDs; i++) { //все поиски нужных мест стоит переделать под использование fd как индексов - будет поиск за о(1) 
             if (proxy.pfds[i].fd == -1) {
                 proxy.pfds[i].fd = newConn;
                 proxy.pfds[i].events = POLLIN;
@@ -45,7 +52,7 @@ int registerRequest(int fd) {
         }
     }
 
-    for (int i = 0; i < proxy.lenRequests; i++) {
+    for (int i = 0; i < proxy.lenRequests; i++) { //тут наверное также стоит сделать
         if (proxy.requests[i].fd == -1) {
             proxy.requests[i].fd = newConn;
             free(proxy.requests[i].req);
@@ -56,7 +63,7 @@ int registerRequest(int fd) {
 
             proxy.requests[i].req->count = 0;
             proxy.requests[i].req->len = 512;
-            proxy.requests[i].req->buffer = calloc(512, sizeof(char));
+            proxy.requests[i].req->buffer = calloc(proxy.requests[i].req->len + 1, sizeof(char));
 
             if (proxy.requests[i].req->buffer == NULL) {
                 return 1;
@@ -70,6 +77,7 @@ int registerRequest(int fd) {
 }
 
 int registerConnect(Loader loader) {
+    //получение хоста надо вынести в отдельную функцию
     struct sockaddr_in servaddr;
     char* target = strstr(loader.request->buffer, "Host:");
 
@@ -121,13 +129,13 @@ int registerConnect(Loader loader) {
         return -1;
     } 
 
-    if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) && errno != EINPROGRESS) {
+    if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) || errno != EINPROGRESS) {
         return -1;
     }
 
     errno = 0;
 
-    if (proxy.countPFDs == proxy.lenPFDs) {
+    if (proxy.countPFDs == proxy.lenPFDs) { //как-то много такого почти одинакового кода
         proxy.pfds = realloc(proxy.pfds, proxy.lenPFDs * 2);
 
         if (proxy.pfds == NULL) {
@@ -169,7 +177,7 @@ int analyzeRequest(int indexReq) {
         if (proxy.requests[indexReq].req->buffer[i] == '\n' && proxy.requests[indexReq].req->buffer[i - 1] == '\r') {
             help->count = i + 1;
             help->len = i + 2;
-            help->buffer = calloc(help->len, sizeof(char));
+            help->buffer = calloc(help->len + 1, sizeof(char));
             if (help->buffer == NULL) {
                 return 1;
             }
@@ -183,7 +191,7 @@ int analyzeRequest(int indexReq) {
     char* check2 = strstr(help->buffer, "GET");
     char* check3 = strstr(help->buffer, "HTTP/1.0");
 
-    if (!check1 && !check2 && !check3) {
+    if ((!check1) == (!check2) && !check3) { //по хорошему и порядок надо проверить
         //послать клиенту ошибку
 
         return 2;
@@ -209,7 +217,7 @@ int initLoader(int indexReq) {
         }
     }
 
-    //сделаю потом (расширение loaders)
+    //сделаю потом (расширение loaders) (опять повторение кода будет, точно надо как-то объединять)
 }
 
 int checkCache(int index) {
@@ -224,7 +232,7 @@ int checkCache(int index) {
 }
 
 int processRequest(int index) {
-    for (int i = 0; i < proxy.lenRequests; i++) {
+    for (int i = 0; i < proxy.lenRequests; i++) { //переработать поиск
         if (proxy.requests[i].fd == proxy.pfds[index].fd) {
             int cnt = 0;
             while ((cnt = read(proxy.requests[i].fd, 
@@ -242,19 +250,18 @@ int processRequest(int index) {
                         return 1;
                     }
 
-                    Buffer* buf = calloc(1, sizeof(Buffer));
+                    Buffer* buf = calloc(1, sizeof(Buffer)); //все ниже можно и покрасивее записать
 
                     if (buf == NULL) {
                         return 1;
                     }
 
-                    buf->buffer = calloc(2048, sizeof(char));
+                    buf->buffer = calloc(2049, sizeof(char));
 
                     if (buf->buffer == NULL) {
                         return 1;
                     }
 
-                    printf("request\n%s\n", proxy.loaders[i].request->buffer);
                     buf->len = 2048;
                     buf->count = 0;
                     putInCache(proxy.requests[i].keyCache, buf);
@@ -287,7 +294,7 @@ int processConnecting(int index) {
         return 1;
     }
 
-    proxy.types[index] = SENDING_REQ;
+    proxy.types[index] = SENDING_REQ; //название выглядит уродливо, надо получше назвать
     return 0;
 }
 
@@ -313,13 +320,13 @@ int processSendingReq(int index) {
 }
 
 int checkEndOfServerAnswer(Buffer* buffer) {
-    char* hasContentLength = strstr(buffer->buffer, "Content-Length:");
-
+    char* hasContentLength = strstr(buffer->buffer, "Content-Length:"); //а если Content-Length нет?
+    
     if (!hasContentLength) {
         return 0;
     }
 
-    hasContentLength += strlen("Content-Length: ");
+    hasContentLength += strlen("Content-Length:");
 
     int lenBody = atoi(hasContentLength);
     
@@ -329,7 +336,8 @@ int checkEndOfServerAnswer(Buffer* buffer) {
         return 0;
     }
 
-    int d = startBody + 4 - buffer->buffer;
+    int d = startBody + strlen("\r\n\r\n") - buffer->buffer;
+   
     if (d + lenBody == buffer->count) {
         return 1;
     }
@@ -340,10 +348,12 @@ int checkEndOfServerAnswer(Buffer* buffer) {
 int processServerAnswer(int index) {
     for (int i = 0; i < proxy.lenLoaders; i++) {
         if (proxy.loaders[i].fd == proxy.pfds[index].fd) {
+            //надо вообще проверять конец запроса по разрыву соединения, а по всяким Content-Length проверять нормальность ответа. Хотя в принципе можно не проверять, а как есть перекинуть
             CacheEntry* entry = getPage(proxy.loaders[i].key);
             ssize_t count;
 
-            if (entry == NULL || entry->status != 0) {
+            if (entry == NULL || entry->status != 0) { //в будущем проверка статуса наверняка выпилится 
+                //CRITICAL ERROR
                 return 1;
             }
 
@@ -358,14 +368,13 @@ int processServerAnswer(int index) {
                 
                 if (entry->val->count == entry->val->len) {
                     entry->val->len *= 2;
-                    entry->val->buffer = realloc(entry->val->buffer, entry->val->len);
+                    entry->val->buffer = realloc(entry->val->buffer, entry->val->len); //э, а проверка где?
                 }
             }
 
             if (checkEndOfServerAnswer(entry->val)) {
-                puts("victory");
                 entry->status = 1;
-                close(proxy.pfds[index].fd);
+                close(proxy.pfds[index].fd); //э, а проверка где?
                 proxy.pfds[index].fd = -1;
                 proxy.loaders[i].fd = -1;
                 proxy.loaders[i].key = NULL;
@@ -394,7 +403,7 @@ int processAnswer(int index) {
                 proxy.requests[i].curIndex += cnt;
 
                 if (proxy.requests[i].curIndex == entry->val->count) {
-                    close(proxy.requests[i].fd);
+                    close(proxy.requests[i].fd); //э, а проверка где?
                     proxy.pfds[index].fd = -1;
                     proxy.requests[i].curIndex = 0;
                     proxy.requests[i].fd = -1;
@@ -455,7 +464,7 @@ int workLoop() {
             default:
                 if (proxy.pfds[0].revents & POLLIN) {
                     proxy.pfds[0].revents = 0;
-                    if (registerRequest(proxy.pfds[0].fd)) {
+                    if (registerRequest(proxy.pfds[0].fd) == 1) {
                         return 1;
                     }
                     count--;
@@ -463,10 +472,14 @@ int workLoop() {
 
                 for (int i = 1; i < proxy.lenPFDs && count != 0; i++) {
                     if (proxy.pfds[i].revents & POLLIN) {
-                        processInputData(i);
+                        if (processInputData(i)) {
+                            return 1;
+                        }
                         count--;
                     } else if (proxy.pfds[i].revents & POLLOUT) {
-                        processOutputData(i);
+                        if (processOutputData(i)) {
+                            return 1;
+                        }
                         count--;
                     }
 

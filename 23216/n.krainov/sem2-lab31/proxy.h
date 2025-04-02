@@ -1,6 +1,8 @@
 #ifndef PROXY_H
 #define PROXY_H
 
+//надо добавить сюда функции типа workLoop
+
 #include <poll.h>
 #include <time.h>
 #include <unistd.h>
@@ -14,8 +16,8 @@ typedef struct {
 typedef struct {
     Buffer* key;
     Buffer* val;
-    char status; // 0 - качается, 1 - скачано, 2 - закачивание провалилось (на будущее) 
-    int ttl; //на будущее
+    char status; // 0 - качается, 1 - скачано, 2 - закачивание провалилось (на будущее) (нужно еще состояний добавить)
+    int ttl; //на будущее (надо подумать, когда чистить кэш. Возможно, проще раз в какое-то время устраивать глобальную чистку (типа сборщика мусора))
 } CacheEntry;
 
 
@@ -26,17 +28,12 @@ typedef struct {
     unsigned int cnt;
 } Cache;
 
-//состояния-этапы запросов:
-//1 - получение запроса
-//2 - парсинг запроса, коннект к серверу 
-//3 - получение ответа, пересылка обратно
 typedef struct {
     int fd;
     ssize_t curIndex;
     Buffer* keyCache;
     Buffer* req;
 } Request;
-
 
 typedef struct {
     int fd;
@@ -68,7 +65,6 @@ typedef struct {
 #define SENDING_REQ 5 //output
 
 #define HTTP_PORT 80
-#define PROXY_PORT 8081
 
 CacheEntry* getPage(Buffer* key);
 
