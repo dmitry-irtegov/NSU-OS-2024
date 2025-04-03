@@ -14,34 +14,28 @@ void mymsginit(Queue* queue) {
     sem_init(&queue->curr_wait_space, 0, 0);
     queue->next_free_index = queue->next_msg_index = 0; 
     pthread_mutex_init(&queue->lock, NULL);
-    pthread_spin_init(&queue->flag_lock, PTHREAD_PROCESS_PRIVATE);
 }
 
 void mymsgdestroy(Queue* queue) {
     pthread_mutex_destroy(&queue->lock);
-    pthread_spin_destroy(&queue->flag_lock);
     sem_destroy(&queue->avail_msg);
     sem_destroy(&queue->avail_space);
     sem_destroy(&queue->curr_wait_space);
     sem_destroy(&queue->curr_wait_msg);
 }
 
-int is_dropped(Queue *queue) {
-    int result = 0;
-    pthread_spin_lock(&queue->flag_lock);
-    result = queue->is_dropped;
-    pthread_spin_unlock(&queue->flag_lock);
-    return result;
-}
-
 int mymsgput(Queue* queue, char* msg) {
-    if (is_dropped(queue)) {
+    if (queue->is_dropped) {
         return 0;
     }
 
     sem_post(&queue->curr_wait_space);
     sem_wait(&queue->avail_space);
     sem_wait(&queue->curr_wait_space);
+    
+    if (queue->is_dropped) {
+        return 0;
+    }
 
     pthread_mutex_lock(&queue->lock);
     unsigned long msg_len = strlen(msg);
@@ -58,7 +52,7 @@ int mymsgput(Queue* queue, char* msg) {
 }
 
 int mymsgget(Queue* queue, char* buf, size_t bufsize) {
-    if (is_dropped(queue)) {
+    if (queue->is_dropped) {
         return 0;
     }
  
@@ -66,7 +60,7 @@ int mymsgget(Queue* queue, char* buf, size_t bufsize) {
     sem_wait(&queue->avail_msg);
     sem_wait(&queue->curr_wait_msg);
 
-    if (is_dropped(queue)) {
+    if (queue->is_dropped) {
         return 0;
     }
 
@@ -93,9 +87,7 @@ void unblock_sem_waiters(sem_t* sem, sem_t* count_wait_sem) {
 }
 
 void mymsgdrop(Queue* queue) {
-    pthread_spin_lock(&queue->flag_lock);
     queue->is_dropped = 1;
-    pthread_spin_unlock(&queue->flag_lock);
 
     pthread_mutex_lock(&queue->lock);
    

@@ -1,3 +1,4 @@
+#pragma once
 #include <pthread.h>
 #include <semaphore.h>
 #define MSG_COUNT 10
@@ -13,7 +14,6 @@ typedef struct {
     sem_t curr_wait_msg, curr_wait_space;
     
     volatile unsigned char is_dropped;
-    pthread_spinlock_t flag_lock;
 } Queue;
 
 void mymsginit(Queue* queue);
