@@ -27,8 +27,7 @@ void* construct_abc(void* params)
 
 void* construct_module(void* prms) 
 {
-    while (1)
-    {
+    while (1) {
         sem_wait(&sem_a);
         sem_wait(&sem_b);
         sem_post(&sem_module); 
@@ -38,8 +37,7 @@ void* construct_module(void* prms)
 
 void construct_widget()
 {
-    while (1)
-    {
+    while (1) {
         sem_wait(&sem_module);
         sem_wait(&sem_c);
         printf("widget constructed\n");
