@@ -10,7 +10,6 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int turn = 0;
 void* thread_body(void* param) {
 	for (int i = 0; i < 10; i++) {
-		sleep(1);
 		pthread_mutex_lock(&mutex);
 		while (atomic_load(&turn) != 1) {
 			pthread_cond_wait(&cond, &mutex);
