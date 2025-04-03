@@ -10,6 +10,7 @@ void* thread_body(void* param) {
         usleep(50000);
         fflush(0);
     }
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
