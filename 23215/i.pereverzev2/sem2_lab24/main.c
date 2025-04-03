@@ -19,9 +19,9 @@ void* construct_abc(void* params)
 {
     pars* paramr = (pars*)params;
     while(1) {
+        sleep(paramr->time);
         sem_post(paramr->sem);
         printf("%c was constructed\n", paramr->type);
-        sleep(paramr->time);
     }
 }
 
@@ -36,7 +36,7 @@ void* construct_module(void* prms)
     }
 }
 
-void* construct_widget(void* prms)
+void construct_widget()
 {
     while (1)
     {
@@ -60,11 +60,10 @@ int main() {
     pthread_t thrd_b;
     pthread_t thrd_c;
     pthread_t thrd_mdl;
-    pthread_t thrd_wdg;
     pthread_create(&thrd_a, NULL, construct_abc, &pars_a);
     pthread_create(&thrd_b, NULL, construct_abc, &pars_b);
     pthread_create(&thrd_c, NULL, construct_abc, &pars_c);
     pthread_create(&thrd_mdl, NULL, construct_module, NULL);
-    pthread_create(&thrd_wdg, NULL, construct_widget, NULL);
+    construct_widget();
     return 0;
 }
