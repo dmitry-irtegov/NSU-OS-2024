@@ -48,5 +48,5 @@
 .tmp_versions/
 modules.order
 Module.symvers
-eMkfile.old
+Mkfile.old
 dkms.conf
