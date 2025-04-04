@@ -1,0 +1,46 @@
+#include <stdio.h>    
+#include <stdlib.h>   
+#include <pthread.h>  
+#include <errno.h>  
+
+#define handleerror(en, msg) do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
+void* print_lines() {
+    for (int i = 0; i < 10; i++) {
+        printf("%d\n", i);
+        fflush(stdout); // Принудительный сброс буфера
+    }
+    return NULL;
+}
+
+int main() {
+    pthread_t thread;
+    pthread_attr_t attr;
+    
+    int val = pthread_attr_init(&attr); 
+    if (val != 0){ 
+        handleerror(val, "pthread_attr_init");\
+        } 
+    
+    int val1 = pthread_create(&thread, NULL, &print_lines, NULL); 
+    if (val1 != 0){ 
+        handleerror(val1, "pthread_create");
+        }
+        
+    int val2 = pthread_attr_destroy(&attr);
+    if (val2 != 0){
+        handleerror(val2, "pthread_attr_destroy");
+        }
+        
+    // Ожидание завершения дочернего потока
+    int val3=pthread_join(thread, NULL);
+    if (val3 != 0){
+    	handleerror(val2, "pthread_join");
+    }
+    
+    // Выполнение кода в главном потоке после завершения дочернего
+    print_lines();
+    
+    exit(EXIT_SUCCESS);
+}
+
