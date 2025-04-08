@@ -57,11 +57,11 @@ func assembleModule(aChan <-chan struct{}, bChan <-chan struct{}, moduleChan cha
 		case <-bChan:
 			hasB = true
 		default:
-		}
-		if hasA && hasB {
-			fmt.Println("Module assembled")
-			moduleChan <- struct{}{}
-			hasA, hasB = false, false
+			if hasA && hasB {
+				fmt.Println("Module assembled")
+				moduleChan <- struct{}{}
+				hasA, hasB = false, false
+			}
 		}
 	}
 }
@@ -75,10 +75,11 @@ func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}) {
 		case <-cChan:
 			hasC = true
 		default:
+			if hasModule && hasC {
+				fmt.Println("Widget assembled")
+				hasModule, hasC = false, false
+			}
 		}
-		if hasModule && hasC {
-			fmt.Println("Widget assembled")
-			hasModule, hasC = false, false
-		}
+
 	}
 }
