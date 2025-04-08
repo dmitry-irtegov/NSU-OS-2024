@@ -7,32 +7,43 @@ void* thread_funk() {
 	for (int i = 0; i < 10; i++) {
 		printf("%d\n", i);
 	}
-	return NULL;
+	pthread_exit(NULL);
 }
 
+void handler(char str[], int num) {
+	char buf[256];
+	strerror_r(num, buf, 256);
+	fprintf(stderr, "%s error: %s", str, buf);
+	exit(EXIT_FAILURE);
+}
 
 int main() {
 	pthread_t thread;
+	pthread_attr_t attr;
 
 	int checkRes = 0;
 
-
-	checkRes = pthread_create(&thread, NULL, thread_funk, NULL);
+	checkRes = pthread_attr_init(&attr);
 	if (checkRes != 0) {
-		char buf[256];
-		strerror_r(checkRes, buf, 256);
-		fprintf(stderr, "create error: %s", buf);
-		exit(1);
+		handler("attr_init", checkRes);
 	}
 
-	checkRes = pthread_join(thread, NULL);
+	checkRes = pthread_create(&thread, &attr, thread_funk, NULL);
 	if (checkRes != 0) {
-		char buf[256];
-		strerror_r(checkRes, buf, 256);
-		fprintf(stderr, "join error: %s", buf);
-		exit(1);
+		handler("create", checkRes);
 	}
 
-	thread_funk(NULL);
-	exit(0);
+
+	checkRes = pthread_attr_destroy(&attr);
+	if (checkRes != 0) {
+		handler("destroy", checkRes);
+	}
+
+	checkRes = pthread_join(thread);
+	if (checkRes != 0) {
+		handler("join", checkRes);
+	}
+
+	thread_funk();
+	exit(EXIT_SUCCESS);
 }
