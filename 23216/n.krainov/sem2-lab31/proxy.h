@@ -16,8 +16,9 @@ typedef struct {
 typedef struct {
     Buffer* key;
     Buffer* val;
+    time_t timeCreating;
     char status; // 0 - качается, 1 - скачано, 2 - закачивание провалилось (на будущее) (нужно еще состояний добавить)
-    int ttl; //на будущее (надо подумать, когда чистить кэш. Возможно, проще раз в какое-то время устраивать глобальную чистку (типа сборщика мусора))
+    char inUse; 
 } CacheEntry;
 
 
@@ -54,6 +55,7 @@ typedef struct {
     int countPFDs; //количество "живых" записей
     int lenPFDs; //длина массива
     Cache cache;
+    char endOfWork;
 } ProxyState;
 
 
@@ -67,5 +69,13 @@ typedef struct {
 #define HTTP_PORT 80
 
 CacheEntry* getPage(Buffer* key);
+
+int initCache();
+
+int workLoop();
+
+int putInCache(Buffer* key, Buffer* val, char status);
+
+void purgeCache(time_t timeNow);
 
 #endif

@@ -3,37 +3,48 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
+#include <signal.h>
 
 #define MAX 10
 
 ProxyState proxy;
 
+void setFlag() {
+    proxy.endOfWork = 1;
+}
+
 int initProxy(int port) {
-    proxy.countPFDs = 0;
-    proxy.lenPFDs = 10;
+    int initPFDs = 10;
+    int initRequest = 10;
+    int initLoaders = 10;
+
+    proxy.endOfWork = 0;
+    proxy.countPFDs = 1;
+    proxy.lenPFDs = initPFDs;
     proxy.countLoaders = 0;
-    proxy.lenLoaders = 10;
+    proxy.lenLoaders = initLoaders;
     proxy.countRequests = 0;
-    proxy.lenRequests = 10;
-    proxy.pfds = calloc(10, sizeof(struct pollfd));
+    proxy.lenRequests = initRequest;
+    proxy.pfds = calloc(initPFDs, sizeof(struct pollfd));
     
     if (proxy.pfds == NULL) {
         return 1;
     }
 
-    proxy.types = calloc(10, sizeof(char));
+    proxy.types = calloc(initPFDs, sizeof(char));
 
     if (proxy.types == NULL) {
         return 1;
     }
 
-    proxy.loaders = calloc(10, sizeof(Loader));
+    proxy.loaders = calloc(initLoaders, sizeof(Loader));
 
     if (proxy.loaders == NULL) {
         return 1;
     }
 
-    proxy.requests = calloc(10, sizeof(Request));
+    proxy.requests = calloc(initRequest, sizeof(Request));
 
     if (proxy.requests == NULL) {
         return 1;
@@ -51,15 +62,15 @@ int initProxy(int port) {
     proxy.pfds[0].fd = sockfd;
     proxy.pfds[0].events = POLLIN;
     
-    for (int i = 1; i < 10; i++) {
+    for (int i = 1; i < initPFDs; i++) {
         proxy.pfds[i].fd = -1;
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < initRequest; i++) {
         proxy.requests[i].fd = -1;
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < initLoaders; i++) {
         proxy.loaders[i].fd = -1;
     }
 
@@ -75,6 +86,10 @@ int initProxy(int port) {
     } 
 
     if (listen(sockfd, 10) == -1) {
+        return 1;
+    }
+
+    if (sigset(SIGINT, setFlag) == SIG_ERR) {
         return 1;
     }
 
