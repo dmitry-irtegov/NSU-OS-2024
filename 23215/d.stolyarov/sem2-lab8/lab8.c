@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <string.h>
 
-#define num_steps 200000000
+#define num_steps 800000000
 
 int strtoi(char* s){
     int t = 0, size = strlen(s);
@@ -39,6 +39,13 @@ int main(int argc, char** argv) {
     }
     double pi = 0;
     
+    int steps;
+    if(argc >= 3){
+        steps = strtoi(argv[2]);
+    }
+    else{
+        steps = num_steps;
+    }
     int threadAmount = strtoi(argv[1]);
     if(threadAmount < 1){
         perror("Wrong amount of threads");
@@ -48,15 +55,15 @@ int main(int argc, char** argv) {
     void *** threadsParams = (void***) malloc(sizeof(void**) *  threadAmount);
     pthread_t * threads = (pthread_t*) malloc(sizeof(pthread_t) * threadAmount);
     
-    int threadPart = (num_steps - 1) / threadAmount + 1;
+    int threadPart = (steps - 1) / threadAmount + 1;
     for(int i = 0; i < threadAmount; i++){
         void ** params = (void **)malloc(sizeof(void *) * 3);
-        params[0] = (int*)malloc(sizeof(int));
-        params[1] = (int*)malloc(sizeof(int));
-        params[2] = (double*)malloc(sizeof(double));
+        params[0] = (int*)malloc(sizeof(int)); //вычисляем пи, начиная с элемента под таким номером
+        params[1] = (int*)malloc(sizeof(int)); //и заканчиваем этим номером
+        params[2] = (double*)malloc(sizeof(double)); //сюда положим результат
         *((int*)params[0]) = i * threadPart;
         if(i == threadAmount - 1){
-            *((int*)params[1]) = num_steps;
+            *((int*)params[1]) = steps;
         }
         else{
             *((int*)params[1]) = (i+1) * threadPart;
