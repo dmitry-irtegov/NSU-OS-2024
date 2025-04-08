@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -18,7 +19,9 @@ func main() {
 	go assembleModule(aChan, bChan, moduleChan)
 	go assembleWidget(moduleChan, cChan)
 
-	select {}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	wg.Wait()
 }
 
 func produceA(ch chan<- struct{}) {
@@ -53,6 +56,7 @@ func assembleModule(aChan <-chan struct{}, bChan <-chan struct{}, moduleChan cha
 			hasA = true
 		case <-bChan:
 			hasB = true
+		default:
 		}
 		if hasA && hasB {
 			fmt.Println("Module assembled")
@@ -70,6 +74,7 @@ func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}) {
 			hasModule = true
 		case <-cChan:
 			hasC = true
+		default:
 		}
 		if hasModule && hasC {
 			fmt.Println("Widget assembled")
