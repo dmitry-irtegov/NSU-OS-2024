@@ -39,7 +39,7 @@ int main() {
 		handler("destroy", checkRes);
 	}
 
-	checkRes = pthread_join(thread);
+	checkRes = pthread_join(thread, NULL);
 	if (checkRes != 0) {
 		handler("join", checkRes);
 	}
