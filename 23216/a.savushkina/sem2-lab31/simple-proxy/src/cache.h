@@ -9,11 +9,14 @@ typedef struct CacheEntry {
     char *url;
     char *response;
     time_t timestamp;
+    int max_age;
+    int is_complete;
     struct CacheEntry *next;
 } CacheEntry;
 
 
-void add_to_cache(const char *url, const char *response);
+void add_to_cache(const char *url, const char *response, int max_age);
 const char *get_from_cache(const char *url);
 void free_cache();
+void mark_cache_entry_complete(const char *url);
 #endif

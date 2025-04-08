@@ -8,9 +8,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <fcntl.h>
+
 #include "proxy.h"
 #include "cache.h"
-
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -25,6 +26,16 @@ int main() {
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    int flags = fcntl(server_fd, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl get failed");
+        exit(EXIT_FAILURE);
+    }
+    if (fcntl(server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl set failed");
         exit(EXIT_FAILURE);
     }
 
@@ -66,10 +77,25 @@ int main() {
         if (fds[0].revents & POLLIN) {
             if ((client_fd = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0) {
                 perror("accept");
-                exit(EXIT_FAILURE);
+                continue;
             }
-            printf("New connection, socket fd is %d, ip is: %u, port: %d\n",
-                   client_fd, htonl(address.sin_addr.s_addr), ntohs(address.sin_port));
+
+            flags = fcntl(client_fd, F_GETFL, 0);
+            if (flags == -1) {
+                perror("fcntl get failed");
+                close(client_fd);
+                continue;
+            }
+            if (fcntl(client_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+                perror("fcntl set failed");
+                close(client_fd);
+                continue;
+            }
+
+            char client_ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &address.sin_addr, client_ip, INET_ADDRSTRLEN);
+            printf("New connection, socket fd is %d, ip is: %s, port: %d\n",
+                   client_fd, client_ip, ntohs(address.sin_port));
 
             for (i = 1; i < MAX_CLIENTS; i++) {
                 if (fds[i].fd < 0) {

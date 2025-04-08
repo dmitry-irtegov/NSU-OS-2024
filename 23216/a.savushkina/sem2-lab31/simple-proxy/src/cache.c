@@ -28,7 +28,10 @@ void print_cache() {
     }
 }
 
-void add_to_cache(const char *url, const char *response) {
+void add_to_cache(const char *url, const char *response, int max_age) {
+    if (max_age <= 0) {
+        return;
+    }
     unsigned long index = hash(url);
     CacheEntry *new_entry = malloc(sizeof(CacheEntry));
     if (!new_entry) {
@@ -37,11 +40,11 @@ void add_to_cache(const char *url, const char *response) {
     new_entry->url = strdup(url);
     new_entry->response = strdup(response);
     new_entry->timestamp = time(NULL);
+    new_entry->max_age = max_age;
     new_entry->next = cache[index];
     cache[index] = new_entry;
     print_cache();
 }
-
 
 void free_cache_entry(CacheEntry *entry) {
     free(entry->url);
@@ -49,9 +52,9 @@ void free_cache_entry(CacheEntry *entry) {
     free(entry);
 }
 
-int is_cache_entry_expired(CacheEntry *entry, int max_age) {
+int is_cache_entry_expired(CacheEntry *entry) {
     time_t current_time = time(NULL);
-    return difftime(current_time, entry->timestamp) > max_age;
+    return difftime(current_time, entry->timestamp) > entry->max_age;
 }
 
 const char *get_from_cache(const char *url) {
@@ -59,7 +62,7 @@ const char *get_from_cache(const char *url) {
     CacheEntry *entry = cache[index];
     while (entry) {
         if (strcmp(entry->url, url) == 0) {
-            if (is_cache_entry_expired(entry, 60)) {
+            if (is_cache_entry_expired(entry)) {
                 cache[index] = entry->next;
                 free_cache_entry(entry);
                 return NULL;
@@ -68,9 +71,20 @@ const char *get_from_cache(const char *url) {
         }
         entry = entry->next;
     }
-    
 
     return NULL;
+}
+
+void mark_cache_entry_complete(const char *url) {
+    unsigned long index = hash(url);
+    CacheEntry *entry = cache[index];
+    while (entry) {
+        if (strcmp(entry->url, url) == 0) {
+            entry->is_complete = 1;
+            return;
+        }
+        entry = entry->next;
+    }
 }
 
 void free_cache() {
