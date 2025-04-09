@@ -1,5 +1,4 @@
 #include "queue.h"
-#include <bits/time.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
