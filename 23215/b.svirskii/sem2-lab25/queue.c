@@ -1,4 +1,5 @@
 #include "queue.h"
+#include <bits/time.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
@@ -6,13 +7,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sched.h>
+#include <time.h>
+#include <errno.h>
 
 void mymsginit(Queue* queue) {
     sem_init(&queue->avail_msg, 0, 0);
     sem_init(&queue->avail_space, 0, MSG_COUNT);
-    sem_init(&queue->curr_wait_msg, 0, 0);
-    sem_init(&queue->curr_wait_space, 0, 0);
-    queue->next_free_index = queue->next_msg_index = 0; 
+    queue->is_dropped = queue->next_free_index = queue->next_msg_index = 0;
     pthread_mutex_init(&queue->lock, NULL);
 }
 
@@ -20,22 +21,23 @@ void mymsgdestroy(Queue* queue) {
     pthread_mutex_destroy(&queue->lock);
     sem_destroy(&queue->avail_msg);
     sem_destroy(&queue->avail_space);
-    sem_destroy(&queue->curr_wait_space);
-    sem_destroy(&queue->curr_wait_msg);
+}
+
+void set_timeout(struct timespec* time) {
+    clock_gettime(CLOCK_REALTIME, time);
+    time->tv_nsec += TIMEOUT_MS * 1000000L;
+    time->tv_sec = time->tv_nsec / 1000000000L;
+    time->tv_nsec = time->tv_nsec % 1000000000L;
 }
 
 int mymsgput(Queue* queue, char* msg) {
-    if (queue->is_dropped) {
-        return 0;
-    }
-
-    sem_post(&queue->curr_wait_space);
-    sem_wait(&queue->avail_space);
-    sem_wait(&queue->curr_wait_space);
-    
-    if (queue->is_dropped) {
-        return 0;
-    }
+    struct timespec t;
+    do {
+        if (queue->is_dropped) {
+            return 0;
+        }
+        set_timeout(&t);
+    } while(sem_timedwait(&queue->avail_space, &t) == -1 && errno == ETIMEDOUT);
 
     pthread_mutex_lock(&queue->lock);
     unsigned long msg_len = strlen(msg);
@@ -52,17 +54,13 @@ int mymsgput(Queue* queue, char* msg) {
 }
 
 int mymsgget(Queue* queue, char* buf, size_t bufsize) {
-    if (queue->is_dropped) {
-        return 0;
-    }
- 
-    sem_post(&queue->curr_wait_msg);
-    sem_wait(&queue->avail_msg);
-    sem_wait(&queue->curr_wait_msg);
-
-    if (queue->is_dropped) {
-        return 0;
-    }
+    struct timespec t;
+    do {
+        if (queue->is_dropped) {
+            return 0;
+        }
+        set_timeout(&t);
+    } while(sem_timedwait(&queue->avail_msg, &t) == -1 && errno == ETIMEDOUT);
 
     pthread_mutex_lock(&queue->lock);
     unsigned int msg_index = queue->next_msg_index;
@@ -81,7 +79,7 @@ void unblock_sem_waiters(sem_t* sem, sem_t* count_wait_sem) {
     sched_yield();
 
     int val = 0;
-    while (sem_getvalue(count_wait_sem, &val) == 0 && val > 0) {
+    while (sem_getvalue(sem, &val) == 0 && val == 0) {
         sem_post(sem);
     }
 }
@@ -89,11 +87,11 @@ void unblock_sem_waiters(sem_t* sem, sem_t* count_wait_sem) {
 void mymsgdrop(Queue* queue) {
     queue->is_dropped = 1;
 
-    pthread_mutex_lock(&queue->lock);
+    // pthread_mutex_lock(&queue->lock);
    
-    unblock_sem_waiters(&queue->avail_space, &queue->curr_wait_space);
-    unblock_sem_waiters(&queue->avail_msg, &queue->curr_wait_msg);
+    // unblock_sem_waiters(&queue->avail_space, &queue->curr_wait_space);
+    // unblock_sem_waiters(&queue->avail_msg, &queue->curr_wait_msg);
 
-    pthread_mutex_unlock(&queue->lock);
+    // pthread_mutex_unlock(&queue->lock);
     printf("queueu was dropped\n");
 }
