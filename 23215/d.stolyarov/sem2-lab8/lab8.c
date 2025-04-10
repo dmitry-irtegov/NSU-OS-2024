@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     else{
         steps = num_steps;
     }
-    int threadAmount = strtoi(argv[1]);
+    int threadAmount = atoi(argv[1]);
     if(threadAmount < 1){
         perror("Wrong amount of threads");
         exit(2);
