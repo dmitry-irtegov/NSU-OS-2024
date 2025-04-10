@@ -45,11 +45,18 @@ int main() {
 
     pthread_create(&thread, NULL, thread_function, NULL);
 
-    usleep(1000);
+    while (pthread_mutex_trylock(&sync_mutex) == 0) {
+        pthread_mutex_unlock(&sync_mutex);  
+    }
 
     for (int i = 0; i < 10; i++) {
         printf("[Parent thread]: Line %d\n", i + 1);
-        release_to_child();
+        if (i == 0) {
+            pthread_mutex_lock(&sync_mutex);
+            pthread_mutex_unlock(&parent_mutex);
+        } else {
+            release_to_child();
+        }
         release_to_parent();
     }
 
