@@ -4,20 +4,6 @@
 #include <string.h>
 
 #define num_steps 800000000
-
-int strtoi(char* s){
-    int t = 0, size = strlen(s);
-    for(int i = 0; i < size; i++){
-        t *= 10;
-        if(s[i] > '9' || s[i] < '0'){
-            return -1;
-        }
-        t += s[i] - '0';
-    }
-    return t;
-}
-
-
 void * calc_pi(void * params){
     double piPart = 0;
     int from = *((int*) ((void**)params)[0]);
@@ -41,7 +27,7 @@ int main(int argc, char** argv) {
     
     int steps;
     if(argc >= 3){
-        steps = strtoi(argv[2]);
+        steps = atoi(argv[2]);
     }
     else{
         steps = num_steps;
