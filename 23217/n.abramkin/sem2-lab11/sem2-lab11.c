@@ -42,6 +42,7 @@ int main() {
     pthread_mutex_init(&sync_mutex, &attr);
 
     pthread_mutex_lock(&parent_mutex);
+    pthread_mutex_lock(&child_mutex);
 
     pthread_create(&thread, NULL, thread_function, NULL);
 
@@ -51,12 +52,7 @@ int main() {
 
     for (int i = 0; i < 10; i++) {
         printf("[Parent thread]: Line %d\n", i + 1);
-        if (i == 0) {
-            pthread_mutex_lock(&sync_mutex);
-            pthread_mutex_unlock(&parent_mutex);
-        } else {
-            release_to_child();
-        }
+        release_to_child();
         release_to_parent();
     }
 
