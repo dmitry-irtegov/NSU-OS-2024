@@ -103,8 +103,8 @@ func processDir(src, dst string, wg *sync.WaitGroup) {
 }
 
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatal("Usage: gocp <source> <destination>")
+	if len(os.Args) < 3 {
+		log.Fatal("Usage: go run main.go <source> <destination>")
 	}
 
 	var wg sync.WaitGroup
