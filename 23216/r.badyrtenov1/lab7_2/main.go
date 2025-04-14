@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -41,24 +42,20 @@ func copyFile(src, dst string, fi os.FileInfo, wg *sync.WaitGroup) {
 
 	srcFile, err := openWithRetry(src, syscall.O_RDONLY, 0)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 	defer srcFile.Close()
 
 	dstFile, err := openWithRetry(dst, syscall.O_WRONLY|syscall.O_CREAT|syscall.O_TRUNC, fi.Mode())
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 	defer dstFile.Close()
 
 	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		log.Println(err)
-	}
-
-	if err = os.Chmod(dst, fi.Mode()); err != nil {
-		log.Printf("Warning: can't set permissions for %s: %v", dst, err)
+		fmt.Println(err)
 	}
 }
 
@@ -79,7 +76,7 @@ func processDir(src, dst string, wg *sync.WaitGroup) {
 			break
 		}
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 			break
 		}
 
@@ -89,7 +86,7 @@ func processDir(src, dst string, wg *sync.WaitGroup) {
 
 		if entry.IsDir() {
 			if err = createDir(dstPath, entry); err != nil {
-				log.Println(err)
+				fmt.Println(err)
 				continue
 			}
 
@@ -113,19 +110,21 @@ func main() {
 
 	srcInfo, err := os.Stat(source)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return
+	}
+	if !srcInfo.IsDir() {
+		fmt.Println("cp " + source + ": not a directory")
+		return
 	}
 
-	if !srcInfo.IsDir() {
-		log.Fatal("Source is not a directory")
+	if _, err = os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
+		dest = filepath.Join(dest, filepath.Base(source))
 	}
 
 	if err = os.MkdirAll(dest, srcInfo.Mode()); err != nil {
-		log.Fatal(err)
-	}
-
-	if err = os.Chmod(dest, srcInfo.Mode()); err != nil {
-		log.Printf("Warning: can't set permissions for %s: %v", dest, err)
+		fmt.Println(err)
+		return
 	}
 
 	wg.Add(1)
