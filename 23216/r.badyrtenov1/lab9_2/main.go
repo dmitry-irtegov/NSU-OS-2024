@@ -6,25 +6,26 @@ import (
 	"os/signal"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"syscall"
 )
 
 const checkInterval = 1000000 // Интервал проверки прерывания
 
-func waitSignal(interruptFlag *atomic.Bool, sigChan <-chan os.Signal) {
+func waitSignal(mutex *sync.Mutex, sigChan <-chan os.Signal) {
+	mutex.Lock()
 	<-sigChan
-	interruptFlag.Store(true)
+	mutex.Unlock()
 }
 
-func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, interruptFlag *atomic.Bool) {
+func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, mutex *sync.Mutex) {
 	defer wg.Done()
 	partialSum := 0.0
 	count, i := 1, start
 	for {
 		partialSum += 1.0 / (float64(i)*4.0 + 1.0)
 		partialSum -= 1.0 / (float64(i)*4.0 + 3.0)
-		if count%checkInterval == 0 && interruptFlag.Load() {
+		if count%checkInterval == 0 && mutex.TryLock() {
+			mutex.Unlock()
 			break
 		}
 		count++
@@ -47,13 +48,13 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
 	result := make(chan float64, amtThreads)
-	var interruptFlag atomic.Bool
+	var mutex sync.Mutex
 	var wg sync.WaitGroup
 
-	go waitSignal(&interruptFlag, sigChan)
+	go waitSignal(&mutex, sigChan)
 	for i := 0; i < amtThreads; i++ {
 		wg.Add(1)
-		go leibnizPi(i, amtThreads, result, &wg, &interruptFlag)
+		go leibnizPi(i, amtThreads, result, &wg, &mutex)
 	}
 
 	wg.Wait()
