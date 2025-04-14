@@ -11,21 +11,36 @@ import (
 
 const checkInterval = 1000000 // Интервал проверки прерывания
 
-func waitSignal(mutex *sync.Mutex, sigChan <-chan os.Signal) {
-	mutex.Lock()
-	<-sigChan
-	mutex.Unlock()
+type InterruptFlag struct {
+	mu    sync.Mutex
+	value bool
 }
 
-func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, mutex *sync.Mutex) {
+func (f *InterruptFlag) Set(value bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.value = value
+}
+
+func (f *InterruptFlag) Get() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.value
+}
+
+func waitSignal(f *InterruptFlag, sigChan <-chan os.Signal) {
+	<-sigChan
+	f.Set(true)
+}
+
+func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, f *InterruptFlag) {
 	defer wg.Done()
 	partialSum := 0.0
 	count, i := 1, start
 	for {
 		partialSum += 1.0 / (float64(i)*4.0 + 1.0)
 		partialSum -= 1.0 / (float64(i)*4.0 + 3.0)
-		if count%checkInterval == 0 && mutex.TryLock() {
-			mutex.Unlock()
+		if count%checkInterval == 0 && f.Get() {
 			break
 		}
 		count++
@@ -48,13 +63,13 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
 	result := make(chan float64, amtThreads)
-	var mutex sync.Mutex
+	var f InterruptFlag
 	var wg sync.WaitGroup
 
-	go waitSignal(&mutex, sigChan)
+	go waitSignal(&f, sigChan)
 	for i := 0; i < amtThreads; i++ {
 		wg.Add(1)
-		go leibnizPi(i, amtThreads, result, &wg, &mutex)
+		go leibnizPi(i, amtThreads, result, &wg, &f)
 	}
 
 	wg.Wait()
