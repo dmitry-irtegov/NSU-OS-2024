@@ -5,8 +5,6 @@
 #include <string.h>
 #include <ctype.h>
 
-extern ProxyState proxy;
-
 Buffer* initBuffer(int cap, char* source) {
     Buffer* ret = calloc(1, sizeof(Buffer));
     if (ret == NULL) {
@@ -47,7 +45,7 @@ int resizeBuffer(Buffer* buf) {
         }
 
         buf->buffer[buf->len * 2] = '\0';
-        buf->len = buf->len * 2 + 1;
+        buf->len = buf->len * 2;
     }
 
     return 0;
@@ -56,21 +54,30 @@ int resizeBuffer(Buffer* buf) {
 int addToPFDs(int newConn, short event, char type) {
     int startIndex = 1;
     if (proxy.countPFDs == proxy.lenPFDs) {
-        proxy.pfds = realloc(proxy.pfds, proxy.lenPFDs * 2);
-        if (proxy.pfds == NULL) { 
+        struct pollfd* pfds = calloc(proxy.lenPFDs * 2, sizeof(struct pollfd));
+        char* types = calloc(proxy.lenPFDs * 2, sizeof(char));
+
+        if (pfds == NULL || types == NULL) {
+            free(pfds);
+            free(types);
             return 1;
         }
 
-        proxy.types = realloc(proxy.types, proxy.lenPFDs * 2);
-        if (proxy.types == NULL) {
-            return 1;
-        }
+        memcpy(pfds, proxy.pfds, sizeof(struct pollfd) * proxy.lenPFDs);
+        memcpy(types, proxy.types, sizeof(char) * proxy.lenPFDs);
+        
+        free(proxy.pfds);
+        free(proxy.types);
+
+        proxy.pfds = pfds;
+        proxy.types = types;
 
         proxy.lenPFDs = proxy.lenPFDs * 2;
         startIndex = proxy.countPFDs;
 
         for (int i = startIndex; i < proxy.lenPFDs; i++) {
             proxy.pfds[i].fd = -1;
+            proxy.types[i] = 0;
         }
     }
 
@@ -88,32 +95,63 @@ int addToPFDs(int newConn, short event, char type) {
     return 1;
 }
 
+void removeFromPFDs(int newConn) {
+    for (int i = 1; i < proxy.lenPFDs; i++) {  
+        if (proxy.pfds[i].fd == newConn) {
+            proxy.pfds[i].fd = -1;
+            proxy.pfds[i].events = 0;
+            proxy.types[i] = 0;
+            proxy.countPFDs--;
+            return;
+        }
+    }
+}
+
 int addToRequests(int newConn) {
     int startIndex = 0;
     if (proxy.countRequests == proxy.lenRequests) {
-        proxy.requests = realloc(proxy.requests, proxy.lenRequests * 2);   
-        if (proxy.requests == NULL) {
+        Request* res = realloc(proxy.requests, sizeof(Request) * proxy.lenRequests * 2);   
+        if (res == NULL) {
             return 1;
         }
+        proxy.requests = res;
 
         startIndex = proxy.countRequests;
+        proxy.lenRequests = proxy.lenRequests * 2;
+
+        for (int i = startIndex; i < proxy.lenRequests; i++) {
+            proxy.requests[i].fd = -1;
+        }
     }
 
     for (int i = startIndex; i < proxy.lenRequests; i++) { //
         if (proxy.requests[i].fd == -1) {
-            proxy.requests[i].fd = newConn;
-            
-            proxy.requests[i].req = initBuffer(256, NULL);
+            proxy.requests[i].req = initBuffer(128, NULL);
 
             if (proxy.requests[i].req == NULL) {
                 return 1;
             }
+
+            proxy.countRequests++;
+            proxy.requests[i].fd = newConn;
 
             return 0;
         }
     }
 
     return 1;
+}
+
+void removeFromRequests(int newConn) {
+    for (int i = 0; i < proxy.lenRequests; i++) {  
+        if (proxy.requests[i].fd == newConn) {
+            proxy.requests[i].fd = -1;
+            freeBuffer(proxy.requests[i].keyCache);
+            freeBuffer(proxy.requests[i].req);
+            proxy.countRequests--;
+            return;
+        }
+    }
 }
 
 Request* findRequest(int indexPFD) {
@@ -139,6 +177,48 @@ Loader* findLoader(int indexPFD) {
 }
 
 int checkEndOfReq(Buffer* req) {
-    return req->buffer[req->count-1] == '\n' && req->buffer[req->count-2] == '\r' 
-        && req->buffer[req->count-3] == '\n' && req->buffer[req->count-4] == '\r';    
+    return strstr(req->buffer, "\r\n\r\n") != NULL;    
+}
+
+int analyzeRequest(Request* req) {
+    char* check1 = strstr(req->req->buffer, "HEAD");
+    char* check2 = strstr(req->req->buffer, "GET");
+    char* check3 = strstr(req->req->buffer, "HTTP/1.0");
+
+    if ((check1 == NULL) == (check2 == NULL) || !check3 || ((check1 == NULL) ? check2 : check1) > check3) { 
+        return 1;
+    }
+
+    char* http = strstr(req->req->buffer, "http://");
+    char* HTTP = strstr(req->req->buffer, "HTTP://");
+
+    char* url = (http == NULL ? HTTP : http);
+    if ((http == NULL) == (HTTP == NULL) && url < check3 &&
+        url > ((check1 == NULL) ? check2 : check1)) {
+
+        return 1;
+    }
+
+    url += strlen("HTTP://");
+
+    char* ptr = url;
+    int cap = 0;
+
+    while (!isspace(*ptr)) {
+        cap++;
+        ptr++;
+    }
+    
+    if (cap == 0) {
+        return 1;
+    }
+
+    Buffer* key = initBuffer(cap, url);
+    if (key == NULL) {
+        return -1;
+    }
+    
+    req->keyCache = key;
+
+    return 0;
 }

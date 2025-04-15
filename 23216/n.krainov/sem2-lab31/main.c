@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <limits.h>
 
 #define MAX 10
 
@@ -85,7 +86,7 @@ int initProxy(int port) {
         return 1;
     } 
 
-    if (listen(sockfd, 10) == -1) {
+    if (listen(sockfd, 500) == -1) {
         return 1;
     }
 
@@ -96,9 +97,6 @@ int initProxy(int port) {
     return 0;
 }
 
-//ПРОКСИ ЕЩЕ НЕ ЗАВЕРШЕН
-//если ты пришел смотреть как делать его, то лучше подожди, когда будет готово
-//Или почитай комментарии, что доделывать надо
 int main(int argc, char** argv) {
     int port;
     if (argc < 2 || (port = atoi(argv[1])) <= 1024) {

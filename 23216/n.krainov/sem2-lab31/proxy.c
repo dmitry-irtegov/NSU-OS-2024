@@ -20,36 +20,47 @@
 
 extern ProxyState proxy;
 
-//вообще надо бы принтовать, что происходит (кто постучался к нам, куда он пошел и так далее)
-//может раскидать разные этапы по разным файлам? Сейчас это крайне трудночитабельно
-//надо подумать, когда надо умереть, а когда просто кидать ошибку. Вроде при неуспехе маллока можно почистить кэш. Но тогда в чем смысл?
-
 int registerRequest(int fd) {
     int newConn = accept(fd, NULL, NULL);
     if (newConn == -1) {
-        perror("accept failed");
-        return 2;
-    }
-
-    if (fcntl(newConn, F_SETFL, O_NONBLOCK) == -1) {
         return 1;
     }
 
+    if (fcntl(newConn, F_SETFL, O_NONBLOCK) == -1) {
+        close(newConn);
+        return -1;
+    }
+
     if (addToPFDs(newConn, POLLIN, REQUEST)) {
+        close(newConn);
         return 1;
     }
 
     if (addToRequests(newConn)) {
+        removeFromPFDs(newConn);
+        close(newConn);
         return 1;
     }
 
     return 0;
 }
 
-int registerConnect(Loader* loader) {
+int registerConnect(Buffer* url) {
     struct sockaddr_in servaddr;
 
-    struct hostent* hosts = gethostbyname(loader->key->buffer); 
+    int end = url->count;
+    for (int i = 0; i < url->count; i++) {
+        if (url->buffer[i] == '/') {
+            end = i;
+            break;
+        }
+    }
+
+    Buffer* host = initBuffer(end, url->buffer);
+
+    struct hostent* hosts = gethostbyname(host->buffer);
+    
+    freeBuffer(host);
     
     if (hosts == NULL) {
         return -2;
@@ -83,90 +94,78 @@ int registerConnect(Loader* loader) {
     return sockfd;
 }
 
-int analyzeRequest(Request* req) {
-    char* check1 = strstr(req->req->buffer, "HEAD");
-    char* check2 = strstr(req->req->buffer, "GET");
-    char* check3 = strstr(req->req->buffer, "HTTP/1.0");
-
-    if ((check1 == NULL) == (check2 == NULL) || !check3 || ((check1 == NULL) ? check2 : check1) > check3) { 
-        return 1;
-    }
-
-    char* http = strstr(req->req->buffer, "http://");
-    char* HTTP = strstr(req->req->buffer, "HTTP://");
-
-    char* url = (http == NULL ? HTTP : http);
-    if ((http == NULL) == (HTTP == NULL) && url < check3 &&
-        url > ((check1 == NULL) ? check2 : check1)) {
-
-        return 1;
-    }
-
-    url += strlen("HTTP://");
-
-    char* ptr = url;
-    int cap = 0;
-
-    while (!isspace(*ptr) && *ptr != '/') {
-        cap++;
-        ptr++;
-    }
-    
-    if (cap == 0) {
-        return 1;
-    }
-
-    Buffer* key = initBuffer(cap, url);
-    if (key == NULL) {
-        return -1;
-    }
-    
-    req->keyCache = key;
-
-    return 0;
-}
-
 int initLoader(Request* req) {
+    int startIndex = 0;
     if (proxy.lenLoaders == proxy.countLoaders) {
-        proxy.loaders = realloc(proxy.loaders, proxy.lenLoaders * 2);
+        proxy.loaders = realloc(proxy.loaders, sizeof(Loader) * proxy.lenLoaders * 2);
         if (proxy.loaders == NULL) {
             return 1;
         }
+
+        proxy.lenLoaders *= 2;
+        startIndex = proxy.countLoaders;
+        for (int i = startIndex; i < proxy.lenLoaders; i++) {
+            proxy.loaders[i].fd = -1;
+        }
     }
     
-    for (int i = 0; i < proxy.lenLoaders; i++) {
+    for (int i = startIndex; i < proxy.lenLoaders; i++) {
         if (proxy.loaders[i].fd == -1) {
-            Buffer* Lkey = initBuffer(req->keyCache->count, req->keyCache->buffer);
-            proxy.loaders[i].key = Lkey;
-            proxy.loaders[i].request = req->req;
-            
             Buffer* buf = initBuffer(2048, NULL); 
             if (buf == NULL) {
                 return 1;
             }
 
-            proxy.loaders[i].fd = registerConnect(&proxy.loaders[i]);
+            proxy.loaders[i].request = initBuffer(req->req->count, req->req->buffer);
+            if (proxy.loaders[i].request == NULL) {
+                freeBuffer(buf);
+                return 1;
+            }
 
+            Buffer* Lkey = initBuffer(req->keyCache->count, req->keyCache->buffer);
+            if (Lkey == NULL) {
+                freeBuffer(buf);
+                return 1;
+            }
+
+            proxy.loaders[i].key = Lkey;
+
+            proxy.loaders[i].fd = registerConnect(req->keyCache);
             if (proxy.loaders[i].fd == -1) {
+                free(proxy.loaders[i].request);
+                freeBuffer(buf);
                 return 1;
             } else if (proxy.loaders[i].fd == -2) {
+                free(proxy.loaders[i].request);
                 proxy.loaders[i].fd = -1;
                 free(buf->buffer);
+
                 if (status502(buf)) {
                     return 1;
                 }
 
-                putInCache(req->keyCache, buf, 1);
+                if (putInCache(Lkey, buf, PAGE_ERROR)) {
+                    freeBuffer(buf);
+                }
                 return 2;
             }
 
             Buffer* key = initBuffer(req->keyCache->count, req->keyCache->buffer);
-            if (putInCache(key, buf, 0)) {
+            if (key == NULL) {
+                freeBuffer(Lkey);
+                freeBuffer(proxy.loaders[i].request);
+                freeBuffer(buf);
+            }
+
+            if (putInCache(key, buf, PAGE_CHECKING)) {
+                freeBuffer(buf);
+                freeBuffer(Lkey);
+                freeBuffer(key);
+                freeBuffer(proxy.loaders[i].request);
                 return 1;
             } 
 
             proxy.countLoaders++;
-
             return 0;
         }
     }
@@ -181,7 +180,9 @@ int checkCache(Request* req) {
         if (initLoader(req) == 1) {
             return 1;
         }
-    } 
+    } else {
+        entry->inUse++;
+    }
 
     return 0;
 }
@@ -189,7 +190,7 @@ int checkCache(Request* req) {
 int processRequest(int index) {
     Request* req = findRequest(index);
     
-    int cnt = 0;
+    ssize_t cnt = 0;
     while ((cnt = read(req->fd, 
                         req->req->buffer + req->req->count, 
                         req->req->len - req->req->count))) {
@@ -206,30 +207,33 @@ int processRequest(int index) {
         resizeBuffer(req->req);
     }
 
+
     if (checkEndOfReq(req->req)) {
         int retval = analyzeRequest(req);
-        if (retval == -1) {
+        
+        if (retval == -1) { //что делать, если нет памяти?
+            close(proxy.pfds[index].fd);
+            removeFromPFDs(proxy.pfds[index].fd);
+            removeFromRequests(proxy.pfds[index].fd);
             return 1;
-        } else if (retval == 1) {
-            proxy.pfds[index].fd = -1;
-            req->fd = -1;
-            freeBuffer(req->req);
-            proxy.countRequests--;
-            proxy.countPFDs--;
-            return 0;
+        } else if (retval == 1) { //надо отправлять ошибку вообще
+            close(proxy.pfds[index].fd);
+            removeFromPFDs(proxy.pfds[index].fd);
+            removeFromRequests(proxy.pfds[index].fd);
+        
+            return 1;
         }
 
         if (checkCache(req)) {
             return 1;
         }
 
+        req->curIndex = 0;
         proxy.pfds[index].events = POLLOUT;
         proxy.types[index] = ANSWER;
     } else {
-        req->fd = -1;
-        freeBuffer(req->req);
-        proxy.countRequests--;
-        proxy.pfds[index].fd = -1;
+        removeFromPFDs(req->fd);
+        removeFromRequests(req->fd);
     }
 
 
@@ -240,22 +244,41 @@ int processConnecting(int index) {
     int err;
     socklen_t sz = sizeof(err);
     if (getsockopt(proxy.pfds[index].fd, SOL_SOCKET, SO_ERROR, &err, &sz) != 0) {
+        Loader* loader = findLoader(index);
+        freeBuffer(loader->key);
+        freeBuffer(loader->request);
+        removeFromPFDs(loader->fd);
+        close(loader->fd);
+        
+        CacheEntry* entry = getPage(loader->key);
+        freeBuffer(entry->val);
+        entry->status = PAGE_ERROR;
+        entry->inUse--;
+
+        if (status502(entry->val)) {
+            entry->val->buffer = NULL;
+            return 1;
+        }
         return 1;
     }
 
     if (err != 0) {
         Loader* loader = findLoader(index);
-
-        loader->fd = -1;
+        freeBuffer(loader->key);
+        freeBuffer(loader->request);
+        removeFromPFDs(loader->fd);
+        close(loader->fd);
+        
         CacheEntry* entry = getPage(loader->key);
         freeBuffer(entry->val);
+        entry->status = PAGE_ERROR;
+        entry->inUse--;
 
         if (status502(entry->val)) {
+            entry->val->buffer = NULL;
             return 1;
         }
-        
-        entry->status = 1;
-        proxy.pfds[index].fd = -1;    
+            
         return 0;
     }
 
@@ -275,21 +298,24 @@ int processSendingReq(int index) {
             }
 
             if (errno == ECONNRESET) {
-                loader->fd = -1;
                 CacheEntry* entry = getPage(loader->key);
+                entry->status = PAGE_ERROR;
+                entry->inUse--;
                 freeBuffer(entry->val);
+                freeBuffer(loader->key);
+                freeBuffer(loader->request);
     
                 if (status502(entry->val)) {
+                    entry->val->buffer = NULL;
                     return 1;
                 }
                 
-                entry->status = 1;
-                errno = 0;
-                proxy.pfds[index].fd = -1;
+                removeFromPFDs(loader->fd);
+                loader->fd = -1;
                 
-                return 0;
+                return 1;
             }
-
+            
             return 1;
         }
         
@@ -313,7 +339,7 @@ int checkAnswer(Buffer* buf) {
         return -1;
     }
 
-    protocol+=strlen("HTTP/1.0");
+    protocol += strlen("HTTP/1.0");
 
     int status = atoi(protocol);
 
@@ -329,7 +355,6 @@ int processServerAnswer(int index) {
     
     
     CacheEntry* entry = getPage(loader->key);
-    entry->inUse = 1;
     ssize_t count;
 
     while ((count = read(loader->fd, entry->val->buffer + entry->val->count, entry->val->len - entry->val->count))) {
@@ -338,30 +363,66 @@ int processServerAnswer(int index) {
                 return 0;
             }
 
-            return 1;
+            if (errno == ECONNRESET) {
+                CacheEntry* entry = getPage(loader->key);
+                entry->status = PAGE_ERROR;
+                entry->inUse--;
+                freeBuffer(entry->val);
+                freeBuffer(loader->key);
+                freeBuffer(loader->request);
+    
+                if (status502(entry->val)) {
+                    entry->val->buffer = NULL;
+                    return 1;
+                }
+                
+                removeFromPFDs(loader->fd);
+                loader->fd = -1;
+                
+                return 1;
+            }
+
+            return -1;
         }
 
         entry->val->count += count;
         
         resizeBuffer(entry->val);
 
-        if (entry->status == 0) {
-            if (checkAnswer(entry->val)) {
-                entry->status = 2;
-            } else {
-                entry->status = 3;
+        if (entry->status == PAGE_CHECKING) {
+            int ret = checkAnswer(entry->val);
+            switch (ret) {
+                case -1:
+                    break;
+                case 1:
+                    entry->status = PAGE_ERROR_LOADING;
+                    break;
+                case 0:
+                    entry->status = PAGE_SUCCESS_LOADING;
+                    break;
             }
         }
     }
 
-    entry->status = entry->status == 3 ? 1 : 2;
+    
     close(proxy.pfds[index].fd);
-    proxy.pfds[index].fd = -1;
-    proxy.countPFDs--;
+    removeFromPFDs(loader->fd);
     loader->fd = -1;
-    loader->key = NULL;
-    loader->request = NULL;
+    freeBuffer(loader->key);
+    freeBuffer(loader->request);
     loader->curIndex = 0;
+    switch (entry->status) {
+        case PAGE_ERROR_LOADING:
+            entry->status = PAGE_ERROR;
+            break;
+        case PAGE_SUCCESS_LOADING:
+            entry->status = PAGE_LOADED;
+            break;
+        case PAGE_CHECKING:
+            entry->status = PAGE_ERROR;
+            break;
+    }
+    entry->inUse--;
 
     return 0;
 }
@@ -370,46 +431,48 @@ int processAnswer(int index) {
     Request* req = findRequest(index);
     
     CacheEntry* entry = getPage(req->keyCache);
-    entry->inUse = 1;
+    
 
-    if (entry->status == 1 || entry->status == 2) {
+    if (entry->status == PAGE_SUCCESS_LOADING || entry->status == PAGE_ERROR_LOADING 
+        || entry->status == PAGE_LOADED || entry->status == PAGE_ERROR) {
         ssize_t cnt;
         while ((cnt = write(req->fd, entry->val->buffer + req->curIndex, entry->val->count - req->curIndex))) {
             if (cnt == -1) {
                 if (errno == EAGAIN) {
                     return 0;
                 }
-                return 1;
+
+                if (errno == ECONNRESET) {
+                    close(req->fd); 
+                    entry->inUse--;
+        
+                    removeFromPFDs(req->fd);
+                    removeFromRequests(req->fd);
+                }
+
+                return -1;
             }
         
             req->curIndex += cnt;
         }
 
-        if (req->curIndex == entry->val->count) {
+        if (req->curIndex == entry->val->count && (entry->status == PAGE_LOADED || entry->status == PAGE_ERROR)) {
             close(req->fd); 
-            proxy.countPFDs--;
-            proxy.pfds[index].fd = -1;
-            req->curIndex = 0;
-            req->fd = -1;
-            freeBuffer(req->keyCache);
-            req->keyCache = NULL;
-            req->req = NULL;
-
-            proxy.countRequests--;
-
-            entry->inUse = 0;
-            if (entry->status == 2) {
-                freeBuffer(entry->val);
-                freeBuffer(entry->key);
-                entry->key = NULL;
-                entry->val = NULL;
+            entry->inUse--;
+            if (entry->status == PAGE_ERROR && entry->inUse == 0) {
+                removeFromCache(req->keyCache);
+            } else {
+                entry->timeCreating = time(NULL);
             }
+
+            removeFromPFDs(req->fd);
+            removeFromRequests(req->fd);
+
+            
         } 
         
         
     }
-
-
 
 
     return 0;
@@ -452,34 +515,34 @@ int workLoop() {
         return 1;
     }
 
-    int timeout = 300000;
+    int timeout = TIMEOUT_PURGE;
     while (1) {
         int count;
         switch ((count = poll(proxy.pfds, proxy.lenPFDs, timeout))) {
             case -1:
                 if (!(errno == EINTR && proxy.endOfWork)) {
-                    return 1;   
+                    return -1;   
                 }
             case 0:
                 break;
             default:
                 if (proxy.endOfWork == 0 && proxy.pfds[0].revents & POLLIN) {
                     proxy.pfds[0].revents = 0;
-                    if (registerRequest(proxy.pfds[0].fd) == 1) {
-                        return 1;
+                    if (registerRequest(proxy.pfds[0].fd) == -1) {
+                        return -1;
                     }  
                     count--;
                 }
 
                 for (int i = 1; i < proxy.lenPFDs && count != 0; i++) {
                     if (proxy.pfds[i].revents & POLLIN) {
-                        if (processInputData(i)) {
-                            return 1;
+                        if (processInputData(i) == -1) {
+                            return -1;
                         }
                         count--;
                     } else if (proxy.pfds[i].revents & POLLOUT) {
-                        if (processOutputData(i)) {
-                            return 1;
+                        if (processOutputData(i) == -1) {
+                            return -1;
                         }
                         count--;
                     }
@@ -494,19 +557,22 @@ int workLoop() {
 
         time_t now = time(NULL);
         if (now == -1) {
-            return 1;
+            return -1;
         }
+
         double diff = difftime(now, startCycle);
         if (timeout/1000 > diff) {
             timeout -= diff*1000;
         } else {
             purgeCache(now);
-            timeout = 300000;
+            timeout = TIMEOUT_PURGE;
             startCycle = now;
         }
 
         for (unsigned int i = 0; i < proxy.cache.cap; i++) {
-            proxy.cache.buffers[i].inUse = 0;
+            if (proxy.cache.state[i] == 1 && proxy.cache.buffers[i].status == PAGE_ERROR && proxy.cache.buffers[i].inUse == 0) {
+                removeFromCache(proxy.cache.buffers[i].key);
+            }
         }
     }
 }

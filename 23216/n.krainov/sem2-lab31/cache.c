@@ -7,7 +7,7 @@
 extern ProxyState proxy;
 
 int initCache() {
-    proxy.cache.buffers = calloc(10, sizeof(Buffer));
+    proxy.cache.buffers = calloc(10, sizeof(CacheEntry));
     if (proxy.cache.buffers == NULL) {
         return 1;
     }
@@ -34,7 +34,7 @@ unsigned int getHash(char* key, int len) {
 
 
 int resizeCache() {
-    CacheEntry* newBuffers = calloc(proxy.cache.cap * 2, sizeof(newBuffers));
+    CacheEntry* newBuffers = calloc(proxy.cache.cap * 2, sizeof(CacheEntry));
     if (newBuffers == NULL) {
         return 1;
     }
@@ -87,9 +87,6 @@ CacheEntry* getPage(Buffer* key) {
         if (key->count != proxy.cache.buffers[i].key->count) continue;
 
         if (strncmp(proxy.cache.buffers[i].key->buffer, key->buffer, key->count) == 0) { 
-            
-            //надо реализовать следующую механику:
-            //если страница из тех, что кэшироваться НЕ ДОЛЖНА, то её надо просто после полной передачи к чертям выпилить. Криво, но действенно
             return &proxy.cache.buffers[i];
         }
     }
@@ -111,14 +108,35 @@ int putInCache(Buffer* key, Buffer* val, char status) {
             proxy.cache.buffers[i].key = key;
             proxy.cache.buffers[i].val = val;
             proxy.cache.buffers[i].status = status;
-            proxy.cache.buffers[i].inUse = 1;
-            proxy.cache.buffers[i].timeCreating = time(NULL);
+            proxy.cache.buffers[i].inUse = 2;
             proxy.cache.state[i] = 1;
             return 0;
         }
     }
 
     return 1;
+}
+
+void removeFromCache(Buffer* key) {
+    unsigned int index = getHash(key->buffer, key->count) % proxy.cache.cap;
+    
+    for (unsigned int i = index; ; i = (i + 1) % proxy.cache.cap) {
+        if (proxy.cache.state[i] == 0) {
+            break;
+        }
+
+        if (proxy.cache.state[i] == 2) {
+            continue;
+        }
+
+        if (key->count != proxy.cache.buffers[i].key->count) continue;
+
+        if (strncmp(proxy.cache.buffers[i].key->buffer, key->buffer, key->count) == 0) { 
+            proxy.cache.state[i] = 2;
+            freeBuffer(proxy.cache.buffers[i].val);
+            freeBuffer(proxy.cache.buffers[i].key);
+        }
+    }
 }
 
 void purgeCache(time_t timeNow) {

@@ -4,5 +4,6 @@
 #include "proxy.h"
 
 int status502(Buffer* buf);
+int status400(Buffer* buf);
 
 #endif 

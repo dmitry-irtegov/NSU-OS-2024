@@ -17,8 +17,8 @@ typedef struct {
     Buffer* key;
     Buffer* val;
     time_t timeCreating;
-    char status; // 0 - качается, 1 - скачано, 2 - закачивание провалилось (на будущее) (нужно еще состояний добавить)
-    char inUse; 
+    char status; 
+    int inUse; 
 } CacheEntry;
 
 
@@ -60,13 +60,22 @@ typedef struct {
 
 
 #define SOCKET 0 
-#define ANSWER 1 //output
-#define SERVER_ANSWER 2 //input
-#define REQUEST 3 //input
-#define CONNECTING 4 //output
-#define SENDING_REQ 5 //output
+#define ANSWER 1 
+#define SERVER_ANSWER 2 
+#define REQUEST 3
+#define CONNECTING 4 
+#define SENDING_REQ 5 
+
+#define PAGE_CHECKING 0
+#define PAGE_LOADING 1
+#define PAGE_LOADED 2
+#define PAGE_ERROR 3
+#define PAGE_ERROR_LOADING 4
+#define PAGE_SUCCESS_LOADING 5
 
 #define HTTP_PORT 80
+
+#define TIMEOUT_PURGE 300000
 
 CacheEntry* getPage(Buffer* key);
 
@@ -77,5 +86,7 @@ int workLoop();
 int putInCache(Buffer* key, Buffer* val, char status);
 
 void purgeCache(time_t timeNow);
+
+void removeFromCache(Buffer* keyCache);
 
 #endif
