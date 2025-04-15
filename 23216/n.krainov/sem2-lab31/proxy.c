@@ -334,7 +334,7 @@ int processSendingReq(int index) {
 
 int checkAnswer(Buffer* buf) {
     char* protocol = strstr(buf->buffer, "HTTP/1.0");
-    char* protocol1 = strstrt(buf->buffer, "HTTP/1.1");
+    char* protocol1 = strstr(buf->buffer, "HTTP/1.1");
 
     if (protocol == NULL || protocol1 == NULL) {
         return -1;
