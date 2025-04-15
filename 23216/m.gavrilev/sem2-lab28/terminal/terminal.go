@@ -8,12 +8,17 @@ import (
 
 type State *syscall.Termios
 
+const (
+	ioctl_TCGETS = 0x540D
+	ioctl_TCSETS = 0x540E
+)
+
 func IsTerminal(fd int) bool {
 	var termios syscall.Termios
 	_, _, errno := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCGETS),
+		uintptr(ioctl_TCGETS),
 		uintptr(unsafe.Pointer(&termios)),
 	)
 	return errno == 0
@@ -24,7 +29,7 @@ func MakeRaw(fd int) (State, error) {
 	_, _, errno := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCGETS),
+		uintptr(ioctl_TCGETS),
 		uintptr(unsafe.Pointer(originalState)),
 	)
 	if errno != 0 {
@@ -45,7 +50,7 @@ func MakeRaw(fd int) (State, error) {
 	_, _, errno = syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCSETS),
+		uintptr(ioctl_TCSETS),
 		uintptr(unsafe.Pointer(&rawState)),
 	)
 	if errno != 0 {
@@ -63,7 +68,7 @@ func Restore(fd int, state State) error {
 	_, _, errno := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCSETS),
+		uintptr(ioctl_TCSETS),
 		uintptr(unsafe.Pointer(originalState)),
 	)
 	if errno != 0 {
@@ -77,7 +82,7 @@ func GetState(fd int) (State, error) {
 	_, _, errno := syscall.Syscall(
 		syscall.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(syscall.TCGETS),
+		uintptr(ioctl_TCGETS),
 		uintptr(unsafe.Pointer(state)),
 	)
 	if errno != 0 {
