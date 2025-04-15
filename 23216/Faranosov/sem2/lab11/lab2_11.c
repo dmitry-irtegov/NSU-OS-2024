@@ -27,7 +27,7 @@ void* thread_funk() {
 	if (res) handler("son mutex3 lock", res);
 
 	res = pthread_barrier_wait(&barr);
-	if (res) handler("barr son", res);
+	if (res != PTHREAD_BARRIER_SERIAL_THREAD && res) handler("barr son", res);
 
 	while (num < 10) {
 		res = pthread_mutex_lock(&mutex1);
