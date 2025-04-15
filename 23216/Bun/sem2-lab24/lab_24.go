@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -12,16 +11,17 @@ func main() {
 	bChan := make(chan struct{})
 	cChan := make(chan struct{})
 	moduleChan := make(chan struct{})
-
+	endChan := make(chan struct{})
 	go produceA(aChan)
 	go produceB(bChan)
 	go produceC(cChan)
 	go assembleModule(aChan, bChan, moduleChan)
-	go assembleWidget(moduleChan, cChan)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	wg.Wait()
+	go assembleWidget(moduleChan, cChan, endChan)
+	count := 0
+	for _ = range endChan {
+		count++;
+		fmt.Println(count, "Widgets")
+	}	
 }
 
 func produceA(ch chan<- struct{}) {
@@ -66,7 +66,7 @@ func assembleModule(aChan <-chan struct{}, bChan <-chan struct{}, moduleChan cha
 	}
 }
 
-func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}) {
+func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}, endChan chan struct{}) {
 	var hasModule, hasC bool
 	for {
 		select {
@@ -77,6 +77,7 @@ func assembleWidget(moduleChan <-chan struct{}, cChan <-chan struct{}) {
 		default:
 			if hasModule && hasC {
 				fmt.Println("Widget assembled")
+				endChan<-struct{}{}
 				hasModule, hasC = false, false
 			}
 		}
