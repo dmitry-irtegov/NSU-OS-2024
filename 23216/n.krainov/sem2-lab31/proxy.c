@@ -340,9 +340,11 @@ int checkAnswer(Buffer* buf) {
         return -1;
     }
 
-    protocol += strlen("HTTP/1.0");
+    char* check = protocol == NULL ? protocol1 : protocol;
 
-    int status = atoi(protocol);
+    check += strlen("HTTP/1.0");
+
+    int status = atoi(check);
 
     if (!(status < 300 && status >= 200)) {
         return 1;
