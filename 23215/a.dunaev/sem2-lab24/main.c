@@ -20,9 +20,7 @@ void* produce_A(void* arg) {
         count_A++;
         printf("Деталь A готова\n");
     }
-    if (!running) {
-    	printf("Производство детали A остановлено\n");
-    }
+    printf("Производство детали A остановлено\n");
     return NULL;
 }
 
@@ -33,9 +31,7 @@ void* produce_B(void* arg) {
         count_B++;
         printf("Деталь B готова\n");
     }
-    if (!running) {
-        	printf("Производство детали B остановлено\n");
-        }
+    printf("Производство детали B остановлено\n");
     return NULL;
 }
 
@@ -47,9 +43,7 @@ void* produce_module(void* arg) {
         count_module++;
         printf("Модуль собран из A и B\n");
     }
-    if (!running) {
-        	printf("Производство модулей остановлено\n");
-        }
+    printf("Производство модулей остановлено\n");
     return NULL;
 }
 
@@ -60,9 +54,7 @@ void* produce_C(void* arg) {
         count_C++;
         printf("Деталь C готова\n");
     }
-    if (!running) {
-        	printf("Производство детали С остановлено\n");
-        }
+    printf("Производство детали С остановлено\n");
     return NULL;
 }
 
@@ -73,9 +65,7 @@ void* produce_widget(void* arg) {
         count_widget++;
         printf("Винтик (widget) собран из модуля и детали C\n");
     }
-    if (!running) {
-        	printf("Производство (widget) остановлено\n");
-        }
+    printf("Производство (widget) остановлено\n");
     return NULL;
 }
 
