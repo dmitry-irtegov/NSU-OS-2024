@@ -23,12 +23,10 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-    else {
 
-        pthread_join(thread, NULL);
-        for (int i = 0;i < 10;i++) {
-            printf("right\n");
-        }
+    pthread_join(thread, NULL);
+    for (int i = 0;i < 10;i++) {
+        printf("right\n");
     }
 
 
