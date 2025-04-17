@@ -91,7 +91,6 @@ int main() {
 	sem_getvalue(&sem_B, &count_B);
 	sem_getvalue(&sem_C, &count_C);
 	sem_getvalue(&sem_module, &count_module);
-	sem_getvalue(&sem_widget, &count_widget);
 
 	sem_destroy(&sem_A);
     sem_destroy(&sem_B);
@@ -104,7 +103,5 @@ int main() {
     printf("Деталей B: %d\n", count_B);
     printf("Деталей C: %d\n", count_C);
     printf("Модулей: %d\n", count_module);
-    printf("Винтиков (widgets): %d\n", count_widget);
-
     return 0;
 }
