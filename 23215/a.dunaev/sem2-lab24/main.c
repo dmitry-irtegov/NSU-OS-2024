@@ -41,6 +41,8 @@ void* produce_module(void* arg) {
         sem_wait(&sem_B);
         sem_post(&sem_module);
         count_module++;
+        count_A--;
+        count_B--;
         printf("Модуль собран из A и B\n");
     }
     printf("Производство модулей остановлено\n");
@@ -63,6 +65,8 @@ void* produce_widget(void* arg) {
         sem_wait(&sem_module);
         sem_wait(&sem_C);
         count_widget++;
+        count_C--;
+        count_module--;
         printf("Винтик (widget) собран из модуля и детали C\n");
     }
     printf("Производство (widget) остановлено\n");
