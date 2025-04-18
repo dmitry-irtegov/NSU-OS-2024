@@ -46,7 +46,7 @@ int main() {
     pthread_t tA, tB, tC, tModule, tWidget;
 
     sem_init(&sem_A, 0, 0);
-    sem_init(&sem_B, 0, 0);
+    sem_init(&sem_B, 0, 0); 
     sem_init(&sem_C, 0, 0);
     sem_init(&sem_module, 0, 0);
 
