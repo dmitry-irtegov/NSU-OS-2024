@@ -37,9 +37,7 @@ func createDir(path string, fi os.FileInfo) error {
 	return os.Chmod(path, fi.Mode())
 }
 
-func copyFile(src, dst string, fi os.FileInfo, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func copyFile(src, dst string, fi os.FileInfo) {
 	srcFile, err := openWithRetry(src, syscall.O_RDONLY, 0)
 	if err != nil {
 		fmt.Println(err)
@@ -59,9 +57,7 @@ func copyFile(src, dst string, fi os.FileInfo, wg *sync.WaitGroup) {
 	}
 }
 
-func processDir(src, dst string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func processDir(src, dst string) {
 	dir, err := openWithRetry(src, syscall.O_RDONLY, 0)
 	if err != nil {
 		log.Println(err)
@@ -69,7 +65,9 @@ func processDir(src, dst string, wg *sync.WaitGroup) {
 	}
 	defer dir.Close()
 
+	var wg sync.WaitGroup
 	var entries []os.FileInfo
+
 	for {
 		entries, err = dir.Readdir(1)
 		if err == io.EOF {
@@ -91,12 +89,20 @@ func processDir(src, dst string, wg *sync.WaitGroup) {
 			}
 
 			wg.Add(1)
-			go processDir(srcPath, dstPath, wg)
+			go func(srcP, dstP string) {
+				defer wg.Done()
+				processDir(srcP, dstP)
+			}(srcPath, dstPath)
 		} else if entry.Mode().IsRegular() {
 			wg.Add(1)
-			go copyFile(srcPath, dstPath, entry, wg)
+			go func(srcP, dstP string, e os.FileInfo) {
+				defer wg.Done()
+				copyFile(srcP, dstP, e)
+			}(srcPath, dstPath, entry)
 		}
 	}
+
+	wg.Wait()
 }
 
 func main() {
@@ -104,7 +110,6 @@ func main() {
 		log.Fatal("Usage: go run main.go <source> <destination>")
 	}
 
-	var wg sync.WaitGroup
 	source := os.Args[1]
 	dest := os.Args[2]
 
@@ -127,8 +132,5 @@ func main() {
 		return
 	}
 
-	wg.Add(1)
-	go processDir(source, dest, &wg)
-
-	wg.Wait()
+	processDir(source, dest)
 }
