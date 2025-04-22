@@ -20,4 +20,5 @@ const char *get_from_cache(const char *url);
 void free_cache_entry(CacheEntry *entry);
 int time_to_expire(const char *url) ;
 void mark_cache_entry_complete(const char *url);
+void print_cache();
 #endif

@@ -51,6 +51,9 @@ int handle_client_request(int client_fd) {
                 return 0;
             }
             process_request(client_fd, buffer);
+
+            printf("Request processed\n");
+            print_cache();
             return 0;
         } else if (bytes_read == 0) {
             printf("Client disconnected\n");

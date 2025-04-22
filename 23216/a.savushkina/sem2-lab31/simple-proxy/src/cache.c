@@ -18,14 +18,26 @@ unsigned long hash(const char *url) {
 }
 
 void print_cache() {
+    printf("Cache contents:\n");
     for (int i = 0; i < CACHE_SIZE; i++) {
+        if (cache[i] != NULL) {
+            printf("Index %d:\n", i);
+        }
         CacheEntry *entry = cache[i];
+        int count = 0;
         while (entry) {
             printf("URL: %s\n", entry->url);
             printf("Response: %s\n", entry->response);
             entry = entry->next;
+            count++;
+        }
+        if (count == 0) {
+        }
+        else {
+            printf("Cache contains %d entries\n", count);
         }
     }
+    printf("End of cache\n");
 }
 
 void add_to_cache(const char *url, const char *response, int max_age) {
