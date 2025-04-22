@@ -15,7 +15,8 @@ int main()
     char *requests[] = {
         "GET / HTTP/1.0\r\nHost: example.com\r\nCache-Control: no-cache\n\r\n",
         "GET / HTTP/1.0\r\nHost: github.com\r\nCache-Control: no-cache\r\n\r\n",
-        "GET /kek HTTP/1.0\r\nHost: speedtest.tele2.net\r\nCache-Control: max-age=60\r\n\r\n",
+        // "GET /kek HTTP/1.0\r\nHost: speedtest.tele2.net\r\nCache-Control: max-age=60\r\n\r\n",
+        "GET /lalalal HTTP/1.0\r\nHost: google.com\r\nCache-Control: max-age=60\r\n\r\n",
         "GET / HTTP/1.0\r\nHost: helloworld.ru\r\nCache-Control: max-age=60\r\n\r\n"
     };
     int num_requests = 100;
