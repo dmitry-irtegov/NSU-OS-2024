@@ -51,11 +51,13 @@ int handle_client_request(int client_fd) {
                 return 0;
             }
             process_request(client_fd, buffer);
+            return 0;
         } else if (bytes_read == 0) {
             printf("Client disconnected\n");
             break;
         } else if (bytes_read < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                printf("No data available for reading\n");
                 continue;
             } else {
                 perror("read error");
@@ -71,11 +73,18 @@ void process_request(int client_fd, char *request) {
     const char *cached_response = get_from_cache(request);
     printf("Request: %s\n", request);
     int cache_age = should_cache_response(request);
-    if (cached_response && cache_age > 0) {
-        write(client_fd, cached_response, strlen(cached_response));
+    if (cached_response) {
         printf("Response from cache\n");
+        if (write(client_fd, cached_response, strlen(cached_response)) < 0) {
+            perror("Failed to send cached response to client");
+        } else {
+            int cache_time = time_to_expire(request);
+            printf("Response from cache sent to client\n");
+            printf("Cache is gonna be available for %d seconds\n", cache_time);
+        }
         return;
     }
+
     printf("Response from server\n");
     char *host = extract_host(request);
     printf("Host: %s\n", host);
@@ -151,27 +160,33 @@ void process_request(int client_fd, char *request) {
 
     while ((response_length = recv(remote_fd, response, BUFFER_SIZE - 1, 0)) > 0) {
         printf("Received %zd bytes from remote server\n", response_length);
+        if (response_length < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            perror("recv error");
+            break;
+        }
+
         response[response_length] = '\0';
         total_bytes_received += response_length;
 
-        if (content_length > 0) {
-            double percentage = ((double)total_bytes_received / content_length) * 100;
-            printf("Downloaded: %.2f%%\n", percentage);
+        int status_code = extract_status_code(response);
+        if (status_code == -1 || (400 <= status_code && status_code <= 599)) {
+            printf("Invalid status code: %d\n", status_code);
+            printf("Response status %d, not caching\n", status_code);
+            cache_age = 0;
         }
 
-        if (!content_length_provided(response)) {
-            printf("Content-Length not provided. Switching to pass-through mode.\n");
-            cache_age = 0;
-        }
-        if (cache_age && !enough_memory_for_cache(response_length)) {
-            printf("Not enough memory for caching. Switching to pass-through mode.\n");
-            cache_age = 0;
-        }
         if (cache_age) {
             add_to_cache(request, response, cache_age);
+            printf("Response cached successfully for: %s\n", request);
         }
-        write(client_fd, response, response_length);
+
+        if (write(client_fd, response, response_length) < 0) {
+            perror("Failed to send response to client");
+        }
     }
+
+    printf("Response sent to client\n");
 
     if (response_length == 0) {
         mark_cache_entry_complete(request);
@@ -181,6 +196,11 @@ void process_request(int client_fd, char *request) {
         perror("recv error");
     }
 
+    if (content_length > 0) {
+        printf("Total bytes received: %zd\n", total_bytes_received);
+    } else {
+        printf("Response length: %zd\n", response_length);
+    }
     free(response);
     close(remote_fd);
     free(host);

@@ -14,6 +14,9 @@ int main()
     char buffer[BUFFER_SIZE];
     char *requests[] = {
         "GET / HTTP/1.0\r\nHost: example.com\r\nCache-Control: no-cache\n\r\n",
+        "GET / HTTP/1.0\r\nHost: github.com\r\nCache-Control: no-cache\r\n\r\n",
+        "GET /kek HTTP/1.0\r\nHost: speedtest.tele2.net\r\nCache-Control: max-age=60\r\n\r\n",
+        "GET / HTTP/1.0\r\nHost: helloworld.ru\r\nCache-Control: max-age=60\r\n\r\n"
     };
     int num_requests = 100;
 
@@ -41,8 +44,8 @@ int main()
             exit(EXIT_FAILURE);
         }
         printf("Connected to proxy\n");
-        send(sockfd, requests[0], strlen(requests[0]), 0);
-        printf("Request sent: %s\n", requests[0]);
+        send(sockfd, requests[i%4], strlen(requests[i%4]), 0);
+        printf("Request sent: %s\n", requests[i%4]);
 
         ssize_t bytes_received;
         while ((bytes_received = recv(sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0) {

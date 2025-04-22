@@ -15,7 +15,6 @@
 
 #define PORT 8080
 #define MAX_CLIENTS 100
-#define BUFFER_SIZE 4096
 
 int main() {
     int server_fd, client_fd, activity, i;
@@ -116,6 +115,11 @@ int main() {
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     printf("Connection closed\n");
+
+                } else {
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    printf("Connection forcibly closed due to error\n");
                 }
             }
         }
