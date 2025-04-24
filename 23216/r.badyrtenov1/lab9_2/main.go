@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,42 +10,25 @@ import (
 	"syscall"
 )
 
-const checkInterval = 1000000 // Интервал проверки прерывания
+const checkInterval = 1000000
 
-type InterruptFlag struct {
-	mu    sync.Mutex
-	value bool
-}
-
-func (f *InterruptFlag) Set(value bool) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.value = value
-}
-
-func (f *InterruptFlag) Get() bool {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.value
-}
-
-func waitSignal(f *InterruptFlag, sigChan <-chan os.Signal) {
-	<-sigChan
-	f.Set(true)
-}
-
-func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, f *InterruptFlag) {
+func leibnizPi(start, step int, result chan<- float64, wg *sync.WaitGroup, ctx context.Context) {
 	defer wg.Done()
 	partialSum := 0.0
-	count, i := 1, start
+	i := start
+
+loop:
 	for {
-		partialSum += 1.0 / (float64(i)*4.0 + 1.0)
-		partialSum -= 1.0 / (float64(i)*4.0 + 3.0)
-		if count%checkInterval == 0 && f.Get() {
-			break
+		for j := 0; j < checkInterval; j++ {
+			partialSum += 1.0 / (float64(i)*4 + 1)
+			partialSum -= 1.0 / (float64(i)*4 + 3)
+			i += step
 		}
-		count++
-		i += step
+
+		select {
+		case <-ctx.Done():
+			break loop
+		}
 	}
 	result <- partialSum
 }
@@ -60,16 +44,15 @@ func main() {
 		return
 	}
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
+	defer stop()
+
 	result := make(chan float64, amtThreads)
-	var f InterruptFlag
 	var wg sync.WaitGroup
 
-	go waitSignal(&f, sigChan)
 	for i := 0; i < amtThreads; i++ {
 		wg.Add(1)
-		go leibnizPi(i, amtThreads, result, &wg, &f)
+		go leibnizPi(i, amtThreads, result, &wg, ctx)
 	}
 
 	wg.Wait()
