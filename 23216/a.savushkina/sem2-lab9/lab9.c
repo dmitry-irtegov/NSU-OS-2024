@@ -89,16 +89,25 @@ int main(int argc, char** argv) {
         .sa_flags = 0
     };
     sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGINT, &sa, NULL) == -1)
-        handle_error_en(errno, "sigaction");
+    if (sigaction(SIGINT, &sa, NULL) == -1){
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
+        
 
     pthread_t threads[num_threads];
     thread_data* thread_args[num_threads];
 
     for (int t = 0; t < num_threads; t++) {
         thread_args[t] = malloc(sizeof(thread_data));
-        if (thread_args[t] == NULL)
-            handle_error_en(errno, "malloc");
+        if (thread_args[t] == NULL){
+            perror("malloc");
+            for (int i = 0; i < t; i++) {
+                free(thread_args[i]);
+            }
+            exit(EXIT_FAILURE);
+        }
+            
         
         thread_args[t]->start = t;
         int s;
