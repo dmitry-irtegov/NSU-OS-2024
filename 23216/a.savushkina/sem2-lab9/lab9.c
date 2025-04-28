@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     num_threads = atoi(argv[1]);
     if (num_threads <= 0) {
         fprintf(stderr, "Number of threads must be positive\n");
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     struct sigaction sa = {
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     sigemptyset(&sa.sa_mask);
     if (sigaction(SIGINT, &sa, NULL) == -1){
         perror("sigaction");
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
         
 
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < t; i++) {
                 free(thread_args[i]);
             }
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
             
         
