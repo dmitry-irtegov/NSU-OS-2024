@@ -24,6 +24,7 @@ void echo_nonbuff_mode(int enable) {
         tcgetattr(0, &old_t);
         new_t = old_t;
         new_t.c_lflag &= ~(ICANON | ECHO);
+        new_t.c_cc[VMIN]=1;
         tcsetattr(0, TCSANOW, &new_t);
     } else {
         tcsetattr(0, TCSANOW, &old_t);
@@ -58,8 +59,6 @@ int main(int argc, char *argv[]) {
     send(sockfd, request, strlen(request), 0);
     echo_nonbuff_mode(1);
     fd_set readfds;
-    int header_parsed = 0;
-    char *body_start;
     int bytes_received;
     while (1) {
         FD_ZERO(&readfds);
@@ -69,31 +68,21 @@ int main(int argc, char *argv[]) {
         }
         if (select(sockfd + 1, &readfds, NULL, NULL, NULL) < 0) {
             perror("select");
-            exit(4)
+            exit(4);
         }
         if (FD_ISSET(sockfd, &readfds) && !paused) {
             bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
             if (bytes_received <= 0) {
                 break;
-            }char , ;
+            }
             buffer[bytes_received] = '\0';
             char *data = buffer;
-            if (!header_parsed) {
-                body_start = strstr(buffer, "\r\n\r\n");
-                if (body_start) {
-                    body_start += 4;
-                    header_parsed = 1;
-                    data = body_start;
-                } else {
-                    continue;
-                }
-            }
             for (char *p = data; *p; ++p) {
                 putchar(*p);
                 if (*p == '\n') {
                     new_line_cnt++;
                     if (new_line_cnt >= 25) {
-                        printf("\nPress space to scroll down");
+                        printf("\nPress space to scroll down...");
                         fflush(stdout);
                         paused = 1;
                         break;
