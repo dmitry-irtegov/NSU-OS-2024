@@ -101,6 +101,60 @@ void close_connection(connection_t *conn) {
     conn->active = 0;
 }
 
+int add_connection_fds(struct pollfd *fds, int index, connection_t *conn) {
+    fds[index].fd = conn->client_fd;
+    fds[index].events = POLLIN | (conn->server_buf_len > 0 ? POLLOUT : 0);
+
+    fds[index + 1].fd = conn->server_fd;
+    fds[index + 1].events = POLLIN | (conn->client_buf_len > 0 ? POLLOUT : 0);
+
+    return 2;
+}
+
+void handle_read_events(struct pollfd *fds, int index, connection_t *conn) {
+    if (fds[1 + index * 2].revents & POLLIN) {
+        ssize_t n = read(conn->client_fd, conn->client_buf + conn->client_buf_len, BUFFER_SIZE - conn->client_buf_len);
+        if (n > 0) {
+            conn->client_buf_len += n;
+        } else {
+            close_connection(conn);
+            return;
+        }
+    }
+
+    if (fds[1 + index * 2 + 1].revents & POLLIN) {
+        ssize_t n = read(conn->server_fd, conn->server_buf + conn->server_buf_len, BUFFER_SIZE - conn->server_buf_len);
+        if (n > 0) {
+            conn->server_buf_len += n;
+        } else {
+            close_connection(conn);
+        }
+    }
+}
+
+void handle_write_events(struct pollfd *fds, int index, connection_t *conn) {
+    if (fds[1 + index * 2].revents & POLLOUT && conn->server_buf_len > 0) {
+        ssize_t n = write(conn->client_fd, conn->server_buf, conn->server_buf_len);
+        if (n > 0) {
+            memmove(conn->server_buf, conn->server_buf + n, conn->server_buf_len - n);
+            conn->server_buf_len -= n;
+        } else {
+            close_connection(conn);
+            return;
+        }
+    }
+
+    if (fds[1 + index * 2 + 1].revents & POLLOUT && conn->client_buf_len > 0) {
+        ssize_t n = write(conn->server_fd, conn->client_buf, conn->client_buf_len);
+        if (n > 0) {
+            memmove(conn->client_buf, conn->client_buf + n, conn->client_buf_len - n);
+            conn->client_buf_len -= n;
+        } else {
+            close_connection(conn);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 4) {
         fprintf(stderr, "Usage: %s <listen_port> <target_host> <target_port>\n", argv[0]);
@@ -125,13 +179,7 @@ int main(int argc, char *argv[]) {
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
             if (conns[i].active) {
-                fds[1 + i * 2].fd = conns[i].client_fd;
-                fds[1 + i * 2].events = POLLIN | (conns[i].server_buf_len > 0 ? POLLOUT : 0);
-                nfds++;
-
-                fds[1 + i * 2 + 1].fd = conns[i].server_fd;
-                fds[1 + i * 2 + 1].events = POLLIN | (conns[i].client_buf_len > 0 ? POLLOUT : 0);
-                nfds++;
+                nfds += add_connection_fds(fds, nfds, &conns[i]);
             }
         }
 
@@ -163,36 +211,9 @@ int main(int argc, char *argv[]) {
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
             if (conns[i].active) {
-                int client_fd = conns[i].client_fd;
-                int server_fd = conns[i].server_fd;
-
-                if (fds[1 + i * 2].revents & POLLIN) {
-                    ssize_t n = read(client_fd, conns[i].client_buf + conns[i].client_buf_len, BUFFER_SIZE - conns[i].client_buf_len);
-                    if (n > 0) conns[i].client_buf_len += n;
-                    else { close_connection(&conns[i]); continue; }
-                }
-
-                if (fds[1 + i * 2 + 1].revents & POLLIN) {
-                    ssize_t n = read(server_fd, conns[i].server_buf + conns[i].server_buf_len, BUFFER_SIZE - conns[i].server_buf_len);
-                    if (n > 0) conns[i].server_buf_len += n;
-                    else { close_connection(&conns[i]); continue; }
-                }
-
-                if (fds[1 + i * 2].revents & POLLOUT && conns[i].server_buf_len > 0) {
-                    ssize_t n = write(client_fd, conns[i].server_buf, conns[i].server_buf_len);
-                    if (n > 0) {
-                        memmove(conns[i].server_buf, conns[i].server_buf + n, conns[i].server_buf_len - n);
-                        conns[i].server_buf_len -= n;
-                    } else { close_connection(&conns[i]); continue; }
-                }
-
-                if (fds[1 + i * 2 + 1].revents & POLLOUT && conns[i].client_buf_len > 0) {
-                    ssize_t n = write(server_fd, conns[i].client_buf, conns[i].client_buf_len);
-                    if (n > 0) {
-                        memmove(conns[i].client_buf, conns[i].client_buf + n, conns[i].client_buf_len - n);
-                        conns[i].client_buf_len -= n;
-                    } else { close_connection(&conns[i]); }
-                }
+                handle_read_events(fds, i, &conns[i]);
+                if (!conns[i].active) continue;
+                handle_write_events(fds, i, &conns[i]);
             }
         }
     }
