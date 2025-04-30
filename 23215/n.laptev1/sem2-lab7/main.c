@@ -98,7 +98,9 @@ void *copy_file(void *param) {
     close(srcfile);
     close(dstfile);
     printf("[copy_file] Finished copy '%s'\n", srcpathname, dstpathname);
+    pthread_mutex_lock(&fileopen_mutex);
     pthread_cond_signal(&fileopen_cond);
+    pthread_mutex_unlock(&fileopen_mutex);
     return NULL;
 }
 
@@ -159,7 +161,9 @@ void *copy_directory(void *param) {
     free(entry);
     closedir(srcdirp);
     printf("[copy_dir] Closed dir '%s'\n", srcpathname);
+    pthread_mutex_lock(&fileopen_mutex);
     pthread_cond_signal(&fileopen_cond);
+    pthread_mutex_unlock(&fileopen_mutex);
     return NULL;
 }
 
