@@ -45,9 +45,9 @@ void* thread_body_c(void* param) {
 void* thread_body_module(void* param) {
 
     while (1) {
-        sleep(1);
         sem_wait(&A);
         sem_wait(&B);
+        sleep(1);
         sem_post(&module);
         write(0, "Module is manufactured\n", 23);
     }
@@ -56,9 +56,9 @@ void* thread_body_module(void* param) {
 void* thread_body_widget(void* param) {
 
     while (1) {
-        sleep(2);
         sem_wait(&module);
         sem_wait(&C);
+        sleep(2);
         write(0, "Widget is manufactured\n", 23);
     }
     return NULL;
@@ -68,10 +68,10 @@ int main(int argc, char* argv[]) {
     pthread_t thread;
     int code;
 
-    sem_init(&A, 0, a);
-    sem_init(&B, 0, b);
-    sem_init(&C, 0, c);
-    sem_init(&module, 0, m);
+    sem_init(&A, 0, 0);
+    sem_init(&B, 0, 0);
+    sem_init(&C, 0, 0);
+    sem_init(&module, 0, 0);
 
     code = pthread_create(&thread, NULL, thread_body_a, NULL);
     if (code != 0) {
