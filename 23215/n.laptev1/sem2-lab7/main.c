@@ -11,7 +11,6 @@
 #include <sys/resource.h>
 
 #define BUFSIZE 4096
-#define FILEDESCLIMIT 5
 
 char *srcdir, *dstdir;
 
@@ -74,8 +73,8 @@ void *copy_file(void *param) {
                 } else {
                     perror("[copy_file] open dst error");
                     close(srcfile);
-                    pthread_mutex_unlock(&fileopen_mutex);
                     pthread_cond_signal(&fileopen_cond);
+                    pthread_mutex_unlock(&fileopen_mutex);
                     return NULL;
                 }
             } else {
@@ -87,7 +86,7 @@ void *copy_file(void *param) {
         }
     } while (srcfile < 0 || dstfile < 0);
     pthread_mutex_unlock(&fileopen_mutex);
-    printf("[copy_file] Starting copy '%s' -> '%s'\n", srcpathname, dstpathname);
+    printf("[copy_file] Starting copy '%s'\n", srcpathname);
 
     while ((was_read = read(srcfile, buf, BUFSIZE)) > 0) {
         if (write(dstfile, buf, was_read) < 0) {
@@ -166,9 +165,6 @@ void *copy_directory(void *param) {
 
 
 int main(int argc, char **argv) {
-    struct rlimit rl;
-    rl.rlim_cur = rl.rlim_max = FILEDESCLIMIT;  // Ограничим до 5 дескрипторов
-    setrlimit(RLIMIT_NOFILE, &rl);
     if (argc < 3) {
         fprintf(stderr, "Usage: %s srcdir dstdir\n", argv[0]);
         exit(0);
