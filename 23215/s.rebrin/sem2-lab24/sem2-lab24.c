@@ -65,7 +65,7 @@ void* thread_body_widget(void* param) {
 }
 
 int main(int argc, char* argv[]) {
-    pthread_t thread;
+    pthread_t thread[5];
     int code;
 
     sem_init(&A, 0, 0);
@@ -73,35 +73,35 @@ int main(int argc, char* argv[]) {
     sem_init(&C, 0, 0);
     sem_init(&module, 0, 0);
 
-    code = pthread_create(&thread, NULL, thread_body_a, NULL);
+    code = pthread_create(&thread[0], NULL, thread_body_a, NULL);
     if (code != 0) {
         char buf[256];
         strerror_r(code, buf, sizeof buf);
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-    code = pthread_create(&thread, NULL, thread_body_b, NULL);
+    code = pthread_create(&thread[1], NULL, thread_body_b, NULL);
     if (code != 0) {
         char buf[256];
         strerror_r(code, buf, sizeof buf);
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-    code = pthread_create(&thread, NULL, thread_body_c, NULL);
+    code = pthread_create(&thread[2], NULL, thread_body_c, NULL);
     if (code != 0) {
         char buf[256];
         strerror_r(code, buf, sizeof buf);
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-    code = pthread_create(&thread, NULL, thread_body_module, NULL);
+    code = pthread_create(&thread[3], NULL, thread_body_module, NULL);
     if (code != 0) {
         char buf[256];
         strerror_r(code, buf, sizeof buf);
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-    code = pthread_create(&thread, NULL, thread_body_widget, NULL);
+    code = pthread_create(&thread[4], NULL, thread_body_widget, NULL);
     if (code != 0) {
         char buf[256];
         strerror_r(code, buf, sizeof buf);
