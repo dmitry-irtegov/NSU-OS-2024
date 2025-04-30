@@ -109,10 +109,10 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    sem_destroy(&A);
-    sem_destroy(&B);
-    sem_destroy(&C);
-    sem_destroy(&module);
+    //sem_destroy(&A);
+    //sem_destroy(&B);
+    //sem_destroy(&C);
+    //sem_destroy(&module);
 
 
     pthread_exit(NULL);
