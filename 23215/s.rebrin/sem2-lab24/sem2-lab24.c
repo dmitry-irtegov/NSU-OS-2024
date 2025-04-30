@@ -49,7 +49,7 @@ void* thread_body_module(void* param) {
         sem_wait(&A);
         sem_wait(&B);
         sem_post(&module);
-        write(0, "Part m is manufactured\n", 23);
+        write(0, "Module is manufactured\n", 23);
     }
     return NULL;
 }
@@ -59,7 +59,7 @@ void* thread_body_widget(void* param) {
         sleep(2);
         sem_wait(&module);
         sem_wait(&C);
-        write(0, "Part w is manufactured\n", 23);
+        write(0, "Widget is manufactured\n", 23);
     }
     return NULL;
 }
