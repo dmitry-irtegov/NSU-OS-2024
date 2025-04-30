@@ -91,9 +91,9 @@ int main() {
         pthread_mutexattr_destroy(&mutex_attr);
         return EXIT_FAILURE;
     }
-
+    while (!atomic_load(&turn));
+    
     for (int i = 1; i <= 10; i++) {
-        while (!atomic_load(&turn));
         // Блокируем следующий мьютекс в кольце
         parent_cur = (parent_cur + 1) % M;
         ret = pthread_mutex_lock(&mut[parent_cur]);
