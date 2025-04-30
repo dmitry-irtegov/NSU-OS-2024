@@ -7,43 +7,33 @@
 #include <termios.h>
 #include <sys/select.h>
 
-#define DEFAULT_PORT "80"
 #define SCREEN_LINES 25
+#define DEFAULT_PORT 80
 
-void parser(const char *url, char *host, char *path, char *port) {
-    const char *protocol = strstr(url, "://");
-    const char *remaining = url;
-    
-    if (protocol) {
-        remaining = protocol + 3;
+void parse_url(const char *url, char *host, char *path, int *port) {
+    *port = DEFAULT_PORT;
+
+    if (strncmp(url, "http://", 7) == 0) {
+        url += 7;
     }
 
-    const char *port_start = strchr(remaining, ':');
-    const char *path_start = strchr(remaining, '/');
+    const char *slash = strchr(url, '/');
+    const char *host_end = slash ? slash : url + strlen(url);
 
-    if (port_start && (!path_start || port_start < path_start)) {
-        strncpy(host, remaining, port_start - remaining);
-        host[port_start - remaining] = '\0';
-        
-        const char *port_end = path_start ? path_start : strchr(port_start, '\0');
-        strncpy(port, port_start + 1, port_end - (port_start + 1));
-        port[port_end - (port_start + 1)] = '\0';
-        
-        remaining = port_end;
+    const char *colon = strchr(url, ':');
+    if (colon && colon < host_end) {
+        strncpy(host, url, colon - url);
+        host[colon - url] = '\0';
+        *port = atoi(colon + 1);
     } else {
-        strcpy(port, DEFAULT_PORT);
+        strncpy(host, url, host_end - url);
+        host[host_end - url] = '\0';
     }
 
-    if (path_start) {
-        strcpy(path, path_start);
+    if (slash) {
+        strcpy(path, slash);
     } else {
         strcpy(path, "/");
-        remaining = strchr(remaining, '\0');
-    }
-
-    if (!port_start || (path_start && port_start > path_start)) {
-        strncpy(host, remaining, path_start ? path_start - remaining : strlen(remaining));
-        host[path_start ? path_start - remaining : strlen(remaining)] = '\0';
     }
 }
 
@@ -65,16 +55,18 @@ void configure_terminal(int enable) {
 int main(int argc, char *argv[]) {
     char host[256] = {0};
     char path[1024] = {0};
-    char port[6] = {0};
+    int port;
     char request[2048];
     char buffer[4096];
+    char port_str[6] = {0};
     
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <URL>\n", argv[0]);
         return 1;
     }
 
-    parser(argv[1], host, path, port);
+    parse_url(argv[1], host, path, &port);
+    snprintf(port_str, sizeof(port_str), "%d", port);
 
     struct addrinfo hints = {0};
     struct addrinfo *results;
@@ -82,7 +74,7 @@ int main(int argc, char *argv[]) {
     hints.ai_socktype = SOCK_STREAM;
 
     int status;
-    if ((status = getaddrinfo(host, port, &hints, &results)) != 0) {
+    if ((status = getaddrinfo(host, port_str, &hints, &results)) != 0) {
         fprintf(stderr, "Address resolution error: %s\n", gai_strerror(status));
         return 1;
     }
@@ -141,7 +133,7 @@ int main(int argc, char *argv[]) {
                     int body_len = bytes - (body - buffer);
                     for (int i = 0; i < body_len; i++) {
                         putchar(body[i]);
-                        if (body[i] == '\n') {  // Изменено здесь
+                        if (body[i] == '\n') {
                             if (++line_count >= SCREEN_LINES) {
                                 printf("\n-- PAUSED (press space) --");
                                 fflush(stdout);
