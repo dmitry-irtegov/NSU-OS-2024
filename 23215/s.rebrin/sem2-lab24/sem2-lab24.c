@@ -5,11 +5,6 @@
 #include <unistd.h>
 #include <semaphore.h>
 
-#define a 10
-#define b 10
-#define c 10
-#define m 10
-
 sem_t A;
 sem_t B;
 sem_t C;
@@ -47,7 +42,6 @@ void* thread_body_module(void* param) {
     while (1) {
         sem_wait(&A);
         sem_wait(&B);
-        sleep(1);
         sem_post(&module);
         write(0, "Module is manufactured\n", 23);
     }
@@ -58,7 +52,6 @@ void* thread_body_widget(void* param) {
     while (1) {
         sem_wait(&module);
         sem_wait(&C);
-        sleep(2);
         write(0, "Widget is manufactured\n", 23);
     }
     return NULL;
@@ -108,11 +101,6 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "%s: creating thread: %s\n", argv[0], buf);
         exit(1);
     }
-
-    //sem_destroy(&A);
-    //sem_destroy(&B);
-    //sem_destroy(&C);
-    //sem_destroy(&module);
 
 
     pthread_exit(NULL);
