@@ -115,7 +115,6 @@ int main(int argc, char *argv[]) {
 
     int line_count = 0;
     int pause_mode = 0;
-    char prev = 0;
     int body_started = 0;
     fd_set descriptors;
 
