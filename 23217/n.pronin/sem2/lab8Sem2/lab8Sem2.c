@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>  
 
 #ifndef NUM_STEPS
 #define NUM_STEPS 200000000 
@@ -23,7 +24,6 @@ void *compute_pi_part(void *arg) {
     }
 
     *partial_sum = 0.0;
-
     for (long i = id; i < NUM_STEPS; i += num_threads) {
         *partial_sum += 1.0 / (i * 4.0 + 1.0);
         *partial_sum -= 1.0 / (i * 4.0 + 3.0);
@@ -43,6 +43,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Number of threads must be positive.\n");
         return EXIT_FAILURE;
     }
+
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);  // Start 
 
     pthread_t threads[num_threads];
     thread_arg_t args[num_threads];
@@ -69,7 +72,14 @@ int main(int argc, char *argv[]) {
     }
 
     pi *= 4.0;
+
+    clock_gettime(CLOCK_MONOTONIC, &end);  // End 
+
+    double elapsed = (end.tv_sec - start.tv_sec) +
+                     (end.tv_nsec - start.tv_nsec) / 1e9;
+
     printf("pi done - %.15g\n", pi);
+    printf("Execution time with %d threads: %.6f seconds\n", num_threads, elapsed);
 
     return EXIT_SUCCESS;
 }
