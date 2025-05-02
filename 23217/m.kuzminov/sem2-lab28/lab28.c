@@ -33,6 +33,9 @@ int main(int argc, char *argv[])
     }   
     old = term;
     term.c_lflag &= ~(ICANON | ECHO);
+    term.c_cc[VMIN] = 1;
+    term.c_cc[VTIME] = 0;
+
 
     atexit(returnTTY);
 
@@ -54,13 +57,18 @@ int main(int argc, char *argv[])
 
     if (strcmp(token, "http:") == 0) {
         token = strtok(NULL, "/");
+        if(token == NULL) {
+            fprintf(stderr, "Invalid adress. Use http://\n");
+            exit(1);
+        }
     } else if(strcmp(token, "http:") != 0) {
-        fprintf(stderr, "Invalid adress. Use http\n");
+        fprintf(stderr, "Invalid adress. Use http://\n");
         exit(1);
         
     }
 
     char host[BUFSIZ/3];
+
     strcpy(host, token);
     char path[BUFSIZ/3] = "/";
     while ((token = strtok(NULL, "/")) != NULL) {
@@ -82,6 +90,10 @@ int main(int argc, char *argv[])
     printf("%s\n\n", request);
 
     struct hostent *host_addr = gethostbyname(host);
+    if (!host_addr) {
+        fprintf(stderr, "Error: Unable to resolve host: %s\n", host);
+        exit(1);
+    }
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -127,7 +139,8 @@ int main(int argc, char *argv[])
 
         if(FD_ISSET(STDIN_FILENO, &fds)) {
             char s;
-            if (read(STDIN_FILENO, &s, 1) == 1) {
+            int res = read(STDIN_FILENO, &s, 1);
+            if (res == 1) {
                 if (lines_count == SCREEN_LINES) {
                     if (s == ' ') {
                         lines_count = 0;
@@ -163,7 +176,7 @@ int main(int argc, char *argv[])
                     lines_count++;
                     flag = 1;
                     if(lines_count == SCREEN_LINES) {
-                        printf("Press space to scroll down ");
+                        printf("Press space to scroll down\n");
                         fflush(stdout);
                         break;
                     }
