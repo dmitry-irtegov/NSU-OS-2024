@@ -163,7 +163,7 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
 
     int age = should_cache_response((char *)raw_request);
     int status = extract_status_code(response);
-    if (age > 0 && status >= 200 && status < 300) {
+    if (age > 0 && status >= 200 && status < 400) {
         add_to_cache(cache_key, response, age);
         mark_cache_entry_complete(cache_key);
     }

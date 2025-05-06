@@ -41,7 +41,6 @@ while true; do
             [[ "$line" == $'\r' ]] && break
         done
         echo "Response received"
-        echo -e "CLOSE_CONNECTION" >&3
         exec 3<&-
         exec 3>&-
     } || {
