@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -10,37 +11,29 @@ import (
 	"syscall"
 )
 
-const (
-	maxSteps  = 2_000_000_000 
-	blockSize = 10_000        
-)
-var (
-	globalIndex int64
-	interrupted int32
-)
+const blockSize = 10_000
 
-func worker(partialSum *float64, wg *sync.WaitGroup) {
+var globalIndex int64
+
+func worker(ctx context.Context, partialSum *float64, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var localSum float64
 
 	for {
-		start := int(atomic.AddInt64(&globalIndex, blockSize)) - blockSize
-		if start >= maxSteps || atomic.LoadInt32(&interrupted) == 1 {
-			break
-		}
+		select {
+		case <-ctx.Done():
+			*partialSum = localSum
+			return
+		default:
+			start := int(atomic.AddInt64(&globalIndex, blockSize)) - blockSize
+			end := start + blockSize
 
-		end := start + blockSize
-		if end > maxSteps {
-			end = maxSteps
-		}
-
-		for i := start; i < end; i++ {
-			localSum += 1.0 / (float64(i)*4.0 + 1.0)
-			localSum -= 1.0 / (float64(i)*4.0 + 3.0)
+			for i := start; i < end; i++ {
+				localSum += 1.0 / (float64(i)*4.0 + 1.0)
+				localSum -= 1.0 / (float64(i)*4.0 + 3.0)
+			}
 		}
 	}
-
-	*partialSum = localSum
 }
 
 func main() {
@@ -56,22 +49,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	
+	ctx, cancel := context.WithCancel(context.Background())
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
 
 	go func() {
 		<-sigChan
 		fmt.Println("\nReceived SIGINT, stopping gracefully...")
-		atomic.StoreInt32(&interrupted, 1)
+		cancel()
 	}()
 
 	var wg sync.WaitGroup
 	partialSums := make([]float64, numThreads)
 
-	wg.Add(numThreads)
 	for i := 0; i < numThreads; i++ {
-		go worker(&partialSums[i], &wg)
+		wg.Add(1)
+		go worker(ctx, &partialSums[i], &wg)
 	}
 
 	wg.Wait()
