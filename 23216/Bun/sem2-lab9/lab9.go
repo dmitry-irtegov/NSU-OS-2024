@@ -15,23 +15,24 @@ const blockSize = 10_000
 
 var globalIndex int64
 
-func worker(ctx context.Context, partialSum *float64, wg *sync.WaitGroup) {
+func worker(ctx context.Context, sumChan chan<- float64, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var localSum float64
 
 	for {
+		start := int(atomic.AddInt64(&globalIndex, blockSize)) - blockSize
+		end := start + blockSize
+
+		for i := start; i < end; i++ {
+			localSum += 1.0 / (float64(i)*4.0 + 1.0)
+			localSum -= 1.0 / (float64(i)*4.0 + 3.0)
+		}
+
 		select {
 		case <-ctx.Done():
-			*partialSum = localSum
+			sumChan <- localSum 
 			return
 		default:
-			start := int(atomic.AddInt64(&globalIndex, blockSize)) - blockSize
-			end := start + blockSize
-
-			for i := start; i < end; i++ {
-				localSum += 1.0 / (float64(i)*4.0 + 1.0)
-				localSum -= 1.0 / (float64(i)*4.0 + 3.0)
-			}
 		}
 	}
 }
@@ -61,18 +62,18 @@ func main() {
 	}()
 
 	var wg sync.WaitGroup
-	partialSums := make([]float64, numThreads)
+	sumChan := make(chan float64, numThreads) 
 
 	for i := 0; i < numThreads; i++ {
 		wg.Add(1)
-		go worker(ctx, &partialSums[i], &wg)
+		go worker(ctx, sumChan, &wg)
 	}
 
 	wg.Wait()
+	close(sumChan)
 
-	
 	var pi float64
-	for _, sum := range partialSums {
+	for sum := range sumChan {
 		pi += sum
 	}
 	pi *= 4.0
