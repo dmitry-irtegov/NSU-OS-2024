@@ -40,7 +40,7 @@ int putReq(int fd) {
         return -1;
     }
 
-    if (globalState.endOfWork) {
+    if (fd == -1) {
         for (int i = 0; i < globalState.countWorkers; i++) {
             sem_post(&globalState.queue.semaphoreGet);
         }

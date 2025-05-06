@@ -569,7 +569,7 @@ int workerWorkLoop(WorkerState* proxy) {
 }
 
 int joinWorkers() {
-    putReq(0); //костыль!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    putReq(-1);
     for (int i = 0; i < globalState.countWorkers; i++) {
         int res = 0, err;
         int* pointer = &res;
