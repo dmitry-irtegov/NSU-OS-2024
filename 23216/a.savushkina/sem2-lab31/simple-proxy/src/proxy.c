@@ -13,198 +13,226 @@
 #include "cache.h"
 #include "utils.h"
 
-int handle_client_request(int client_fd);
-void process_request(int client_fd, char *request);
-char *extract_host(char *request);
-int should_cache_response(char *request);
-int set_nonblocking(int fd);
-
 int set_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
-        perror("fcntl get failed");
+        perror("fcntl get");
         return -1;
     }
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        perror("fcntl set failed");
+        perror("fcntl set");
         return -1;
     }
     return 0;
 }
 
-int handle_client_request(int client_fd) {
-    char buffer[BUFFER_SIZE];
-    ssize_t bytes_read;
-    char incorrect_method[44] = "Incorrect http method. Use only get or head\n";
+char *read_full_request(int client_fd, size_t *out_length) {
+    char *buffer = malloc(MAX_HEADER_SIZE);
+    if (!buffer) return NULL;
 
-    while (1) {
-        bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    size_t total = 0;
+    while (total < MAX_HEADER_SIZE - 1) {
+        ssize_t n = read(client_fd, buffer + total, MAX_HEADER_SIZE - total - 1);
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            perror("read error");
+            free(buffer);
+            return NULL;
+        }
+        if (n == 0) break;
+        total += n;
+        buffer[total] = '\0';
+        if (strstr(buffer, "\r\n\r\n")) break;
+    }
 
-        if (bytes_read > 0) {
-            buffer[bytes_read] = '\0';
-            if (strcmp(buffer, "CLOSE_CONNECTION") == 0) {
-                printf("Received close connection command\n");
-                return 0;
-            }
-            if (!should_keep_connection(buffer)) {
-                write(client_fd, incorrect_method, strlen(incorrect_method));
-                return 0;
-            }
-            process_request(client_fd, buffer);
+    buffer[total] = '\0';
+    *out_length = total;
+    return buffer;
+}
 
-            printf("Request processed\n");
-            print_cache();
-            return 0;
-        } else if (bytes_read == 0) {
-            printf("Client disconnected\n");
-            break;
-        } else if (bytes_read < 0) {
+void process_request(int client_fd, const char *raw_request, size_t request_length) {
+    if (!raw_request) return;
+
+    char *cache_key = make_cache_key(raw_request);
+    if (!cache_key) return;
+
+    const char *cached = get_from_cache(cache_key);
+    if (cached) {
+        write(client_fd, cached, strlen(cached));
+        printf("Cache hit for %s\n", cache_key);
+        free(cache_key);
+        return;
+    }
+
+    printf("Cache miss for %s\n", cache_key);
+    print_cache();
+
+    char *hostname = extract_host((char *)raw_request);
+    if (!hostname) {
+        free(cache_key);
+        return;
+    }
+
+    struct hostent *host_entry = gethostbyname(hostname);
+    if (!host_entry) {
+        perror("gethostbyname");
+        free(hostname);
+        free(cache_key);
+        return;
+    }
+
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("socket");
+        free(hostname);
+        free(cache_key);
+        return;
+    }
+    set_nonblocking(server_fd);
+
+    struct sockaddr_in server_addr = {0};
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(80);
+    memcpy(&server_addr.sin_addr, host_entry->h_addr_list[0], host_entry->h_length);
+
+    if (connect(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0 && errno != EINPROGRESS) {
+        perror("connect");
+        close(server_fd);
+        free(hostname);
+        free(cache_key);
+        return;
+    }
+    printf("Connected to %s\n", hostname);
+
+    size_t sent_total = 0;
+    while (sent_total < request_length) {
+        ssize_t sent = send(server_fd, raw_request + sent_total, request_length - sent_total, 0);
+        if (sent > 0) {
+            sent_total += (size_t)sent;
+        } else if (sent < 0) {
+            if (errno == EINTR) continue;
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                printf("No data available for reading\n");
+                fd_set wfds;
+                FD_ZERO(&wfds);
+                FD_SET(server_fd, &wfds);
+                if (select(server_fd + 1, NULL, &wfds, NULL, NULL) < 0) break;
                 continue;
-            } else {
-                perror("read error");
-                break;
             }
+            break;
+        } else {
+            break;
         }
     }
 
+    printf("Request sent to %s\n", hostname);
+
+    size_t capacity = 16384;
+    size_t size = 0;
+    char *response = malloc(capacity);
+    if (!response) {
+        close(server_fd);
+        free(hostname);
+        free(cache_key);
+        return;
+    }
+
+    while (1) {
+        char chunk[4096];
+        ssize_t r = recv(server_fd, chunk, sizeof(chunk), 0);
+        if (r < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            perror("recv");
+            break;
+        }
+        if (r == 0) break;
+
+        write(client_fd, chunk, (size_t)r);
+
+        if (size + (size_t)r + 1 > capacity) {
+            capacity = capacity * 2 + (size_t)r;
+            char *tmp = realloc(response, capacity);
+            if (!tmp) break;
+            response = tmp;
+        }
+        memcpy(response + size, chunk, (size_t)r);
+        size += (size_t)r;
+    }
+    response[size] = '\0';
+
+    printf("Response received from %s\n", hostname);
+
+    int age = should_cache_response((char *)raw_request);
+    int status = extract_status_code(response);
+    if (age > 0 && status >= 200 && status < 300) {
+        add_to_cache(cache_key, response, age);
+        mark_cache_entry_complete(cache_key);
+    }
+
+    printf("End of response from %s\n", hostname);
+
+    free(response);
+    close(server_fd);
+    free(hostname);
+    free(cache_key);
+}
+
+int handle_client_request(int client_fd) {
+    set_nonblocking(client_fd);
+    size_t length = 0;
+    char *req = read_full_request(client_fd, &length);
+    if (!req) return 0;
+
+    if (strcmp(req, "CLOSE_CONNECTION") == 0) {
+        free(req);
+        return 0;
+    }
+
+    if (!should_keep_connection(req)) {
+        const char *msg = "Incorrect http method. Use only GET or HEAD\n";
+        write(client_fd, msg, strlen(msg));
+        free(req);
+        return 0;
+    }
+
+    process_request(client_fd, req, length);
+    free(req);
     return 0;
 }
 
-void process_request(int client_fd, char *request) {
-    const char *cached_response = get_from_cache(request);
-    printf("Request: %s\n", request);
-    int cache_age = should_cache_response(request);
-    if (cached_response) {
-        printf("Response from cache\n");
-        if (write(client_fd, cached_response, strlen(cached_response)) < 0) {
-            perror("Failed to send cached response to client");
-        } else {
-            int cache_time = time_to_expire(request);
-            printf("Response from cache sent to client\n");
-            printf("Cache is gonna be available for %d seconds\n", cache_time);
-        }
-        return;
+char *make_cache_key(const char *raw_request) {
+    char method[16] = {0}, uri[1024] = {0};
+    if (sscanf(raw_request, "%15s %1023s", method, uri) != 2) {
+        fprintf(stderr, "make_cache_key: invalid request\n");
+        return NULL;
     }
 
-    printf("Response from server\n");
-    char *host = extract_host(request);
-    printf("Host: %s\n", host);
+    char *host = extract_host((char*)raw_request);
     if (!host) {
-        fprintf(stderr, "Failed to extract host from request\n");
-        return;
+        fprintf(stderr, "make_cache_key: cannot extract host\n");
+        return NULL;
     }
-    printf("befor\n");
-    struct hostent *remote_host = gethostbyname(host);
-    printf("after\n");
-    if (!remote_host || !remote_host->h_addr_list || !remote_host->h_addr_list[0]) {
-        perror("gethostbyname");
-        printf("Failed to resolve host: %s\n", host);
+
+    size_t needed = strlen(method)
+                    + 8
+                    + strlen(host)
+                    + strlen(uri)
+                    + 1;
+
+    char *key = malloc(needed);
+    if (!key) {
+        perror("make_cache_key: malloc");
         free(host);
-        return;
+        return NULL;
     }
-    printf("Host: %s\n", remote_host->h_name);
 
-    int remote_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (remote_fd < 0) {
-        perror("socket");
+    int wrote = snprintf(key, needed, "%s http://%s%s", method, host, uri);
+    if (wrote < 0 || (size_t)wrote >= needed) {
+        fprintf(stderr, "make_cache_key: snprintf failed or truncated\n");
+        free(key);
         free(host);
-        return;
+        return NULL;
     }
 
-    printf("Connecting to remote server\n");
-
-    struct sockaddr_in remote_address;
-    remote_address.sin_family = AF_INET;
-    remote_address.sin_port = htons(80);
-    memcpy(&remote_address.sin_addr, remote_host->h_addr_list[0], remote_host->h_length);
-
-    if (connect(remote_fd, (struct sockaddr *)&remote_address, sizeof(remote_address)) < 0) {
-        perror("connect");
-        close(remote_fd);
-        free(host);
-        return;
-    }
-
-    printf("Connected to remote server\n");
-
-    if (send(remote_fd, request, strlen(request), 0) < 0) {
-        perror("send failed");
-        close(remote_fd);
-        free(host);
-        return;
-    }
-    printf("Request sent to remote server\n");
-
-    char *response = malloc(BUFFER_SIZE);
-    if (!response) {
-        perror("malloc failed");
-        close(remote_fd);
-        free(host);
-        return;
-    }
-    printf("Sending request to remote server\n");
-
-    ssize_t response_length;
-    ssize_t total_bytes_received = 0;
-    ssize_t content_length = content_length_provided(response);
-    printf("Content-Length: %zd\n", content_length);
-    if (content_length > 0) {
-        printf("Content-Length provided: %zd\n", content_length);
-    } else {
-        printf("Content-Length not provided\n");
-    }
-    if (cache_age > 0) {
-        printf("Cache age: %d\n", cache_age);
-    } else {
-        printf("No cache age provided\n");
-    }
-
-    while ((response_length = recv(remote_fd, response, BUFFER_SIZE - 1, 0)) > 0) {
-        printf("Received %zd bytes from remote server\n", response_length);
-        if (response_length < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
-            perror("recv error");
-            break;
-        }
-
-        response[response_length] = '\0';
-        total_bytes_received += response_length;
-
-        int status_code = extract_status_code(response);
-        if (status_code == -1 || (400 <= status_code && status_code <= 599)) {
-            printf("Invalid status code: %d\n", status_code);
-            printf("Response status %d, not caching\n", status_code);
-            cache_age = 0;
-        }
-
-        if (cache_age) {
-            add_to_cache(request, response, cache_age);
-            printf("Response cached successfully for: %s\n", request);
-        }
-
-        if (write(client_fd, response, response_length) < 0) {
-            perror("Failed to send response to client");
-        }
-    }
-
-    printf("Response sent to client\n");
-
-    if (response_length == 0) {
-        mark_cache_entry_complete(request);
-    }
-
-    if (response_length < 0) {
-        perror("recv error");
-    }
-
-    if (content_length > 0) {
-        printf("Total bytes received: %zd\n", total_bytes_received);
-    } else {
-        printf("Response length: %zd\n", response_length);
-    }
-    free(response);
-    close(remote_fd);
     free(host);
+    return key;
 }
