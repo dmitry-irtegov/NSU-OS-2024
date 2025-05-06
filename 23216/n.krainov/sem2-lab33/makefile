@@ -1,6 +1,6 @@
 all: proxy
 proxy: main.o proxy.o cache.o statuses.o util.o queue.o
-		gcc -o proxy main.o proxy.o cache.o statuses.o util.o queue.o -lsocket -lnsl
+		gcc -o proxy main.o proxy.o cache.o statuses.o util.o queue.o -lsocket -lnsl -D_REENTRANT
 main.o: main.c
 		gcc -c main.c
 proxy.o: proxy.c

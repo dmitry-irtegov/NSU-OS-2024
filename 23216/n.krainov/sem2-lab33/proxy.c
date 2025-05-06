@@ -569,11 +569,11 @@ int workerWorkLoop(WorkerState* proxy) {
 }
 
 int joinWorkers() {
-    putReq(-1);
+    putReq(0); //костыль!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     for (int i = 0; i < globalState.countWorkers; i++) {
         int res = 0, err;
         int* pointer = &res;
-        if ((err = pthread_join(globalState.workers[i], (void**)&pointer)) || res != 0) {
+        if ((err = pthread_join(globalState.workers[i], &pointer)) || res != 0) {
             fprintf(stderr, "error with pthread_joing: %s\n", strerror(err));
         }
     }
