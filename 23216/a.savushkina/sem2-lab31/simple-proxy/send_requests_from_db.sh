@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROXY_HOST="127.0.0.1"
-PROXY_PORT=8080
+PROXY_PORT=65430
 DB_FILE="requests_db.txt"
 
 if [[ ! -f "$DB_FILE" ]]; then

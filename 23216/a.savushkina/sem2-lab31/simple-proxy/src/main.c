@@ -13,7 +13,7 @@
 #include "proxy.h"
 #include "cache.h"
 
-#define PORT 8080
+#define PORT 65430
 #define MAX_CLIENTS 100
 
 int main() {
