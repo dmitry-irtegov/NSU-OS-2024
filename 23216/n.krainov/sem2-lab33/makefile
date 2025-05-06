@@ -1,6 +1,6 @@
 all: proxy
-proxy: main.o proxy.o cache.o statuses.o util.o
-		gcc -o proxy main.o proxy.o cache.o statuses.o util.o -lsocket -lnsl
+proxy: main.o proxy.o cache.o statuses.o util.o queue.o
+		gcc -o proxy main.o proxy.o cache.o statuses.o util.o queue.o -lsocket -lnsl
 main.o: main.c
 		gcc -c main.c
 proxy.o: proxy.c
@@ -11,5 +11,7 @@ statuses.o: statuses.c
 		gcc -c statuses.c
 util.o: util.c
 		gcc -c util.c
+queue.o: queue.c
+		gcc -c queue.c
 clean:
 		rm -f *.o proxy
