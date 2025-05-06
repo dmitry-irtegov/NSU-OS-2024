@@ -37,25 +37,25 @@ void* workerInit(void* ignored) {
     proxy.pfds = calloc(initPFDs, sizeof(struct pollfd));
     
     if (proxy.pfds == NULL) {
-        return -1;
+        return (void*)-1;
     }
 
     proxy.types = calloc(initPFDs, sizeof(char));
 
     if (proxy.types == NULL) {
-        return -1;
+        return (void*)-1;
     }
 
     proxy.loaders = calloc(initLoaders, sizeof(Loader));
 
     if (proxy.loaders == NULL) {
-        return -1;
+        return (void*)-1;
     }
 
     proxy.requests = calloc(initRequest, sizeof(Request));
 
     if (proxy.requests == NULL) {
-        return -1;
+        return (void*)-1;
     }
 
     for (int i = 0; i < initPFDs; i++) {
@@ -71,7 +71,7 @@ void* workerInit(void* ignored) {
     }
 
     if (workerWorkLoop(&proxy)) {
-        exit(EXIT_FAILURE);
+        return (void*) -1;
     }
 
     return 0;
