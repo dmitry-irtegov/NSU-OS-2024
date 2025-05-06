@@ -109,7 +109,7 @@ void close_connection(connection_t *conn) {
     conn->active = 0;
 }
 
-int add_connection_fds(proxy_state_t *state, int ind) {
+void add_connection_fds(proxy_state_t *state, int ind) {
     int index = state->nfds;
     connection_t *conn = &state->conns[ind];
 
@@ -119,7 +119,7 @@ int add_connection_fds(proxy_state_t *state, int ind) {
     state->fds[index + 1].fd = conn->server_fd;
     state->fds[index + 1].events = POLLIN | (conn->client_buf_len > 0 ? POLLOUT : 0);
 
-    return 2;
+    state->nfds += 2;
 }
 
 void handle_read_events(proxy_state_t *state, int index) {
@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
             if (state.conns[i].active) {
-                state.nfds += add_connection_fds(&state, i);
+                add_connection_fds(&state, i);
             }
         }
 
