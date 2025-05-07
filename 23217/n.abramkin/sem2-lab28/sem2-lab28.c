@@ -51,14 +51,18 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
 
     size_t inbytesleft = strlen(input);
     size_t outbytesleft = inbytesleft * 4;
-    char *output = malloc(outbytesleft + 1);
-    if (!output) return NULL;
 
-    const char *inbuf = input;
+    char *output = malloc(outbytesleft + 1);
+    if (!output) {
+        iconv_close(cd);
+        return NULL;
+    }
+
+    const char *inbuf_const = input; 
     char *outbuf = output;
     char *outbuf_start = output;
 
-    if (iconv(cd, (char **)&inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)(-1)) {
+    if (iconv(cd, (char **)&inbuf_const, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1) {
         perror("iconv");
         free(outbuf_start);
         iconv_close(cd);
