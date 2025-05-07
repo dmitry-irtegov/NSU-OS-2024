@@ -9,15 +9,14 @@
 #include <sys/select.h>
 #include <time.h>
 #include <fcntl.h>    
+#include <signal.h>
+
 
 #define BUFFER_SIZE 4096
 #define HOST "127.0.0.1:6000"
 int sockfd;
+int server_socket;
 
-void error(const char* msg) {
-    perror(msg);
-    exit(1);
-}
 
 typedef struct data data;
 typedef struct cache cache;
@@ -31,6 +30,8 @@ typedef struct data{
 typedef struct cache{
     char* request;
     int live_time;
+    time_t birth_time;
+    int working;
     data* dat;
     cache* next;
 }cache;
@@ -50,10 +51,41 @@ typedef struct client{
 }client;
 
 
-cache* head = NULL;
+cache* cache_head = NULL;
+client* client_head = NULL;
+
+void signal_handler(int sig) {
+    close(server_socket);
+    client* cur = client_head;
+    while (cur) {
+        client* next = cur->next;
+        close(cur->cli_fd);
+        if (cur->inet_fd > 0) close(cur->inet_fd);
+        free(cur->host);
+        free(cur);
+        cur = next;
+    }
+    exit(0);
+}
+
+void error(const char* msg) {
+    perror(msg);
+
+    close(server_socket);
+    client* cur = client_head;
+    while (cur) {
+        client* next = cur->next;
+        close(cur->cli_fd);
+        if (cur->inet_fd > 0) close(cur->inet_fd);
+        free(cur->host);
+        free(cur);
+        cur = next;
+    }
+    exit(1);
+}
 
 cache* add_to_cache(char* req, int live, char* buff, int len) {
-    cache* t = head;
+    cache* t = cache_head;
     while (t) {
         if (t->request && !strcmp(req, t->request)) {
             return NULL; 
@@ -66,6 +98,7 @@ cache* add_to_cache(char* req, int live, char* buff, int len) {
 
     new_cache->request = strdup(req); 
     new_cache->live_time = live;
+    new_cache->birth_time = time(NULL);
     new_cache->dat = (data*)malloc(sizeof(data));
     if (!new_cache->dat) {
         free(new_cache->request);
@@ -85,11 +118,11 @@ cache* add_to_cache(char* req, int live, char* buff, int len) {
     new_cache->dat->next = NULL;
     new_cache->next = NULL;
 
-    if (!head) {
-        head = new_cache;
+    if (!cache_head) {
+        cache_head = new_cache;
     }
     else {
-        t = head;
+        t = cache_head;
         while (t->next) t = t->next;
         t->next = new_cache;
     }
@@ -109,7 +142,7 @@ void fr_data(data* d) {
 void remove_from_cache(cache* a) {
     if (!a) return;
 
-    cache** p = &head;
+    cache** p = &cache_head;
     while (*p && *p != a) p = &(*p)->next;
     if (*p) {
         *p = a->next; 
@@ -216,7 +249,19 @@ void set_nonblocking(int cl_fd) {
     }
 }
 
-int add(client** head, int cl_fd) {
+void check_live_time_cache() {
+    cache* cur = cache_head;
+    time_t now = time(NULL);
+    while (cur) {
+        cache* next = cur->next;
+        if (cur->live_time > 0 && (now - cur->birth_time) > cur->live_time) { 
+            remove_from_cache(cur);
+        }
+        cur = next;
+    }
+}
+
+int add(client** client_head, int cl_fd) {
     client* a = malloc(sizeof(client));
     if (!a) return -1;
 
@@ -237,16 +282,28 @@ int add(client** head, int cl_fd) {
     a->inet_fd = 0;
     a->cur_cache = NULL;
 
-    if (*head == NULL) {
-        *head = a;
+    if (*client_head == NULL) {
+        *client_head = a;
     }
     else {
-        client* t = *head;
+        client* t = *client_head;
         while (t->next) t = t->next;
         t->next = a;
     }
 
     return 0;
+}
+
+void clear_connection(client* cur) {
+
+    close(cur->cli_fd);
+    if (cur->inet_fd > 0) close(cur->inet_fd);
+    client** p = &client_head;
+    while (*p && *p != cur) p = &(*p)->next;
+    if (*p) *p = cur->next;
+    free(cur->host);
+    free(cur);
+    cur = cur->next;
 }
 
 client* find_cli();
@@ -256,26 +313,25 @@ int main() {
     char hst[1024];
 
     int client_socket;
-    int server_socket; 
     con_to_cli(&server_socket);
     if (listen(server_socket, 5) < 0) {
         error("Ошибка listen");
     }
 
-    client* head = NULL;
+    //client* client_head = NULL;
 
     client_socket = accept(server_socket, NULL, NULL);
     printf("hello\n");
 
-    add(&head, client_socket);
+    add(&client_head, client_socket);
 
     printf("start\n");
 
     while (1) {
         struct timeval tv;
-        tv.tv_sec = 5;         // 5 секунд
+        tv.tv_sec = 5;         
         tv.tv_usec = 0;
-        client* cur = head;
+        client* cur = client_head;
         fd_set read_fds;
         fd_set write_fds;
         FD_ZERO(&read_fds);
@@ -298,6 +354,10 @@ int main() {
             perror("select");
             exit(1);
         }
+        if (activity == 0) {
+            check_live_time_cache();
+            continue;
+        }
 
 
         //New connecting
@@ -308,27 +368,31 @@ int main() {
                 continue;
             }
             printf("New client %d\n", client_socket);
-            add(&head, client_socket);
+            add(&client_head, client_socket);
         }
 
-        cur = head;
+        cur = client_head;
+        int ff = 0;
         while (cur) {
-            client* next = cur->next;
+            if (ff) {
+                client* next = cur->next;
+                ff = 0;
+            }
             if (FD_ISSET(cur->cli_fd, &read_fds)) {
                 
                 int r = read(cur->cli_fd, buffer, BUFFER_SIZE - 1);
 
                 //Closing client
                 if (r <= 0) {
-                    // Закрыть клиента
                     close(cur->cli_fd);
                     if (cur->inet_fd > 0) close(cur->inet_fd);
-                    // удалить из списка
-                    client** p = &head;
+                    client** p = &client_head;
                     while (*p && *p != cur) p = &(*p)->next;
                     if (*p) *p = cur->next;
+                    free(cur->host);
                     free(cur);
-                    cur = next;
+                    cur = cur->next;
+                    ff = 1;
                     continue;
                 }
 
@@ -338,6 +402,10 @@ int main() {
                 if (!cur->writing) {
                     parse_http_request(buffer, hst);
                     if (strcmp(hst, cur->host)) {
+                        if (cur->inet_fd > 0) {
+                            close(cur->inet_fd); 
+                            cur->inet_fd = 0;
+                        }
                         con_to_host(&cur->inet_fd, hst);
                         strcpy(cur->host, hst);
                     }
@@ -358,8 +426,10 @@ int main() {
             //Write from server to client
             if (FD_ISSET(cur->cli_fd, &write_fds) && FD_ISSET(cur->inet_fd, &read_fds) && !cur->writing_to_client && cur->tot <= cur->len &&
                 (bytes_read = read(cur->inet_fd, cur->buffer, BUFFER_SIZE - 1)) > 0) {
-                int l = get_content_length_from_headers(cur->buffer);
-                cur->len = l == -1 ? cur->len : l;
+                if (!cur->len) {
+                    int l = get_content_length_from_headers(cur->buffer);
+                    cur->len = l == -1 ? cur->len : l;
+                }
                 cur->buffer[bytes_read] = '\0';
                 cur->writing_to_client = write(cur->cli_fd, cur->buffer, bytes_read);
                 cur->writing_to_client_total = bytes_read;
