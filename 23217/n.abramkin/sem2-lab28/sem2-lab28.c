@@ -54,11 +54,11 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
     char *output = malloc(outbytesleft + 1);
     if (!output) return NULL;
 
-    char *inbuf = (char *)input;
+    const char *inbuf = input;
     char *outbuf = output;
     char *outbuf_start = output;
 
-    if (iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)(-1)) {
+    if (iconv(cd, (char **)&inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)(-1)) {
         perror("iconv");
         free(outbuf_start);
         iconv_close(cd);
