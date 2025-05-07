@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <signal.h>
+#include <iconv.h>
 
 #define PORT 80
 #define BUFFER_SIZE 1024
@@ -18,6 +20,18 @@ void disable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
 
+void handle_signal(int sig) {
+    disable_raw_mode();
+    printf("\n[Exiting on signal %d]\n", sig);
+    exit(1);
+}
+
+void setup_signal_handlers() {
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
+    signal(SIGHUP, handle_signal);
+}
+
 void enable_raw_mode() {
     tcgetattr(STDIN_FILENO, &orig_termios);
     atexit(disable_raw_mode);
@@ -26,6 +40,34 @@ void enable_raw_mode() {
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+char *convert_encoding(const char *input, const char *from_charset, const char *to_charset) {
+    iconv_t cd = iconv_open(to_charset, from_charset);
+    if (cd == (iconv_t)(-1)) {
+        perror("iconv_open");
+        return NULL;
+    }
+
+    size_t inbytesleft = strlen(input);
+    size_t outbytesleft = inbytesleft * 4;
+    char *output = malloc(outbytesleft + 1);
+    if (!output) return NULL;
+
+    char *inbuf = (char *)input;
+    char *outbuf = output;
+    char *outbuf_start = output;
+
+    if (iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)(-1)) {
+        perror("iconv");
+        free(outbuf_start);
+        iconv_close(cd);
+        return NULL;
+    }
+
+    *outbuf = '\0';
+    iconv_close(cd);
+    return outbuf_start;
 }
 
 void parse_url(const char *url, char *host, char *path) {
@@ -48,6 +90,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s http://host/path\n", argv[0]);
         exit(1);
     }
+
+    setup_signal_handlers();
 
     char host[256], path[1024];
     parse_url(argv[1], host, path);
@@ -83,8 +127,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Request too long!\n");
         exit(1);
     }
-    send(sock, request, strlen(request), 0);
 
+    send(sock, request, strlen(request), 0);
     enable_raw_mode();
 
     char buffer[BUFFER_SIZE];
@@ -110,7 +154,14 @@ int main(int argc, char *argv[]) {
 
             char *line = strtok(buffer, "\n");
             while (line) {
-                printf("%s\n", line);
+                char *utf8_line = convert_encoding(line, "WINDOWS-1251", "UTF-8");
+                if (utf8_line) {
+                    printf("%s\n", utf8_line);
+                    free(utf8_line);
+                } else {
+                    printf("%s\n", line);
+                }
+
                 line_count++;
                 if (line_count >= LINES_PER_PAGE) {
                     printf("\n-- Press space to scroll down --\n");
@@ -129,6 +180,7 @@ int main(int argc, char *argv[]) {
                         }
                     }
                 }
+
                 line = strtok(NULL, "\n");
             }
         }
