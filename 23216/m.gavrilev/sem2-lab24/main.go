@@ -217,7 +217,7 @@ func handleSignals(shutdownRequestChan chan<- os.Signal) {
 	log.Printf("[Обработчик Сигналов] Получен сигнал (%s). Отправляю запрос на остановку в Main...", sig)
 
 	shutdownRequestChan <- sig
-    log.Println("[Обработчик Сигналов] Запрос на остановку успешно отправлен.")
+	log.Println("[Обработчик Сигналов] Запрос на остановку успешно отправлен.")
 }
 
 func main() {
