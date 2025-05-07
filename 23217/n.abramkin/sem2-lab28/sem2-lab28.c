@@ -23,6 +23,8 @@ void enable_raw_mode() {
     atexit(disable_raw_mode);
     struct termios raw = orig_termios;
     raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
