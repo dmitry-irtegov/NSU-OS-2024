@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 
 #define PHILO 5
 #define DELAY 30000
@@ -15,14 +16,9 @@ void get_fork(int, int, const char *);
 void down_forks(int, int);
 pthread_mutex_t foodlock;
 
-int sleep_seconds = 0;
-
 int main(int argn, char **argv) {
     int i;
-
-    if (argn == 2)
-        sleep_seconds = atoi(argv[1]);
-
+    srand(time(NULL)); 
     pthread_mutex_init(&foodlock, NULL);
     for (i = 0; i < PHILO; i++)
         pthread_mutex_init(&forks[i], NULL);
@@ -40,7 +36,6 @@ void *philosopher(void *num) {
     int right_fork = id;
     int f;
 
-    // Для последнего философа меняем порядок взятия вилок
     if (id == PHILO - 1) {
         int temp = left_fork;
         left_fork = right_fork;
@@ -50,16 +45,16 @@ void *philosopher(void *num) {
     printf("Philosopher %d sitting down to dinner.\n", id);
 
     while ((f = food_on_table())) {
+        printf("Philosopher %d: thinking...\n", id);
+        usleep(rand() % (DELAY * 2)); // задержка 0-60ms
 
-        if (id == 1)
-            sleep(sleep_seconds);
-
+        // Фаза еды
         printf("Philosopher %d: get dish %d.\n", id, f);
         get_fork(id, left_fork, "left ");
         get_fork(id, right_fork, "right");
 
         printf("Philosopher %d: eating.\n", id);
-        usleep(DELAY * (FOOD - f + 1));
+        usleep(DELAY * (FOOD - f + 1)); 
         down_forks(left_fork, right_fork);
     }
 
@@ -72,9 +67,7 @@ int food_on_table() {
     int myfood;
 
     pthread_mutex_lock(&foodlock);
-    if (food > 0) {
-        food--;
-    }
+    if (food > 0) food--;
     myfood = food;
     pthread_mutex_unlock(&foodlock);
     return myfood;
@@ -89,4 +82,3 @@ void down_forks(int f1, int f2) {
     pthread_mutex_unlock(&forks[f1]);
     pthread_mutex_unlock(&forks[f2]);
 }
- 
