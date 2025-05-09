@@ -1,24 +1,15 @@
-CC = gcc
-CFLAGS = -g -Wall -pthread -lrt
-
-EXECS = drp dstr fstcns fstprd longmsg
-
-all: $(EXECS)
-
-drp: drp.c queue.c
-	$(CC) $(CFLAGS) drp.c queue.c -o drp
-
-dstr: dstr.c queue.c
-	$(CC) $(CFLAGS) dstr.c queue.c -o dstr
-
-fstcns: fstcns.c queue.c
-	$(CC) $(CFLAGS) fstcns.c queue.c -o fstcns
-
-fstprd: fstprd.c queue.c
-	$(CC) $(CFLAGS) fstprd.c queue.c -o fstprd
-
-longmsg: longmsg.c queue.c
-	$(CC) $(CFLAGS) longmsg.c queue.c -o longmsg
-
+all: fast_producer_test fast_consumer_test message_length_test
+fast_producer_test: fast_producer_test.c task25.c
+	gcc -Wall -pthread -c task25.c
+	gcc -Wall -pthread -c fast_producer_test.c
+	gcc -Wall -pthread task25.o fast_producer_test.o -o fast_producer_test
+fast_consumer_test: fast_consumer_test.c task25.c
+	gcc -Wall -pthread -c task25.c
+	gcc -Wall -pthread -c fast_consumer_test.c
+	gcc -Wall -pthread task25.o fast_consumer_test.o -o fast_consumer_test
+message_length_test: message_length_test.c task25.c
+	gcc -Wall -pthread -c task25.c
+	gcc -Wall -pthread -c message_length_test.c
+	gcc -Wall -pthread task25.o message_length_test.o -o message_length_test
 clean:
-	rm -f $(EXECS)
+	rm -f *.o fast_producer_test fast_consumer_test message_length_test
