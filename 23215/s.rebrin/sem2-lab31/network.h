@@ -38,6 +38,7 @@ typedef struct client {
     data* cur_data;
     time_t last_activity;
     int using_cache;
+    int headers_len;
     struct client* next;
 } client;
 

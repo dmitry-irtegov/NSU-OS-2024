@@ -16,11 +16,11 @@ void con_to_host(int* sockfd, char* host) {
 
     *sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (*sockfd < 0)
-        error("Ошибка открытия сокета");
+        error("Creating socket error");
 
     server = gethostbyname(host);
     if (server == NULL)
-        error("Ошибка: нет такого хоста");
+        error("Error: no such host");
 
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -28,7 +28,7 @@ void con_to_host(int* sockfd, char* host) {
     serv_addr.sin_port = htons(80);
 
     if (connect(*sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
-        error("Ошибка подключения");
+        error("Connection error");
 }
 
 void con_to_cli(int* sockfd) {
@@ -36,7 +36,7 @@ void con_to_cli(int* sockfd) {
 
     *sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (*sockfd < 0)
-        error("Ошибка открытия сокета");
+        error("Opening socket error");
 
     int opt = 1;
     setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -50,7 +50,7 @@ void con_to_cli(int* sockfd) {
     serv_addr.sin_port = htons(9002);
 
     if (bind(*sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
-        error("Ошибка подключения");
+        error("Binding error");
 }
 
 void set_nonblocking(int cl_fd) {

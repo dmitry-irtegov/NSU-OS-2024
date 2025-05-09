@@ -28,7 +28,7 @@ int lg = 1;
 
 void logs() {
 	time_t lst = time(NULL);
-	if (lst - last_log < 1) {
+	if (lst - last_log < 10) {
 		return;
 	}
 	last_log = lst;
@@ -52,6 +52,12 @@ void logs() {
 	}
 	else while (cc) {
 		printf("==============================================\n%s==============================================\n", cc->request);
+		/*data* d = cc->dat;
+		while (d) {
+
+			printf("----------------------------------\n%s\n----------------------------------\n", d->data);
+			d = d->next;
+		}*/
 		cc = cc->next;
 	}
 	printf("\n");
@@ -108,6 +114,8 @@ int add(int cl_fd) {
 	a->tot = 0;
 	a->len = 0;
 	a->writing = 0;
+	a->header_len = 0;
+	a->headers_len = 0;
 	a->writing_to_client = 0;
 	a->writing_to_client_total = 0;
 	a->using_cache = 0;
@@ -228,6 +236,7 @@ int main() {
 		while (cur) {
 			//printf("%d\n", 1);
 			if (FD_ISSET(cur->cli_fd, &read_fds)) {
+
 				int r = read(cur->cli_fd, buffer, BUFFER_SIZE - 1);
 
 				if (r <= 0) {
@@ -243,10 +252,14 @@ int main() {
 					cur->writing = 0;
 					cur->tot = 0;
 					cur->len = 0;
+					cur->header_len = 0;
+					cur->headers_len = 0;
 					cur->writing_to_client = 0;
 					cur->writing_to_client_total = 0;
+				printf("hmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm\n");
 					cache* pot_cache = find_cache(buffer);
 					if(pot_cache){
+						printf("---------Used prepared cache\n");
 						cur->cur_cache = pot_cache;
 						cur->cur_data = pot_cache->dat;
 						cur->using_cache = 1;
@@ -255,7 +268,7 @@ int main() {
 					else {
 						cur->using_cache = 0;
 						parse_http_request(buffer, hst);
-						add_to_cache(buffer, 60);
+						cur->cur_cache = add_to_cache(buffer, 60);
 						if (hst[0] != '\0' && (cur->host[0] == '\0' || strcmp(hst, cur->host))) {
 							if (cur->inet_fd > 0) {
 								close(cur->inet_fd);
@@ -285,32 +298,45 @@ int main() {
 			}
 
 			if (cur->using_cache) {
-				if (FD_ISSET(cur->cli_fd, &write_fds) && !cur->writing_to_client && cur->tot <= cur->len) {
-					cur->buffer[bytes_read] = '\0';
-					cur->writing_to_client = write(cur->cli_fd, cur->buffer, bytes_read);
-					cur->writing_to_client_total = bytes_read;
-					if (cur->writing_to_client == bytes_read) cur->writing_to_client = 0;
-					cur->tot += bytes_read;
+				if (cur->cur_data) { printf("ok\n"); }
+				//else printf("meh\n");
+				if (FD_ISSET(cur->cli_fd, &write_fds) && !cur->writing_to_client && cur->cur_data) {
+					memcpy(cur->buffer, cur->cur_data->data, cur->cur_data->len);
+					cur->writing_to_client = write(cur->cli_fd, cur->buffer, cur->cur_data->len);
+					cur->writing_to_client_total = cur->cur_data->len;
+					if (cur->writing_to_client == cur->cur_data->len) cur->writing_to_client = 0;
+					//cur->tot += cur->cur_data->len;
 					//add_to_cache(buffer, 60, cur->buffer, bytes_read);
 					cur->last_activity = time(NULL);
+					cur->cur_data = cur->cur_data->next;
 				}
 			}
 			else {
-				if (FD_ISSET(cur->cli_fd, &write_fds) && FD_ISSET(cur->inet_fd, &read_fds) && !cur->writing_to_client && (cur->tot <= cur->len || !cur->len) &&
+				if (FD_ISSET(cur->cli_fd, &write_fds) && FD_ISSET(cur->inet_fd, &read_fds) && !cur->writing_to_client && (cur->tot <= cur->len + cur->headers_len || !cur->len) &&
 					(bytes_read = read(cur->inet_fd, cur->buffer, BUFFER_SIZE - 1)) > 0) {
+					//printf("s;dlfjawpihawefuahoiahvzfhvoidfidfvhdfv\n");
 					if (!cur->len) {
 						int l = get_content_length_from_headers(cur->buffer);
 						cur->len = l == -1 ? cur->len : l;
 					}
+
+					if (!cur->headers_len) {
+						char* header_end = strstr(cur->buffer, "\r\n\r\n");
+						if (header_end) {
+							printf(">>>>>>>>>>>> %d %d\n", cur->tot, header_end - cur->buffer);
+							cur->headers_len = cur->tot + header_end - cur->buffer + 4;
+
+						}
+					}
 					cur->buffer[bytes_read] = '\0';
 					cur->writing_to_client = write(cur->cli_fd, cur->buffer, bytes_read);
 					cur->writing_to_client_total = bytes_read;
-					printf("\tI get %d bytes from %d, and send %d bytes\n", bytes_read, cur->len, cur->writing_to_client);
-					printf("%s\n", cur->buffer);
+					printf("\tI get %d: %d bytes from %d, and send %d bytes\n", bytes_read, cur->tot + bytes_read, cur->len + cur->headers_len, cur->writing_to_client);
+					//printf("%s\n", cur->buffer);
 					if (cur->writing_to_client >= bytes_read) cur->writing_to_client = 0;
 					cur->tot += bytes_read;
-					printf("%d\n", cur->tot);
-					add_to_cache(buffer, 60, cur->buffer, bytes_read);
+					//printf("%d\n", cur->tot);
+					add_to_data(cur->cur_cache, cur->buffer, bytes_read);
 					cur->last_activity = time(NULL);
 				}
 

@@ -7,19 +7,31 @@
 cache* cache_head = NULL;
 
 void add_to_data(cache* cac, char* buff, int len) {
+    if (!cac || !buff || len <= 0) return;
 
-    cac->dat = (data*)malloc(sizeof(data));
+    data* new_node = (data*)malloc(sizeof(data));
+    if (!new_node) return;
 
-    cac->dat->len = len;
-    cac->dat->data = (char*)malloc(len);
-    if (!cac->dat->data) {
-        free(cac->dat);
-        free(cac->request);
-        free(cac);
-        return NULL;
+    new_node->data = (char*)malloc(len);
+    if (!new_node->data) {
+        free(new_node);
+        return;
     }
-    memcpy(cac->dat->data, buff, len);
-    cac->dat->next = NULL;
+
+    memcpy(new_node->data, buff, len);
+    new_node->len = len;
+    new_node->next = NULL;
+
+    if (!cac->dat) {
+        cac->dat = new_node;
+    }
+    else {
+        data* curr = cac->dat;
+        while (curr->next) {
+            curr = curr->next;
+        }
+        curr->next = new_node;
+    }
 }
 
 cache* add_to_cache(char* req, int live) {
@@ -33,7 +45,7 @@ cache* add_to_cache(char* req, int live) {
     new_cache->working = 0;
     new_cache->dat = NULL;
     new_cache->next = NULL;
-
+    cache* t;
     if (!cache_head) {
         cache_head = new_cache;
     }
@@ -59,6 +71,7 @@ cache* find_cache(char* buf) {
     cache* cur = cache_head;
     while (cur) {
         if (!strcmp(buf, cur->request)) return cur;
+        cur = cur->next;
     }
     return NULL;
 }
