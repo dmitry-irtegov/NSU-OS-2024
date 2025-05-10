@@ -67,7 +67,9 @@ int main(int argc, char *argv[]){
         close(sock);
         exit(6);
     }
+    printf("connected!\n");
 
+    
     //делаем запрос к серверу
     char request[9999] = {0};
     sprintf(request, "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", path, hostname);
@@ -76,13 +78,14 @@ int main(int argc, char *argv[]){
         close(sock);
         exit(7);
     }
+    printf("request sent!\n");
 
 
     //меняем настройки терминала, чтобы выводить поэкранно
     struct termios start_tty;
     tcgetattr(0, &start_tty);
 
-    struct termios new_tty = new_tty;
+    struct termios new_tty = start_tty;
     new_tty.c_lflag &= ~(ICANON | ECHO);
     new_tty.c_cc[VMIN] = 1;
     tcsetattr(0, TCSANOW, &new_tty);
@@ -94,6 +97,8 @@ int main(int argc, char *argv[]){
     int linesPrinted = 0;
     int connection_active = 1;
     int last_waiting = 0;
+    
+
     while(response[0] != 0 || connection_active){
         fd_set readFds;
         FD_ZERO(&readFds);
@@ -157,7 +162,6 @@ int main(int argc, char *argv[]){
                 last_waiting = 1;
             }
         }
-
     }
 
 
