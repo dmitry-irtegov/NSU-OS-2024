@@ -17,7 +17,8 @@ unsigned long hash(const char *url) {
 
 void print_cache() {
     printf("\n\n\nCache contents:\n\n\n");
-    for (int i = 0; i < CACHE_SIZE; i++) {
+    int i;
+    for (i = 0; i < CACHE_SIZE; i++) {
         CacheEntry *entry = cache[i];
         if (!entry) continue;
         printf("Index %d:\n", i);
@@ -78,7 +79,8 @@ int is_cache_entry_expired(CacheEntry *entry) {
 
 
 void clean_expired(){
-    for (int i = 0; i < CACHE_SIZE; i++) {
+    int i;
+    for (i = 0; i < CACHE_SIZE; i++) {
         CacheEntry *prev = NULL;
         CacheEntry *entry = cache[i];
         while (entry) {
@@ -130,7 +132,8 @@ void mark_cache_entry_complete(const char *url) {
 }
 
 void free_cache() {
-    for (int i = 0; i < CACHE_SIZE; i++) {
+    int i;
+    for (i = 0; i < CACHE_SIZE; i++) {
         CacheEntry *entry = cache[i];
         while (entry) {
             CacheEntry *next = entry->next;
