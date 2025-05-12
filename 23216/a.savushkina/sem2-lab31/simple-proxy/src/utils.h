@@ -13,4 +13,5 @@ int enough_memory_for_cache(size_t response_length);
 
 int extract_status_code(char *response);
 
+char* extract_path(char* request);
 #endif

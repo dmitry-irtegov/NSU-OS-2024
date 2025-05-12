@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <poll.h>
 #include "proxy.h"
 #include "cache.h"
 #include "utils.h"
@@ -31,7 +32,22 @@ char *read_full_request(int client_fd, size_t *out_length) {
     if (!buffer) return NULL;
 
     size_t total = 0;
-    while (total < MAX_HEADER_SIZE - 1) {
+    int max_timeout_ms = 5000;
+    int poll_timeout = 1000;
+    int elapsed_time = 0;
+
+    while (total < MAX_HEADER_SIZE - 1 && elapsed_time < max_timeout_ms) {
+        struct pollfd pfd = { .fd = client_fd, .events = POLLIN };
+        int poll_res = poll(&pfd, 1, poll_timeout);
+        if (poll_res == 0) {
+            elapsed_time += poll_timeout;
+            continue;
+        } else if (poll_res < 0) {
+            perror("poll error");
+            free(buffer);
+            return NULL;
+        }
+
         ssize_t n = read(client_fd, buffer + total, MAX_HEADER_SIZE - total - 1);
         if (n < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
@@ -40,15 +56,24 @@ char *read_full_request(int client_fd, size_t *out_length) {
             return NULL;
         }
         if (n == 0) break;
+
         total += n;
         buffer[total] = '\0';
+
         if (strstr(buffer, "\r\n\r\n")) break;
+    }
+
+    if (elapsed_time >= max_timeout_ms) {
+        fprintf(stderr, "read_full_request: timeout waiting for client data\n");
+        free(buffer);
+        return NULL;
     }
 
     buffer[total] = '\0';
     *out_length = total;
     return buffer;
 }
+
 
 void process_request(int client_fd, const char *raw_request, size_t request_length) {
     if (!raw_request) return;
@@ -103,14 +128,10 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
             return;
         }
 
-        fd_set wfds;
-        FD_ZERO(&wfds);
-        FD_SET(server_fd, &wfds);
-        struct timeval timeout = {.tv_sec = 5, .tv_usec = 0};
-
-        int sel = select(server_fd + 1, NULL, &wfds, NULL, &timeout);
-        if (sel <= 0) {
-            perror("connect timeout");
+        struct pollfd pfd = { .fd = server_fd, .events = POLLOUT };
+        int ret = poll(&pfd, 1, 5000);
+        if (ret <= 0 || !(pfd.revents & POLLOUT)) {
+            perror("poll connect timeout");
             close(server_fd);
             free(hostname);
             free(cache_key);
@@ -137,10 +158,8 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
         } else if (sent < 0) {
             if (errno == EINTR) continue;
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                fd_set wfds;
-                FD_ZERO(&wfds);
-                FD_SET(server_fd, &wfds);
-                if (select(server_fd + 1, NULL, &wfds, NULL, NULL) < 0) break;
+                struct pollfd pfd = { .fd = server_fd, .events = POLLOUT };
+                if (poll(&pfd, 1, -1) < 0) break;
                 continue;
             }
             break;
@@ -161,27 +180,50 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
         return;
     }
 
-    while (1) {
-        char chunk[4096];
-        ssize_t r = recv(server_fd, chunk, sizeof(chunk), 0);
-        if (r < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
-            perror("recv");
+    int max_timeout_ms = 5000;
+    int poll_timeout = 1000;
+    int elapsed_time = 0;
+    
+    while (elapsed_time < max_timeout_ms) {
+        struct pollfd pfd = { .fd = server_fd, .events = POLLIN };
+        int poll_res = poll(&pfd, 1, poll_timeout);
+    
+        if (poll_res < 0) {
+            perror("poll recv");
             break;
+        } else if (poll_res == 0) {
+            elapsed_time += poll_timeout;
+            continue;
         }
-        if (r == 0) break;
-
-        write(client_fd, chunk, (size_t)r);
-
-        if (size + (size_t)r + 1 > capacity) {
-            capacity = capacity * 2 + (size_t)r;
-            char *tmp = realloc(response, capacity);
-            if (!tmp) break;
-            response = tmp;
+    
+        if (pfd.revents & POLLIN) {
+            char chunk[4096];
+            ssize_t r = recv(server_fd, chunk, sizeof(chunk), 0);
+            if (r < 0) {
+                perror("recv");
+                break;
+            }
+            if (r == 0) break;
+    
+            write(client_fd, chunk, (size_t)r);
+    
+            if (size + (size_t)r + 1 > capacity) {
+                capacity = capacity * 2 + (size_t)r;
+                char *tmp = realloc(response, capacity);
+                if (!tmp) break;
+                response = tmp;
+            }
+            memcpy(response + size, chunk, (size_t)r);
+            size += (size_t)r;
+    
+            elapsed_time = 0;
         }
-        memcpy(response + size, chunk, (size_t)r);
-        size += (size_t)r;
     }
+    
+    if (elapsed_time >= max_timeout_ms) {
+        fprintf(stderr, "recv timeout from server\n");
+    }
+    
     response[size] = '\0';
 
     printf("Response received from %s\n", hostname);
@@ -213,7 +255,7 @@ int handle_client_request(int client_fd) {
     }
 
     if (!should_keep_connection(req)) {
-        const char *msg = "Incorrect http method. Use only GET or HEAD\n";
+        const char *msg = "HTTP/1.0 405 Method Not Allowed\r\nConnection: close\r\n\r\nMethod Not Allowed";
         write(client_fd, msg, strlen(msg));
         free(req);
         return 0;
@@ -237,27 +279,39 @@ char *make_cache_key(const char *raw_request) {
         return NULL;
     }
 
+    char *path = extract_path((char*)raw_request);
+    if (!path) {
+        fprintf(stderr, "make_cache_key: cannot extract uri\n");
+        free(host);
+        return NULL;
+    }
+
+    printf("make_cache_key: method: %s, host: %s, path: %s\n", method, host, path);
+
     size_t needed = strlen(method)
                     + 8
                     + strlen(host)
-                    + strlen(uri)
+                    + strlen(path)
                     + 1;
 
     char *key = malloc(needed);
     if (!key) {
         perror("make_cache_key: malloc");
         free(host);
+        free(path);
         return NULL;
     }
 
-    int wrote = snprintf(key, needed, "%s http://%s%s", method, host, uri);
+    int wrote = snprintf(key, needed, "%s http://%s%s", method, host, path);
     if (wrote < 0 || (size_t)wrote >= needed) {
         fprintf(stderr, "make_cache_key: snprintf failed or truncated\n");
         free(key);
         free(host);
+        free(path);
         return NULL;
     }
 
     free(host);
+    free(path);
     return key;
 }

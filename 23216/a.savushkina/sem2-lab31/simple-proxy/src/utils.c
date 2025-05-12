@@ -25,6 +25,38 @@ char *extract_host(char *request) {
     return host;
 }
 
+char *extract_path(char *request) {
+    const char *path_start = strstr(request, "://");
+    if (path_start) {
+        path_start = strchr(path_start + 3, '/');
+    } else {
+        path_start = strchr(request, '/');
+    }
+
+    if (!path_start) {
+        return strdup("/");
+    }
+    const char *path_end = strstr(path_start, " ");
+    if (path_end) {
+        size_t path_length = path_end - path_start;
+        char *path = (char *)malloc(path_length + 1);
+        if (!path) {
+            return NULL;
+        }
+        strncpy(path, path_start, path_length);
+        path[path_length] = '\0';
+        return path;
+    }
+    size_t path_length = strlen(path_start);
+    char *path = (char *)malloc(path_length + 1);
+    if (!path) {
+        return NULL;
+    }
+
+    return strdup(path_start);
+}
+
+
 int should_keep_connection(char *request) {
     char *protocol_get = strstr(request, "GET");
     char *protocol_head = strstr(request, "HEAD");
