@@ -95,12 +95,37 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
     server_addr.sin_port = htons(80);
     memcpy(&server_addr.sin_addr, host_entry->h_addr_list[0], host_entry->h_length);
 
-    if (connect(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0 && errno != EINPROGRESS) {
-        perror("connect");
-        close(server_fd);
-        free(hostname);
-        free(cache_key);
-        return;
+    if (connect(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        if (errno != EINPROGRESS) {
+            close(server_fd);
+            free(hostname);
+            free(cache_key);
+            return;
+        }
+
+        fd_set wfds;
+        FD_ZERO(&wfds);
+        FD_SET(server_fd, &wfds);
+        struct timeval timeout = {.tv_sec = 5, .tv_usec = 0};
+
+        int sel = select(server_fd + 1, NULL, &wfds, NULL, &timeout);
+        if (sel <= 0) {
+            perror("connect timeout");
+            close(server_fd);
+            free(hostname);
+            free(cache_key);
+            return;
+        }
+
+        int err;
+        socklen_t len = sizeof(err);
+        if (getsockopt(server_fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0 || err != 0) {
+            fprintf(stderr, "connect error: %s\n", strerror(err));
+            close(server_fd);
+            free(hostname);
+            free(cache_key);
+            return;
+        }
     }
     printf("Connected to %s\n", hostname);
 
