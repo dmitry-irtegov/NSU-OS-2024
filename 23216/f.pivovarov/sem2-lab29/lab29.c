@@ -9,8 +9,8 @@
 #include <aio.h>
 #include <errno.h>
 
-#define BUFFER_SIZE 50
-#define SCREEN_LINES 5
+#define BUFFER_SIZE 1024
+#define SCREEN_LINES 25
 
 int connectToHost(char *host, int port);
 int parseUrl(const char *url, char **host, char **path, int *port);
@@ -181,7 +181,9 @@ int setNoncanonical() {
 
 int recieveGetResponse(int sockfd) {
     char buffer[BUFFER_SIZE], userinputBuff[1];
-    int printedLines = 0, waitForInput = 0, offset = 0, prevOffset = 0;
+    int printedLines = 0;
+    int waitForInput = 0;
+    int offset = 0;
     struct aiocb readrq, userinput;
     const struct aiocb *asyncs[] = { &readrq, &userinput, NULL };
 
@@ -201,18 +203,17 @@ int recieveGetResponse(int sockfd) {
             switch (userinputBuff[0]) {
                 case ' ':
                     if (waitForInput) {
-                        prevOffset = offset;
-                        offset = writeRecieved(buffer + offset, unwrited - offset, &printedLines);
+                        offset = writeRecieved(buffer + offset, unwrited, &printedLines);
                         if (offset > 0) {
-                            unwrited -= offset - prevOffset;
+                            unwrited -= offset;
                             memmove(buffer, buffer + offset, unwrited);
                             aiocbFilling(&readrq, sockfd, buffer + unwrited, BUFFER_SIZE - unwrited);
-                            aio_read(&readrq);
                             offset = 0;
                         } else {
                             unwrited = 0;
                             waitForInput = 0;
                         }
+                        aio_read(&readrq); 
                     }
                     break;
                 case 'q': return 0;
@@ -225,16 +226,16 @@ int recieveGetResponse(int sockfd) {
         if (data_size > 0) {
             unwrited += data_size;
             if (waitForInput == 0) {
-                prevOffset = offset;
                 offset = writeRecieved(buffer, data_size, &printedLines);
                 if (offset > 0) {
-                    unwrited -= offset - prevOffset;
+                    unwrited -= offset;
                     waitForInput = 1;
                 } else {unwrited = 0; }
+                
             }
             aiocbFilling(&readrq, sockfd, buffer + unwrited, BUFFER_SIZE - unwrited);
             aio_read(&readrq);
-        } else if (data_size == 0 && unwrited == 0) break;
+        } else if (data_size == 0 && unwrited == 0) { break; } 
     }
     return 0;
 }
