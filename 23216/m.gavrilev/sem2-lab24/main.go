@@ -177,16 +177,16 @@ func widgetAssembler(
 
 	for {
 		select {
-        case <-ctx.Done():
-            log.Printf("[%s] Остановка...", assemblerName)
-            return
-        case _, ok := <-moduleChan:
+		case <-ctx.Done():
+			log.Printf("[%s] Остановка...", assemblerName)
+			return
+		case _, ok := <-moduleChan:
 			if !ok {
 				log.Printf("[%s] ОШИБКА: Канал semModule закрыт!", assemblerName)
 				return
 			}
 			haveModule = true
-        case _, ok := <-detailCChan:
+		case _, ok := <-detailCChan:
 			if !ok {
 				log.Printf("[%s] ОШИБКА: Канал C закрыт!", assemblerName)
 				return
