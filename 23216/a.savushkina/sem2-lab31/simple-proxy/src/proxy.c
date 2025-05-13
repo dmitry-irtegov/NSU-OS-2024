@@ -236,6 +236,9 @@ void process_request(int client_fd, const char *raw_request, size_t request_leng
     }
 
     printf("End of response from %s\n", hostname);
+    
+    clean_expired();
+    printf("Expired cache cleaned\n");
 
     free(response);
     close(server_fd);
