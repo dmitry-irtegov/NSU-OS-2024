@@ -9,8 +9,8 @@
 #include <aio.h>
 #include <errno.h>
 
-#define BUFFER_SIZE 50
-#define SCREEN_LINES 5
+#define BUFFER_SIZE 1024
+#define SCREEN_LINES 25
 
 int connectToHost(char *host, int port);
 int parseUrl(const char *url, char **host, char **path, int *port);
