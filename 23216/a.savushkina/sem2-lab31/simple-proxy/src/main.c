@@ -123,7 +123,6 @@ int main() {
                 }
             }
         }
-        void clean_expired();
     }
 
     return 0;
