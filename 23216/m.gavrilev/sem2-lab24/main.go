@@ -192,13 +192,13 @@ func widgetAssembler(
 				return
 			}
 			haveC = true
-        }
+		}
 
 		if haveModule && haveC {
-            newCount := atomic.AddInt64(widgetCounter, 1)
-            log.Printf("[%s] ===> Собран Винтик #%d", assemblerName, newCount)
-            haveModule, haveC = false, false
-        }
+			newCount := atomic.AddInt64(widgetCounter, 1)
+			log.Printf("[%s] ===> Собран Винтик #%d", assemblerName, newCount)
+			haveModule, haveC = false, false
+		}
 	}
 }
 
