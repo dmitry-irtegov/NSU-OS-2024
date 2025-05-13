@@ -14,8 +14,10 @@ import (
 
 const (
 	sortObservationDelay time.Duration = 50 * time.Millisecond
-	numSorters = 10
-	maxLength = 80
+	numSorters                         = 10
+	maxLength                          = 80
+	minSortInterval                    = 3 * time.Second
+	intervalRange                      = int64(12 * time.Second)
 )
 
 type Node struct {
@@ -160,58 +162,41 @@ func (l *LinkedList) Sort() {
 				// было  1  1 2  1  3
 				// стало 1  1 2  1  3
 				//       p  c n n.n
-				//          p  
+				//          p
 			}
 		}
 	}
 }
 
-func sorter(ctx context.Context, wg *sync.WaitGroup, id int, list *LinkedList, minInterval, maxInterval time.Duration) {
-	defer wg.Done()
-	fmt.Printf("[Sorter %d] Запущен.\n", id)
-
-	initialDelayRange := int64(minInterval)
-	if initialDelayRange > 0 {
-		initialDelay := time.Duration(rand.Int63n(initialDelayRange/2 + 1))
-		select {
-		case <-time.After(initialDelay):
-		case <-ctx.Done():
-			fmt.Printf("[Sorter %d] Получен сигнал отмены во время начальной задержки, завершаю работу.\n", id)
-			return
-		}
-	}
+func sorter(ctx context.Context, wg *sync.WaitGroup, id int, list *LinkedList, sleepTime time.Duration) {
+	ticker := time.NewTicker(sleepTime)
+	defer func() {
+		ticker.Stop()
+		wg.Done()
+	}()
+	fmt.Printf("[Sorter %d] Запущен и спит по %d (секунд).\n", id, sleepTime/time.Second)
 
 	for {
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			fmt.Printf("[Sorter %d] Завершаю работу...\n", id)
+			return
+		}
 		// fmt.Printf("[Sorter %d] Начинаю сортировку...\n", id)
 		// startTime := time.Now()
+		
 		list.Sort()
+
 		// duration := time.Since(startTime)
 		// fmt.Printf("[Sorter %d] Сортировка завершена за %v.\n", id, duration)
 
-		intervalRange := int64(maxInterval - minInterval)
-		var randomOffset time.Duration
-		if intervalRange > 0 {
-			randomOffset = time.Duration(rand.Int63n(intervalRange))
-		} else {
-			randomOffset = 0
-		}
-		sleepDuration := minInterval + randomOffset
 		// fmt.Printf("[Sorter %d] Следующая сортировка через ~%v\n", id, sleepDuration)
-
-		select {
-		case <-time.After(sleepDuration):
-		case <-ctx.Done():
-			fmt.Printf("[Sorter %d] Получен сигнал отмены во время ожидания, завершаю работу.\n", id)
-			return
-		}
 	}
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-
-	const minSortInterval = 3 * time.Second
-	const maxSortInterval = 8 * time.Second
 
 	list := &LinkedList{}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -220,7 +205,10 @@ func main() {
 	fmt.Printf("Запуск %d горутин сортировщиков...\n", numSorters)
 	for i := 0; i < numSorters; i++ {
 		wg.Add(1)
-		go sorter(ctx, &wg, i, list, minSortInterval, maxSortInterval)
+		randomOffset := time.Duration(rand.Int63n(intervalRange))
+		sleepDuration := minSortInterval + randomOffset
+
+		go sorter(ctx, &wg, i, list, sleepDuration)
 	}
 	fmt.Println("Сортировщики запущены.")
 	time.Sleep(100 * time.Millisecond)
@@ -263,8 +251,8 @@ func main() {
 	cancel()
 	fmt.Println("Ожидание завершения всех горутин сортировщиков...")
 	wg.Wait()
-	fmt.Println("Все сортировщики завершили работу.\n")
-	fmt.Println("Финальное состояние списка:")
+	fmt.Println("Все сортировщики завершили работу.")
+	fmt.Println("\nФинальное состояние списка:")
 	list.Print()
 	fmt.Println("Программа завершена.")
 }
