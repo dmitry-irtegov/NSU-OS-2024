@@ -9,8 +9,8 @@
 #include <aio.h>
 #include <errno.h>
 
-#define BUFFER_SIZE 1024
-#define SCREEN_LINES 25
+#define BUFFER_SIZE 50
+#define SCREEN_LINES 5
 
 int connectToHost(char *host, int port);
 int parseUrl(const char *url, char **host, char **path, int *port);
@@ -233,7 +233,7 @@ int recieveGetResponse(int sockfd) {
                 } else {unwrited = 0; }
             }
             aiocbFilling(&readrq, sockfd, buffer + unwrited, BUFFER_SIZE - unwrited);
-            int rv = aio_read(&readrq);
+            aio_read(&readrq);
         } else if (data_size == 0 && unwrited == 0) break;
     }
     return 0;
