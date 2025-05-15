@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
     char has_more = 0;
     char *line = NULL;
     int lines = 0;
+    int not_first = 0;
 
     struct termios orig_term, new_term;
     tcgetattr(0, &orig_term);
@@ -125,14 +126,19 @@ int main(int argc, char *argv[]) {
             }
 
             while (line != NULL) {
-                printf("%s\n", line);
+                if (lines == 0 && not_first) {
+                    printf("\r%-40s\n", line);
+                } else {
+                    printf("%s\n", line);
+                }
                 lines++;
 
                 if (lines == 25) {
                     lines = 0;
                     stopped = 1;
                     has_more = 1;
-                    printf("----- Press space to scroll down -----\n");
+                    not_first = 1;
+                    printf("----- Press space to scroll down -----");
                     break;
                 }
 
@@ -152,7 +158,7 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    
+
     close(sockfd);
     tcsetattr(0, TCSANOW, &orig_term);
     exit(EXIT_SUCCESS);
