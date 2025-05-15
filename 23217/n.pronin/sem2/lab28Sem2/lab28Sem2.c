@@ -58,20 +58,22 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
         return NULL;
     }
 
-    const char *inbuf = input;
-    char *outbuf = output;
-    char *outbuf_start = output;
+    char *inbuf = strdup(input); // копия входной строки
+    char *inptr = inbuf;
+    char *outptr = output;
 
-    if (iconv(cd, (char **)&inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1) {
+    if (iconv(cd, &inptr, &inbytesleft, &outptr, &outbytesleft) == (size_t)-1) {
         perror("iconv");
-        free(outbuf_start);
+        free(output);
+        free(inbuf);
         iconv_close(cd);
         return NULL;
     }
 
-    *outbuf = '\0';
+    *outptr = '\0';
+    free(inbuf);
     iconv_close(cd);
-    return outbuf_start;
+    return output;
 }
 
 void parse_url(const char *url, char *host, char *path) {
