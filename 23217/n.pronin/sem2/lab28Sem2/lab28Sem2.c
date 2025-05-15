@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <ctype.h>
+#include <iconv.h> 
 
 #define BUFFER_SIZE 4096
 #define LINES_PER_PAGE 25
@@ -59,6 +60,25 @@ void send_request(int sockfd, const char *host, const char *path) {
     write(sockfd, request, strlen(request));
 }
 
+void convert_encoding(char *input, size_t input_len, char *output, size_t output_len) {
+    iconv_t cd = iconv_open("UTF-8", "WINDOWS-1251");
+    if (cd == (iconv_t)(-1)) {
+        error("iconv_open failed");
+    }
+
+    char *in_buf = input;
+    char *out_buf = output;
+    size_t in_bytes_left = input_len;
+    size_t out_bytes_left = output_len;
+
+    size_t res = iconv(cd, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
+    if (res == (size_t)(-1)) {
+        error("iconv failed");
+    }
+
+    iconv_close(cd);
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <URL>\n", argv[0]);
@@ -76,7 +96,6 @@ int main(int argc, char *argv[]) {
     int lines_printed = 0;
     int paused = 0;
 
-    // Переводим stdin в неблокирующий режим
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
     while (1) {
@@ -94,8 +113,12 @@ int main(int argc, char *argv[]) {
             if (n <= 0) break; // соединение закрыто
             buffer[n] = '\0';
 
+            // Преобразуем кодировку данных
+            char output_buffer[BUFFER_SIZE * 2];  // Буфер для вывода
+            convert_encoding(buffer, n, output_buffer, sizeof(output_buffer));
+
             // Вывод построчно
-            char *line = strtok(buffer, "\n");
+            char *line = strtok(output_buffer, "\n");
             while (line) {
                 printf("%s\n", line);
                 fflush(stdout);
