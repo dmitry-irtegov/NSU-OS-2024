@@ -3,9 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
-int coef;
-char ar[100][11];
-
 void * printLines(void *line){
     char *name = (char*) line;
     for(int i = 0; i < 10; i++){
