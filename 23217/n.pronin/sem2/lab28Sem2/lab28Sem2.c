@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <ctype.h>
-#include <iconv.h> 
+#include <iconv.h>
 
 #define BUFFER_SIZE 4096
 #define LINES_PER_PAGE 25
@@ -18,7 +18,7 @@ void error(const char *msg) {
     exit(1);
 }
 
-// Простая функция для извлечения хоста и пути из URL
+// Функция для извлечения хоста и пути из URL
 void parse_url(const char *url, char *host, char *path) {
     if (strncmp(url, "http://", 7) == 0)
         url += 7;
@@ -30,7 +30,7 @@ void parse_url(const char *url, char *host, char *path) {
         strcpy(path, slash);
     } else {
         strcpy(host, url);
-        strcpy(path, "/");
+        strcpy(path, "/";
     }
 }
 
@@ -60,13 +60,27 @@ void send_request(int sockfd, const char *host, const char *path) {
     write(sockfd, request, strlen(request));
 }
 
-void convert_encoding(char *input, size_t input_len, char *output, size_t output_len) {
-    iconv_t cd = iconv_open("UTF-8", "WINDOWS-1251");
+char* extract_encoding(const char *response) {
+    const char *content_type = strstr(response, "Content-Type:");
+    if (content_type) {
+        char *encoding = strstr(content_type, "charset=");
+        if (encoding) {
+            encoding += 8; // Пропустить "charset="
+            char *end = strchr(encoding, ';');
+            if (end) *end = '\0'; // Завершить строку
+            return strdup(encoding); // Вернуть кодировку
+        }
+    }
+    return NULL; // Если кодировка не найдена
+}
+
+void convert_encoding(char *input, size_t input_len, char *output, size_t output_len, const char *from_encoding) {
+    iconv_t cd = iconv_open("UTF-8", from_encoding);
     if (cd == (iconv_t)(-1)) {
         error("iconv_open failed");
     }
 
-    const char *in_buf_const = input;  
+    const char *in_buf_const = input;
     char *out_buf = output;
     size_t in_bytes_left = input_len;
     size_t out_bytes_left = output_len;
@@ -78,7 +92,6 @@ void convert_encoding(char *input, size_t input_len, char *output, size_t output
 
     iconv_close(cd);
 }
-
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -98,6 +111,8 @@ int main(int argc, char *argv[]) {
     int paused = 0;
 
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+    char response[BUFFER_SIZE];
+    int total_bytes = 0;
 
     while (1) {
         FD_ZERO(&read_fds);
@@ -114,23 +129,34 @@ int main(int argc, char *argv[]) {
             if (n <= 0) break; // соединение закрыто
             buffer[n] = '\0';
 
-            // Преобразуем кодировку данных
-            char output_buffer[BUFFER_SIZE * 2];  // Буфер для вывода
-            convert_encoding(buffer, n, output_buffer, sizeof(output_buffer));
+            // Сохраняем ответ для анализа кодировки
+            strncat(response, buffer, sizeof(response) - strlen(response) - 1);
+            total_bytes += n;
 
-            // Вывод построчно
-            char *line = strtok(output_buffer, "\n");
-            while (line) {
-                printf("%s\n", line);
-                fflush(stdout);
-                lines_printed++;
-                if (lines_printed >= LINES_PER_PAGE) {
-                    printf("Press space to scroll down...\n");
-                    fflush(stdout);
-                    paused = 1;
-                    break;
+            // Проверяем, получили ли мы полный заголовок
+            if (strstr(response, "\r\n\r\n")) {
+                char *encoding = extract_encoding(response);
+                if (encoding) {
+                    // Преобразуем кодировку
+                    char output_buffer[BUFFER_SIZE * 2];
+                    convert_encoding(buffer, n, output_buffer, sizeof(output_buffer), encoding);
+
+                    // Вывод построчно
+                    char *line = strtok(output_buffer, "\n");
+                    while (line) {
+                        printf("%s\n", line);
+                        fflush(stdout);
+                        lines_printed++;
+                        if (lines_printed >= LINES_PER_PAGE) {
+                            printf("Press space to scroll down...\n");
+                            fflush(stdout);
+                            paused = 1;
+                            break;
+                        }
+                        line = strtok(NULL, "\n");
+                    }
+                    free(encoding); // Освобождаем память
                 }
-                line = strtok(NULL, "\n");
             }
         }
 
