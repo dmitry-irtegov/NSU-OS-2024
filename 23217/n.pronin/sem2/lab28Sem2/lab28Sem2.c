@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <ctype.h>
-#include <iconv.h>  // Для преобразования кодировок
+#include <iconv.h> 
 
 #define BUFFER_SIZE 4096
 #define LINES_PER_PAGE 25
@@ -66,18 +66,19 @@ void convert_encoding(char *input, size_t input_len, char *output, size_t output
         error("iconv_open failed");
     }
 
-    char *in_buf = input;
+    const char *in_buf_const = input;  
     char *out_buf = output;
     size_t in_bytes_left = input_len;
     size_t out_bytes_left = output_len;
 
-    size_t res = iconv(cd, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
+    size_t res = iconv(cd, &in_buf_const, &in_bytes_left, &out_buf, &out_bytes_left);
     if (res == (size_t)(-1)) {
-        error("iconv failed");
+        perror("iconv");
     }
 
     iconv_close(cd);
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -96,7 +97,6 @@ int main(int argc, char *argv[]) {
     int lines_printed = 0;
     int paused = 0;
 
-    // Переводим stdin в неблокирующий режим
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
     while (1) {
