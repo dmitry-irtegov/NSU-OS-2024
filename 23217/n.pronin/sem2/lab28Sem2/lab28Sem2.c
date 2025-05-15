@@ -3,138 +3,87 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <errno.h>
-#include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/select.h>
-#include <ctype.h>
+#include <netdb.h>
+#include <termios.h>
 
-#define BUFFER_SIZE 4096
+#define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
 
-int parse_url(const char *url, char *host, char *path) {
-    const char *p;
-    if (strncmp(url, "http://", 7) == 0) {
-        p = url + 7;
-    } else {
-        p = url;
-    }
-
-    const char *slash = strchr(p, '/');
-    if (slash) {
-        strncpy(host, p, slash - p);
-        host[slash - p] = '\0';
-        strcpy(path, slash);
-    } else {
-        strcpy(host, p);
-        strcpy(path, "/");
-    }
-
-    return 0;
+void set_terminal_mode(struct termios *orig_term) {
+    struct termios raw = *orig_term;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 }
 
-int connect_to_host(const char *host) {
-    struct addrinfo hints, *res, *rp;
-    int sockfd;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET; // IPv4
+int connect_to_host(const char *host, const char *port) {
+    struct addrinfo hints = {0}, *res;
+    int sock;
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-
-    if (getaddrinfo(host, "80", &hints, &res) != 0) {
-        perror("getaddrinfo");
-        return -1;
-    }
-
-    for (rp = res; rp != NULL; rp = rp->ai_next) {
-        sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (sockfd == -1) continue;
-        if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) == 0) break;
-        close(sockfd);
-    }
-
+    getaddrinfo(host, port, &hints, &res);
+    sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    connect(sock, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
-    if (rp == NULL) return -1;
-    return sockfd;
+    return sock;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        const char *usage = "Usage: ./client http://host/path\n";
-        write(STDERR_FILENO, usage, strlen(usage));
+    if (argc != 2) { fprintf(stderr, "Usage: %s http://host/path\n", argv[0]); return 1; }
+
+    char host[256], path[1024] = "/";
+    if (sscanf(argv[1], "http://%255[^/]%1023s", host, path + 1) < 1) {
+        fprintf(stderr, "Invalid URL format\n");
         return 1;
     }
 
-    char host[256], path[1024];
-    parse_url(argv[1], host, path);
-    int sockfd = connect_to_host(host);
-    if (sockfd < 0) {
-        perror("connect");
-        return 1;
-    }
+    int sock = connect_to_host(host, "80");
 
-    char request[2048];
+    char request[1500];
     snprintf(request, sizeof(request),
-             "GET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",
-             path, host);
-    write(sockfd, request, strlen(request));
+             "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", path[1] ? path + 1 : "", host);
+    write(sock, request, strlen(request));
 
-    fd_set readfds;
-    char buffer[BUFFER_SIZE];
-    int lines_printed = 0;
-    int in_body = 0;
+    struct termios orig_term;
+    tcgetattr(STDIN_FILENO, &orig_term);
+    set_terminal_mode(&orig_term);
 
+    char buf[BUF_SIZE];
+    int lines = 0, pause = 0;
+
+    fd_set fds;
     while (1) {
-        FD_ZERO(&readfds);
-        FD_SET(sockfd, &readfds);
-        FD_SET(STDIN_FILENO, &readfds);
-        int maxfd = sockfd > STDIN_FILENO ? sockfd : STDIN_FILENO;
+        FD_ZERO(&fds);
+        FD_SET(sock, &fds);
+        if (pause) FD_SET(STDIN_FILENO, &fds);
 
-        if (select(maxfd + 1, &readfds, NULL, NULL, NULL) < 0) {
-            perror("select");
-            break;
+        select(sock + 1, &fds, NULL, NULL, NULL);
+
+        if (FD_ISSET(sock, &fds) && !pause) {
+            int n = read(sock, buf, BUF_SIZE);
+            if (n <= 0) break;
+
+            for (int i = 0; i < n; ++i) {
+                write(STDOUT_FILENO, &buf[i], 1);
+                if (buf[i] == '\n' && ++lines >= LINES_PER_PAGE) {
+                    pause = 1;
+                    write(STDOUT_FILENO, "\nPress space to scroll down\n", 29);
+                    break;
+                }
+            }
         }
 
-        if (FD_ISSET(sockfd, &readfds)) {
-            ssize_t n = read(sockfd, buffer, sizeof(buffer) - 1);
-            if (n <= 0) break;
-            buffer[n] = '\0';
-
-            char *line = strtok(buffer, "\n");
-            while (line) {
-                if (!in_body) {
-                    if (strcmp(line, "\r") == 0 || strcmp(line, "") == 0) {
-                        in_body = 1;
-                    }
-                } else {
-                    size_t len = strlen(line);
-                    write(STDOUT_FILENO, line, len);
-                    write(STDOUT_FILENO, "\n", 1);
-                    lines_printed++;
-                    if (lines_printed >= LINES_PER_PAGE) {
-                        const char *prompt = "\nPress space to scroll down\n";
-                        write(STDOUT_FILENO, prompt, strlen(prompt));
-                        while (1) {
-                            FD_ZERO(&readfds);
-                            FD_SET(STDIN_FILENO, &readfds);
-                            select(STDIN_FILENO + 1, &readfds, NULL, NULL, NULL);
-                            if (FD_ISSET(STDIN_FILENO, &readfds)) {
-                                char c;
-                                read(STDIN_FILENO, &c, 1);
-                                if (c == ' ') break;
-                            }
-                        }
-                        lines_printed = 0;
-                    }
-                }
-                line = strtok(NULL, "\n");
+        if (FD_ISSET(STDIN_FILENO, &fds)) {
+            char c;
+            if (read(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
+                lines = 0;
+                pause = 0;
             }
         }
     }
 
-    close(sockfd);
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
+    close(sock);
     return 0;
 }
