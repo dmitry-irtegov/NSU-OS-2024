@@ -66,18 +66,20 @@ void convert_encoding(char *input, size_t input_len, char *output, size_t output
         error("iconv_open failed");
     }
 
-    char *in_buf = input;
+    const char *in_buf_const = input;  // Обратите внимание на const
     char *out_buf = output;
     size_t in_bytes_left = input_len;
     size_t out_bytes_left = output_len;
 
-    size_t res = iconv(cd, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
+    size_t res = iconv(cd, &in_buf_const, &in_bytes_left, &out_buf, &out_bytes_left);
     if (res == (size_t)(-1)) {
-        error("iconv failed");
+        perror("iconv");
+        // Не вызываем exit, так как это может быть recoverable ошибка
     }
 
     iconv_close(cd);
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
