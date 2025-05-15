@@ -20,22 +20,31 @@ int main(int argc, char *argv[]){
     //парсинг url
     char hostname[999] = {0};
     char path[777] = {0};
+    char portStr[666] = {0};
     int port = 80;
     if(sscanf(argv[1], "http://%s", hostname) != 1){
         perror("Wrong url");
         exit(2);
     }
     for(int i = 0; hostname[i] != 0; i++){
+        if(hostname[i] == ':'){
+            hostname[i] = 0;
+            i++;
+            for(int j = 0; hostname[i] != 0 && hostname[i] != '/'; j++){
+                portStr[j] = hostname[i];
+                i++;
+            }
+            port = atoi(portStr);
+        }
         if(hostname[i] == '/'){
             strcpy(path, hostname + i);
             hostname[i] = 0;
             break;
         }
-
     }
-
     printf("hostnane: %s\n", hostname);
     printf("path: %s\n", path);
+    printf("port: %d\n", port);
 
     //находим адрес по имени
     struct hostent *host = gethostbyname(hostname);
