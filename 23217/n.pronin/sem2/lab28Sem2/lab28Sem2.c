@@ -5,13 +5,23 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <iconv.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #define BUF 8192
 
 void error(const char *msg) { perror(msg); exit(1); }
 
+char *my_strcasestr(const char *haystack, const char *needle) {
+    for (; *haystack; haystack++) {
+        if (strncasecmp(haystack, needle, strlen(needle)) == 0)
+            return (char *)haystack;
+    }
+    return NULL;
+}
+
 char *get_charset(const char *hdrs) {
-    char *p = strcasestr(hdrs, "charset=");
+    char *p = my_strcasestr(hdrs, "charset=");
     if (!p) return "UTF-8";
     p += 8;
     static char cs[32];
@@ -34,6 +44,7 @@ int main(int argc, char **argv) {
     if (argc != 2) { fprintf(stderr, "Usage: %s <url>\n", argv[0]); return 1; }
 
     char host[256], path[1024];
+    memset(path, 0, sizeof(path));
     sscanf(argv[1], "http://%255[^/]%1023s", host, path);
     if (path[0] == '\0') strcpy(path, "/");
 
@@ -44,7 +55,9 @@ int main(int argc, char **argv) {
     memcpy(&sa.sin_addr, he->h_addr, he->h_length);
     connect(s, (struct sockaddr*)&sa, sizeof sa);
 
-    dprintf(s, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", path, host);
+    char req[1024];
+    snprintf(req, sizeof(req), "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", path, host);
+    write(s, req, strlen(req));
 
     char buf[BUF], *body;
     int n = recv(s, buf, BUF-1, 0); buf[n] = 0;
