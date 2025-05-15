@@ -15,7 +15,13 @@
 void set_terminal_mode(struct termios *orig_term) {
     struct termios raw = *orig_term;
     raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
+void restore_terminal_mode(struct termios *orig_term) {
+    tcsetattr(STDIN_FILENO, TCSANOW, orig_term);
 }
 
 int connect_to_host(const char *host, const char *port) {
@@ -65,7 +71,8 @@ int main(int argc, char *argv[]) {
 
     char request[1500];
     snprintf(request, sizeof(request),
-             "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", path[1] ? path + 1 : "", host);
+             "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",
+             path[1] ? path + 1 : "", host);
     write(sock, request, strlen(request));
 
     struct termios orig_term;
@@ -76,18 +83,25 @@ int main(int argc, char *argv[]) {
     int lines = 0;
     int pause = 0;
 
-    fd_set fds;
-
     while (1) {
+        fd_set fds;
         FD_ZERO(&fds);
         FD_SET(sock, &fds);
-        if (pause) {
-            FD_SET(STDIN_FILENO, &fds);
-        }
+        FD_SET(STDIN_FILENO, &fds);
 
-        if (select(sock + 1, &fds, NULL, NULL, NULL) < 0) {
+        int maxfd = (sock > STDIN_FILENO) ? sock : STDIN_FILENO;
+
+        if (select(maxfd + 1, &fds, NULL, NULL, NULL) < 0) {
             perror("select");
             break;
+        }
+
+        if (FD_ISSET(STDIN_FILENO, &fds)) {
+            char c;
+            if (read(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
+                lines = 0;
+                pause = 0;
+            }
         }
 
         if (FD_ISSET(sock, &fds) && !pause) {
@@ -108,17 +122,9 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
-        if (pause && FD_ISSET(STDIN_FILENO, &fds)) {
-            char c;
-            if (read(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
-                lines = 0;
-                pause = 0;
-            }
-        }
     }
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
+    restore_terminal_mode(&orig_term);
     close(sock);
     return 0;
 }
