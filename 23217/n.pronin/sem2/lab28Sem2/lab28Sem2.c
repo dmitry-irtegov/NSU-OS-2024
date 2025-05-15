@@ -61,27 +61,36 @@ void send_request(int sockfd, const char *host, const char *path) {
     write(sockfd, request, strlen(request));
 }
 
-// Преобразование из Windows-1251 в UTF-8
-size_t convert_encoding(char *input, size_t input_len, char *output, size_t output_len) {
-    iconv_t cd = iconv_open("UTF-8", "WINDOWS-1251");
+char *convert_encoding(const char *input, const char *from_charset, const char *to_charset) {
+    iconv_t cd = iconv_open(to_charset, from_charset);
     if (cd == (iconv_t)(-1)) {
         perror("iconv_open");
-        return 0;
+        return NULL;
     }
 
-    const char *in_buf_const = input;
-    char *in_buf = (char *)in_buf_const;
-    char *out_buf = output;
-    size_t in_bytes_left = input_len;
-    size_t out_bytes_left = output_len;
+    size_t inbytesleft = strlen(input);
+    size_t outbytesleft = inbytesleft * 4;
 
-    size_t res = iconv(cd, (const char **)&in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
-    if (res == (size_t)-1) {
+    char *output = malloc(outbytesleft + 1);
+    if (!output) {
+        iconv_close(cd);
+        return NULL;
+    }
+
+    const char *inbuf_const = input; 
+    char *outbuf = output;
+    char *outbuf_start = output;
+
+    if (iconv(cd, (char **)&inbuf_const, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1) {
         perror("iconv");
+        free(outbuf_start);
+        iconv_close(cd);
+        return NULL;
     }
 
+    *outbuf = '\0';
     iconv_close(cd);
-    return output_len - out_bytes_left;
+    return outbuf_start;
 }
 
 int main(int argc, char *argv[]) {
