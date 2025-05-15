@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
         FD_SET(0, &read_fds);
 
         if (select(sockfd + 1, &read_fds, NULL, NULL, NULL) == -1) {
-            perror("select");
+            fprintf(stderr, "select");
             close(sockfd);
             tcsetattr(0, TCSANOW, &orig_term);
             exit(EXIT_FAILURE);
