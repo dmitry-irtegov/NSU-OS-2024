@@ -58,20 +58,19 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
         return NULL;
     }
 
-    char *inbuf = strdup(input); // копия входной строки
-    char *inptr = inbuf;
+    const char *inbuf = input;  // input не изменяем
+    const char **pinbuf = &inbuf; // указатель на константный указатель
+
     char *outptr = output;
 
-    if (iconv(cd, &inptr, &inbytesleft, &outptr, &outbytesleft) == (size_t)-1) {
+    if (iconv(cd, (char **)pinbuf, &inbytesleft, &outptr, &outbytesleft) == (size_t)-1) {
         perror("iconv");
         free(output);
-        free(inbuf);
         iconv_close(cd);
         return NULL;
     }
 
     *outptr = '\0';
-    free(inbuf);
     iconv_close(cd);
     return output;
 }
