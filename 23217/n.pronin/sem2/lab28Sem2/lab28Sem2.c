@@ -30,7 +30,7 @@ void parse_url(const char *url, char *host, char *path) {
         strcpy(path, slash);
     } else {
         strcpy(host, url);
-        strcpy(path, "/";
+        strcpy(path, "/"); // Исправлено
     }
 }
 
