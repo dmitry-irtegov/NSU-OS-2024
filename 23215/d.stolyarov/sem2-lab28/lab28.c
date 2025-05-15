@@ -158,7 +158,7 @@ int main(int argc, char *argv[]){
                 connection_active = 0;
             }
             else{
-                addStrToList(&response_buffer, buf);
+                addStrToAr(&response_buffer, buf);
 
                 if(linesPrinted >= SCREEN_HEIGHT && !last_waiting){
                     fprintf(stderr, "Press any key to scroll down");
