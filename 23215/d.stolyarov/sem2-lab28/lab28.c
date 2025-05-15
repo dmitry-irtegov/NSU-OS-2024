@@ -7,15 +7,31 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/time.h>
-
+#define EXAMPLE "http://example.com"
 #define SCREEN_HEIGHT 25 //в количестве строк
+typedef struct ar{
+    char * buf;
+    int symsPrinted;
+    int limitSize;
+    int curSize;
+}ar;
 
+void addStrToAr(ar* dest, char* src){
+    int srclen = strlen(src);
+    while(dest->limitSize - dest->curSize <= srclen){
+        dest->limitSize *= 2;
+        dest->buf = (char*) realloc(dest->buf, sizeof(char) * dest->limitSize);
+    }
+    strcat(dest->buf, src);
+    dest->curSize += srclen;
+}
 int main(int argc, char *argv[]){
     
     if(argc < 2){
         perror("Missing arguements");
         exit(1);
     }
+    //argv[1] = EXAMPLE;
     
     //парсинг url
     char hostname[999] = {0};
@@ -101,14 +117,18 @@ int main(int argc, char *argv[]){
 
     //получаем и выводим ответ
     printf("---response---\r\n");
-    char response_buf[999999] = {0};
-    char *response = response_buf;
+    ar response_buffer;
+    response_buffer.buf = (char*)calloc(2, sizeof(char));
+    response_buffer.symsPrinted = 0;
+    response_buffer.curSize = 0;
+    response_buffer.limitSize = 2;
+    
     int linesPrinted = 0;
     int connection_active = 1;
     int last_waiting = 0;
     
 
-    while(response[0] != 0 || connection_active){
+    while(response_buffer.buf[response_buffer.symsPrinted] != 0 || connection_active){
         fd_set readFds;
         FD_ZERO(&readFds);
         FD_SET(0, &readFds);
@@ -119,6 +139,7 @@ int main(int argc, char *argv[]){
         if(select(sock+1, &readFds, NULL, NULL, NULL) == -1){
             close(sock);
             tcsetattr(0, TCSANOW, &start_tty);
+            free(response_buffer.buf);
             perror("Select failed");
             exit(8);
         }
@@ -129,6 +150,7 @@ int main(int argc, char *argv[]){
             if(ret == -1){
                 close(sock);
                 tcsetattr(0, TCSANOW, &start_tty);
+                free(response_buffer.buf);
                 perror("Socket read error");
                 exit(9);
             }
@@ -136,7 +158,7 @@ int main(int argc, char *argv[]){
                 connection_active = 0;
             }
             else{
-                strcat(response, buf);
+                addStrToList(&response_buffer, buf);
 
                 if(linesPrinted >= SCREEN_HEIGHT && !last_waiting){
                     fprintf(stderr, "Press any key to scroll down");
@@ -153,20 +175,21 @@ int main(int argc, char *argv[]){
         }
 
         if(linesPrinted < SCREEN_HEIGHT){
-            for(; linesPrinted < SCREEN_HEIGHT && response[0] != 0; linesPrinted++){
+            for(; linesPrinted < SCREEN_HEIGHT && response_buffer.buf[response_buffer.symsPrinted] != 0; linesPrinted++){
                 if(last_waiting){
                     printf("\r                                               \r");
                     last_waiting = 0;
                 }
                 char str[99999] = {0};
                 int i = 0;
-                for(; response[i] != 0 && response[i] != '\n'; i++){
-                    str[i] = response[i];
+                for(; response_buffer.buf[response_buffer.symsPrinted + i] != 0 
+                    && response_buffer.buf[response_buffer.symsPrinted + i] != '\n'; i++){
+                    str[i] = response_buffer.buf[response_buffer.symsPrinted + i];
                 }
-                response = response + i + 1;
+                response_buffer.symsPrinted += i + 1;
                 printf("%s\r\n", str);
             }
-            if(response[0] != 0 && !last_waiting){
+            if(response_buffer.buf[response_buffer.symsPrinted] != 0 && !last_waiting){
                 fprintf(stderr, "Press any key to scroll down");
                 last_waiting = 1;
             }
@@ -176,5 +199,6 @@ int main(int argc, char *argv[]){
 
     close(sock);
     tcsetattr(0, TCSANOW, &start_tty);
+    free(response_buffer.buf);
     exit(0);
 }
