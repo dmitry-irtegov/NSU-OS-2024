@@ -1,11 +1,8 @@
-#ifndef TASK25_H
-#define TASK25_H
+#ifndef TASK25_SEM_H
+#define TASK25_SEM_H
 
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
 #include <semaphore.h>
-#include <unistd.h>
+#include <pthread.h>
 
 #define MAX_QUEUE_SIZE 10
 #define MAX_MSG_LENGTH 80

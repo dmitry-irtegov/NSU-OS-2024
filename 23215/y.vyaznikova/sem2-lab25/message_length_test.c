@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include "task25.h"
+#include "task25_sem.h"
 
 const char *messages[] = {
     "Short message.",

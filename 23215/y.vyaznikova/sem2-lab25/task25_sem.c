@@ -3,20 +3,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-
-#define MAX_QUEUE_SIZE 10
-#define MAX_MSG_LENGTH 80
-
-typedef struct {
-    char messages[MAX_QUEUE_SIZE][MAX_MSG_LENGTH + 1];
-    int head;
-    int tail;
-    int count;
-    sem_t empty;
-    sem_t full;
-    pthread_mutex_t mutex;
-    int dropped;
-} queue;
+#include "task25_sem.h"
 
 void mymsginit(queue *q) {
     if (q == NULL) {
@@ -52,9 +39,21 @@ void mymsqdrop(queue *q) {
     q->dropped = 1;
     pthread_mutex_unlock(&q->mutex);
 
-    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
-        sem_post(&q->full);
-        sem_post(&q->empty);
+    int empty_value, full_value;
+    int max_attempts = 100;
+
+    while (max_attempts--) {
+        sem_getvalue(&q->empty, &empty_value);
+        sem_getvalue(&q->full, &full_value);
+
+        if (empty_value > 0 && full_value > 0) {
+            break;
+        }
+
+        if (empty_value <= 0) sem_post(&q->empty);
+        if (full_value <= 0) sem_post(&q->full);
+
+        nanosleep(&(struct timespec){0, 1000000}, NULL);
     }
 }
 
@@ -68,6 +67,7 @@ int mymsgput(queue *q, char *msg) {
     }
 
     pthread_mutex_lock(&q->mutex);
+
     if (q->dropped) {
         pthread_mutex_unlock(&q->mutex);
         sem_post(&q->empty);
@@ -97,6 +97,7 @@ int mymsgget(queue *q, char *buf, size_t bufsize) {
     }
 
     pthread_mutex_lock(&q->mutex);
+
     if (q->dropped) {
         pthread_mutex_unlock(&q->mutex);
         sem_post(&q->full);

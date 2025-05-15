@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <alloca.h>
-#include "task25.h"
+#include "task25_sem.h"
 
 void *producer(void *arg) {
     queue *q = (queue *)arg;
