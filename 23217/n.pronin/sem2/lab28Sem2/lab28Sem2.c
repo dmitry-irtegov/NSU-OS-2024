@@ -11,9 +11,11 @@
 #define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
 
-void set_terminal_mode(struct termios *orig_term) {
+void set_raw_mode(struct termios *orig_term) {
     struct termios raw = *orig_term;
     raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 }
 
@@ -30,7 +32,10 @@ int connect_to_host(const char *host, const char *port) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) { fprintf(stderr, "Usage: %s http://host/path\n", argv[0]); return 1; }
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s http://host/path\n", argv[0]);
+        return 1;
+    }
 
     char host[256], path[1024] = "/";
     if (sscanf(argv[1], "http://%255[^/]%1023s", host, path + 1) < 1) {
@@ -47,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     struct termios orig_term;
     tcgetattr(STDIN_FILENO, &orig_term);
-    set_terminal_mode(&orig_term);
+    set_raw_mode(&orig_term);
 
     char buf[BUF_SIZE];
     int lines = 0, pause = 0;
@@ -55,8 +60,8 @@ int main(int argc, char *argv[]) {
     fd_set fds;
     while (1) {
         FD_ZERO(&fds);
-        FD_SET(sock, &fds);
-        if (pause) FD_SET(STDIN_FILENO, &fds);
+        if (!pause) FD_SET(sock, &fds);
+        FD_SET(STDIN_FILENO, &fds);
 
         select(sock + 1, &fds, NULL, NULL, NULL);
 
