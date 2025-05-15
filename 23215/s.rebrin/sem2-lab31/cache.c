@@ -34,17 +34,18 @@ void add_to_data(cache* cac, char* buff, int len) {
     }
 }
 
-cache* add_to_cache(char* req, int live) {
+cache* add_to_cache(char* req) {
 
     cache* new_cache = (cache*)malloc(sizeof(cache));
     if (!new_cache) return NULL;
 
     new_cache->request = strdup(req);
-    new_cache->live_time = live;
+    new_cache->live_time = -1;
     new_cache->birth_time = time(NULL);
     new_cache->working = 0;
     new_cache->dat = NULL;
     new_cache->next = NULL;
+    new_cache->status_code = -1;
     cache* t;
     if (!cache_head) {
         cache_head = new_cache;
@@ -70,7 +71,7 @@ void fr_data(data* d) {
 cache* find_cache(char* buf) {
     cache* cur = cache_head;
     while (cur) {
-        if (!strcmp(buf, cur->request)) return cur;
+        if (cur->status_code/100 == 2 && !strcmp(buf, cur->request)) return cur;
         cur = cur->next;
     }
     return NULL;
@@ -94,7 +95,7 @@ void check_live_time_cache() {
     time_t now = time(NULL);
     while (cur) {
         cache* next = cur->next;
-        if (cur->live_time > 0 && (now - cur->birth_time) > cur->live_time && !cur->working) {
+        if ((now - cur->birth_time) > cur->live_time && !cur->working) {
             printf("\nCleared cache:\n==============================================\n%s\n==============================================\n", cur->request);
             remove_from_cache(cur);
         }

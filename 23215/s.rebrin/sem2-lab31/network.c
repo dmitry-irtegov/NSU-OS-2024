@@ -41,8 +41,8 @@ void con_to_cli(int* sockfd) {
     int opt = 1;
     setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    int rcvbuf = 16; // 256 байт
-    setsockopt(*sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+    //int rcvbuf = 16; // 256 байт
+    //setsockopt(*sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -98,4 +98,55 @@ int get_content_length_from_headers(const char* headers) {
     }
 
     return length;
+}
+
+void parse_headers(const char* headers, int* content_length, int* cache_live, int* status) {
+    *content_length = -1;
+    *cache_live = -1;
+    *status = -1;
+
+    const char* content_length_ptr = strstr(headers, "Content-Length:");
+    if (content_length_ptr != NULL) {
+        content_length_ptr += strlen("Content-Length:");
+        while (*content_length_ptr && isspace(*content_length_ptr)) {
+            content_length_ptr++;
+        }
+
+        *content_length = 0;
+        while (*content_length_ptr && isdigit(*content_length_ptr)) {
+            *content_length = *content_length * 10 + (*content_length_ptr - '0');
+            content_length_ptr++;
+        }
+    }
+
+    const char* cache_control_ptr = strstr(headers, "Cache-Control:");
+    if (cache_control_ptr != NULL) {
+        const char* max_age_ptr = strstr(cache_control_ptr, "max-age=");
+        if (max_age_ptr != NULL) {
+            max_age_ptr += strlen("max-age=");
+
+            *cache_live = 0;
+            while (*max_age_ptr && isdigit(*max_age_ptr)) {
+                *cache_live = *cache_live * 10 + (*max_age_ptr - '0');
+                max_age_ptr++;
+            }
+        }
+    }
+
+    const char* http_version_ptr = strstr(headers, "HTTP/");
+    if (http_version_ptr != NULL) {
+        // Пропускаем "HTTP/x.x "
+        while (*http_version_ptr && !isspace(*http_version_ptr)) {
+            http_version_ptr++;
+        }
+        while (*http_version_ptr && isspace(*http_version_ptr)) {
+            http_version_ptr++;
+        }
+
+        *status = 0;
+        while (*http_version_ptr && isdigit(*http_version_ptr)) {
+            *status = *status * 10 + (*http_version_ptr - '0');
+            http_version_ptr++;
+        }
+    }
 }

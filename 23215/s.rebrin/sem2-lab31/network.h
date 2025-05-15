@@ -18,6 +18,7 @@ typedef struct cache {
     char* request;
     int live_time;
     time_t birth_time;
+    int status_code;
     int working;
     data* dat;
     struct cache* next;
@@ -39,6 +40,8 @@ typedef struct client {
     time_t last_activity;
     int using_cache;
     int headers_len;
+    int collect_headers;
+    char* headers_collectors;
     struct client* next;
 } client;
 
@@ -47,5 +50,6 @@ void con_to_cli(int* sockfd);
 void set_nonblocking(int cl_fd);
 void parse_http_request(const char* request, char* host);
 int get_content_length_from_headers(const char* headers);
+void parse_headers(const char* headers, int* content_length, int* cache_live, int* status);
 
 #endif
