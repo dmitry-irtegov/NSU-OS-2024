@@ -11,12 +11,17 @@
 #define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
 
-void set_raw_mode(struct termios *orig_term) {
-    struct termios raw = *orig_term;
+struct termios orig_term;
+
+void set_raw_mode() {
+    tcgetattr(STDIN_FILENO, &orig_term);
+    struct termios raw = orig_term;
     raw.c_lflag &= ~(ICANON | ECHO);
-    raw.c_cc[VMIN] = 1;
-    raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
+void reset_terminal() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
 }
 
 int connect_to_host(const char *host, const char *port) {
@@ -50,18 +55,17 @@ int main(int argc, char *argv[]) {
              "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", path[1] ? path + 1 : "", host);
     write(sock, request, strlen(request));
 
-    struct termios orig_term;
-    tcgetattr(STDIN_FILENO, &orig_term);
-    set_raw_mode(&orig_term);
+    set_raw_mode();
+    atexit(reset_terminal);
 
     char buf[BUF_SIZE];
     int lines = 0, pause = 0;
-
     fd_set fds;
+
     while (1) {
         FD_ZERO(&fds);
-        if (!pause) FD_SET(sock, &fds);
-        FD_SET(STDIN_FILENO, &fds);
+        FD_SET(sock, &fds);
+        if (pause) FD_SET(STDIN_FILENO, &fds);
 
         select(sock + 1, &fds, NULL, NULL, NULL);
 
@@ -73,7 +77,7 @@ int main(int argc, char *argv[]) {
                 write(STDOUT_FILENO, &buf[i], 1);
                 if (buf[i] == '\n' && ++lines >= LINES_PER_PAGE) {
                     pause = 1;
-                    write(STDOUT_FILENO, "\nPress space to scroll down\n", 29);
+                    write(STDOUT_FILENO, "\n-- Press space to scroll --\n", 30);
                     break;
                 }
             }
@@ -88,7 +92,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
     close(sock);
     return 0;
 }
