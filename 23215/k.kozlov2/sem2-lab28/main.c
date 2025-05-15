@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
     tcgetattr(0, &orig_term);
     new_term = orig_term;
     new_term.c_lflag &= ~(ICANON | ECHO);
+    new_term.c_cc[VMIN] = 1;
     tcsetattr(0, TCSANOW, &new_term);
 
     while (1) {
