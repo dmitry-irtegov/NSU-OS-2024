@@ -7,31 +7,43 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <termios.h>
+#include <sys/select.h>
 
 #define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
 
-struct termios orig_term;
-
-void set_raw_mode() {
-    tcgetattr(STDIN_FILENO, &orig_term);
-    struct termios raw = orig_term;
+void set_terminal_mode(struct termios *orig_term) {
+    struct termios raw = *orig_term;
     raw.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 }
 
-void reset_terminal() {
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
-}
-
 int connect_to_host(const char *host, const char *port) {
-    struct addrinfo hints = {0}, *res;
+    struct addrinfo hints;
+    struct addrinfo *res;
     int sock;
-    hints.ai_family = AF_UNSPEC;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    getaddrinfo(host, port, &hints, &res);
+
+    if (getaddrinfo(host, port, &hints, &res) != 0) {
+        perror("getaddrinfo");
+        exit(1);
+    }
+
     sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    connect(sock, res->ai_addr, res->ai_addrlen);
+    if (sock < 0) {
+        perror("socket");
+        exit(1);
+    }
+
+    if (connect(sock, res->ai_addr, res->ai_addrlen) < 0) {
+        perror("connect");
+        close(sock);
+        exit(1);
+    }
+
     freeaddrinfo(res);
     return sock;
 }
@@ -42,7 +54,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char host[256], path[1024] = "/";
+    char host[256], path[1024];
+    path[0] = '/'; path[1] = '\0';
     if (sscanf(argv[1], "http://%255[^/]%1023s", host, path + 1) < 1) {
         fprintf(stderr, "Invalid URL format\n");
         return 1;
@@ -55,35 +68,48 @@ int main(int argc, char *argv[]) {
              "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", path[1] ? path + 1 : "", host);
     write(sock, request, strlen(request));
 
-    set_raw_mode();
-    atexit(reset_terminal);
+    struct termios orig_term;
+    tcgetattr(STDIN_FILENO, &orig_term);
+    set_terminal_mode(&orig_term);
 
     char buf[BUF_SIZE];
-    int lines = 0, pause = 0;
+    int lines = 0;
+    int pause = 0;
+
     fd_set fds;
 
     while (1) {
         FD_ZERO(&fds);
         FD_SET(sock, &fds);
-        if (pause) FD_SET(STDIN_FILENO, &fds);
+        if (pause) {
+            FD_SET(STDIN_FILENO, &fds);
+        }
 
-        select(sock + 1, &fds, NULL, NULL, NULL);
+        if (select(sock + 1, &fds, NULL, NULL, NULL) < 0) {
+            perror("select");
+            break;
+        }
 
         if (FD_ISSET(sock, &fds) && !pause) {
             int n = read(sock, buf, BUF_SIZE);
             if (n <= 0) break;
 
-            for (int i = 0; i < n; ++i) {
+            int i;
+            for (i = 0; i < n; ++i) {
                 write(STDOUT_FILENO, &buf[i], 1);
-                if (buf[i] == '\n' && ++lines >= LINES_PER_PAGE) {
-                    pause = 1;
-                    write(STDOUT_FILENO, "\n-- Press space to scroll --\n", 30);
-                    break;
+                if (buf[i] == '\n') {
+                    lines++;
+                    if (lines >= LINES_PER_PAGE) {
+                        pause = 1;
+                        const char *msg = "\n-- Press space to scroll down --\n";
+                        write(STDOUT_FILENO, msg, strlen(msg));
+                        break;
+                    }
                 }
             }
         }
 
-        if (FD_ISSET(STDIN_FILENO, &fds)) {
+        if (pause && FD_ISSET(STDIN_FILENO, &fds)) {
             char c;
             if (read(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
                 lines = 0;
@@ -92,6 +118,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
     close(sock);
     return 0;
 }
