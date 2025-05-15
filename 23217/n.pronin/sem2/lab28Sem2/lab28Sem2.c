@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/select.h>
-#include <ctype.h>
 #include <iconv.h>
 
 #define BUFFER_SIZE 4096
@@ -18,6 +17,7 @@ void error(const char *msg) {
     exit(1);
 }
 
+// Парсинг URL: разбиваем на хост и путь
 void parse_url(const char *url, char *host, char *path) {
     if (strncmp(url, "http://", 7) == 0)
         url += 7;
@@ -33,6 +33,7 @@ void parse_url(const char *url, char *host, char *path) {
     }
 }
 
+// Создание TCP-соединения по хосту
 int create_connection(const char *host) {
     struct hostent *server = gethostbyname(host);
     if (!server) error("No such host");
@@ -51,6 +52,7 @@ int create_connection(const char *host) {
     return sockfd;
 }
 
+// Отправка HTTP GET-запроса
 void send_request(int sockfd, const char *host, const char *path) {
     char request[1024];
     snprintf(request, sizeof(request),
@@ -59,6 +61,7 @@ void send_request(int sockfd, const char *host, const char *path) {
     write(sockfd, request, strlen(request));
 }
 
+// Преобразование из Windows-1251 в UTF-8
 size_t convert_encoding(char *input, size_t input_len, char *output, size_t output_len) {
     iconv_t cd = iconv_open("UTF-8", "WINDOWS-1251");
     if (cd == (iconv_t)(-1)) {
@@ -66,12 +69,13 @@ size_t convert_encoding(char *input, size_t input_len, char *output, size_t outp
         return 0;
     }
 
-    char *in_buf = input;
+    const char *in_buf_const = input;
+    char *in_buf = (char *)in_buf_const;
     char *out_buf = output;
     size_t in_bytes_left = input_len;
     size_t out_bytes_left = output_len;
 
-    size_t res = iconv(cd, &in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
+    size_t res = iconv(cd, (const char **)&in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
     if (res == (size_t)-1) {
         perror("iconv");
     }
@@ -94,10 +98,10 @@ int main(int argc, char *argv[]) {
 
     fd_set read_fds;
     char buffer[BUFFER_SIZE];
-    char leftover[BUFFER_SIZE] = {0};  // остаток неполной строки
-    int lines_printed = 0, paused = 0;
+    char leftover[BUFFER_SIZE] = {0};
+    int lines_printed = 0;
+    int paused = 0;
     int header_parsed = 0;
-    char *body_start;
 
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
@@ -110,6 +114,7 @@ int main(int argc, char *argv[]) {
         int activity = select(maxfd + 1, &read_fds, NULL, NULL, NULL);
         if (activity < 0) error("select");
 
+        // Чтение с сокета
         if (FD_ISSET(sockfd, &read_fds) && !paused) {
             int n = read(sockfd, buffer, sizeof(buffer));
             if (n <= 0) break;
@@ -124,21 +129,20 @@ int main(int argc, char *argv[]) {
                     data = header_end + 4;
                     data_len = n - (data - buffer);
                 } else {
-                    continue;  // ждем конец заголовков
+                    continue;
                 }
             }
 
-            // Перевод кодировки
-            char utf8_buffer[BUFFER_SIZE * 2];
-            size_t utf8_len = convert_encoding(data, data_len, utf8_buffer, sizeof(utf8_buffer));
+            char utf8_buffer[BUFFER_SIZE * 2] = {0};
+            size_t utf8_len = convert_encoding(data, data_len, utf8_buffer, sizeof(utf8_buffer) - 1);
             utf8_buffer[utf8_len] = '\0';
 
-            // Добавим остаток от предыдущего раза
             char combined[BUFFER_SIZE * 3];
             snprintf(combined, sizeof(combined), "%s%s", leftover, utf8_buffer);
 
             // Построчный вывод
-            char *line = strtok(combined, "\n");
+            char *saveptr;
+            char *line = strtok_r(combined, "\n", &saveptr);
             leftover[0] = '\0';
 
             while (line) {
@@ -151,18 +155,17 @@ int main(int argc, char *argv[]) {
                     paused = 1;
                     break;
                 }
-                line = strtok(NULL, "\n");
+                line = strtok_r(NULL, "\n", &saveptr);
             }
 
-            // Сохраняем, если что-то осталось после последнего \n
-            if (line == NULL) {
-                int len = strlen(combined);
-                if (len > 0 && combined[len - 1] != '\n') {
-                    strncpy(leftover, combined + (len - (utf8_len - (utf8_buffer + utf8_len - data_len))), sizeof(leftover) - 1);
-                }
+            // Сохраняем остаток, если есть
+            if (line == NULL && saveptr && strlen(saveptr) < sizeof(leftover)) {
+                strncpy(leftover, saveptr, sizeof(leftover) - 1);
+                leftover[sizeof(leftover) - 1] = '\0';
             }
         }
 
+        // Обработка клавиши
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             char ch;
             if (read(STDIN_FILENO, &ch, 1) > 0) {
