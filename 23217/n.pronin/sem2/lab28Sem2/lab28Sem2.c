@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <ctype.h>
-#include <iconv.h> 
+#include <iconv.h>
 
 #define BUFFER_SIZE 4096
 #define LINES_PER_PAGE 25
@@ -18,7 +18,6 @@ void error(const char *msg) {
     exit(1);
 }
 
-// Простая функция для извлечения хоста и пути из URL
 void parse_url(const char *url, char *host, char *path) {
     if (strncmp(url, "http://", 7) == 0)
         url += 7;
@@ -60,25 +59,52 @@ void send_request(int sockfd, const char *host, const char *path) {
     write(sockfd, request, strlen(request));
 }
 
-void convert_encoding(char *input, size_t input_len, char *output, size_t output_len) {
-    iconv_t cd = iconv_open("UTF-8", "WINDOWS-1251");
+void to_lowercase(char *str) {
+    for (; *str; ++str)
+        *str = tolower(*str);
+}
+
+void get_charset_from_headers(const char *headers, char *charset, size_t max_len) {
+    const char *ct = strcasestr(headers, "Content-Type:");
+    if (ct) {
+        const char *charset_pos = strcasestr(ct, "charset=");
+        if (charset_pos) {
+            charset_pos += 8; // skip "charset="
+            const char *end = strpbrk(charset_pos, ";\r\n");
+            if (!end) end = charset_pos + strlen(charset_pos);
+            size_t len = end - charset_pos;
+            if (len >= max_len) len = max_len - 1;
+            strncpy(charset, charset_pos, len);
+            charset[len] = '\0';
+            to_lowercase(charset);
+            return;
+        }
+    }
+    strcpy(charset, "utf-8"); // default fallback
+}
+
+void convert_encoding(const char *from_charset, const char *input, size_t input_len, char *output, size_t output_len) {
+    iconv_t cd = iconv_open("UTF-8", from_charset);
     if (cd == (iconv_t)(-1)) {
-        error("iconv_open failed");
+        perror("iconv_open failed, using fallback copy");
+        strncpy(output, input, output_len - 1);
+        output[output_len - 1] = '\0';
+        return;
     }
 
-    const char *in_buf_const = input;  
+    const char *in_buf = input;
     char *out_buf = output;
     size_t in_bytes_left = input_len;
     size_t out_bytes_left = output_len;
 
-    size_t res = iconv(cd, &in_buf_const, &in_bytes_left, &out_buf, &out_bytes_left);
+    size_t res = iconv(cd, (char**)&in_buf, &in_bytes_left, &out_buf, &out_bytes_left);
     if (res == (size_t)(-1)) {
-        perror("iconv");
+        perror("iconv failed");
     }
 
+    *out_buf = '\0';
     iconv_close(cd);
 }
-
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -96,6 +122,9 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFER_SIZE];
     int lines_printed = 0;
     int paused = 0;
+    int headers_parsed = 0;
+    char headers[BUFFER_SIZE * 2] = "";
+    char charset[64] = "utf-8"; // default
 
     fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
 
@@ -108,17 +137,30 @@ int main(int argc, char *argv[]) {
         int activity = select(maxfd + 1, &read_fds, NULL, NULL, NULL);
         if (activity < 0) error("select");
 
-        // Обработка данных от сервера
         if (FD_ISSET(sockfd, &read_fds) && !paused) {
             int n = read(sockfd, buffer, sizeof(buffer) - 1);
-            if (n <= 0) break; // соединение закрыто
+            if (n <= 0) break;
             buffer[n] = '\0';
 
-            // Преобразуем кодировку данных
-            char output_buffer[BUFFER_SIZE * 2];  // Буфер для вывода
-            convert_encoding(buffer, n, output_buffer, sizeof(output_buffer));
+            const char *body = buffer;
 
-            // Вывод построчно
+            if (!headers_parsed) {
+                strncat(headers, buffer, sizeof(headers) - strlen(headers) - 1);
+                char *header_end = strstr(headers, "\r\n\r\n");
+                if (header_end) {
+                    headers_parsed = 1;
+                    header_end += 4; // skip past \r\n\r\n
+                    get_charset_from_headers(headers, charset, sizeof(charset));
+                    body = header_end;
+                    n = strlen(body); // update size to only body
+                } else {
+                    continue; // keep reading headers
+                }
+            }
+
+            char output_buffer[BUFFER_SIZE * 2];
+            convert_encoding(charset, body, n, output_buffer, sizeof(output_buffer));
+
             char *line = strtok(output_buffer, "\n");
             while (line) {
                 printf("%s\n", line);
@@ -134,7 +176,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Обработка ввода пользователя
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             char ch;
             if (read(STDIN_FILENO, &ch, 1) > 0) {
