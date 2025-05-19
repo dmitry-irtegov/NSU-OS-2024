@@ -7,14 +7,22 @@
 #include <termios.h>
 #include <sys/select.h>
 
+#define RINGBUF_SIZE 10245
+char ringbuf[RINGBUF_SIZE];
+
 void parse_url(const char *url, char *host, char *path) {
     if (strncmp(url, "http://", 7) == 0) {
         url += 7;
     }
     const char *slash = strchr(url, '/');
-    strncpy(host, url, slash - url);
-    host[slash - url] = '\0';
-    strcpy(path, slash);
+    if (!slash) {
+        strcpy(host, url);
+        strcpy(path, "/");
+    } else {
+        strncpy(host, url, slash - url);
+        host[slash - url] = '\0';
+        strcpy(path, slash);
+    }
 }
 
 void echo_nonbuff_mode(int enable) {
@@ -24,11 +32,31 @@ void echo_nonbuff_mode(int enable) {
         tcgetattr(0, &old_t);
         new_t = old_t;
         new_t.c_lflag &= ~(ICANON | ECHO);
-        new_t.c_cc[VMIN]=1;
+        new_t.c_cc[VMIN] = 1;
         tcsetattr(0, TCSANOW, &new_t);
     } else {
         tcsetattr(0, TCSANOW, &old_t);
     }
+}
+
+void ringbuf_put(int *start, int *end, char c) {
+    if (((*end + 1) % RINGBUF_SIZE) != *start) {
+        ringbuf[*end] = c;
+        *end = (*end + 1) % RINGBUF_SIZE;
+    } else {
+        *start = (*start + 1) % RINGBUF_SIZE;
+        ringbuf[*end] = c;
+        *end = (*end + 1) % RINGBUF_SIZE;
+    }
+}
+
+int ringbuf_get(int *start, int *end, char *c) {
+    if (*start == *end) {
+        return 0;
+    }
+    *c = ringbuf[*start];
+    *start = (*start + 1) % RINGBUF_SIZE;
+    return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -37,6 +65,8 @@ int main(int argc, char *argv[]) {
     int sockfd;
     int new_line_cnt = 0;
     int paused = 0;
+    int buf_start = 0;
+    int buf_end = 0;
     parse_url(argv[1], host, path);
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -60,48 +90,52 @@ int main(int argc, char *argv[]) {
     echo_nonbuff_mode(1);
     fd_set readfds;
     int bytes_received;
+    char c;
+    int data_done = 0;
     while (1) {
         FD_ZERO(&readfds);
         FD_SET(sockfd, &readfds);
-        if (paused) {
-            FD_SET(0, &readfds);
-        }
+        if (paused) FD_SET(0, &readfds);
         if (select(sockfd + 1, &readfds, NULL, NULL, NULL) < 0) {
             perror("select");
             exit(4);
         }
-        if (FD_ISSET(sockfd, &readfds) && !paused) {
+        if (FD_ISSET(sockfd, &readfds)) {
             bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
             if (bytes_received <= 0) {
-                break;
-            }
-            buffer[bytes_received] = '\0';
-            char *data = buffer;
-            for (char *p = data; *p; ++p) {
-                putchar(*p);
-                if (*p == '\n') {
-                    new_line_cnt++;
-                    if (new_line_cnt >= 25) {
-                        printf("\nPress space to scroll down...");
-                        fflush(stdout);
-                        paused = 1;
-                        break;
-                    }
+                data_done = 1;
+            } else {
+                buffer[bytes_received] = '\0';
+                for (int i = 0; i < bytes_received; ++i) {
+                    ringbuf_put(&buf_start, &buf_end, buffer[i]);
                 }
             }
-            fflush(stdout);
         }
-        if (FD_ISSET(0, &readfds) && paused) {
-            char c;
-            if (read(0, &c, 1) > 0) {
-                if (c == ' ') {
-                    new_line_cnt = 0;
-                    paused = 0;
+        while (!paused && ringbuf_get(&buf_start, &buf_end, &c)) {
+            putchar(c);
+            if (c == '\n') {
+                new_line_cnt++;
+                if (new_line_cnt >= 25) {
+                    printf("\nPress space to scroll down...");
+                    fflush(stdout);
+                    paused = 1;
+                    break;
                 }
             }
+        }
+        if (paused && FD_ISSET(0, &readfds)) {
+            char input;
+            if (read(0, &input, 1) > 0 && input == ' ') {
+                new_line_cnt = 0;
+                paused = 0;
+            }
+        }
+        if (data_done && (buf_start == buf_end)) {
+            printf("\nPRINTING IS DONE\n");
+            break;
         }
     }
     close(sockfd);
     echo_nonbuff_mode(0);
-    exit(0);
+    return 0;
 }
