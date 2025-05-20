@@ -8,11 +8,41 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <errno.h>
+
 
 #define INITIAL_BUF_SIZE 8192  // начальный размер динамического буфера
 #define SCREEN_LINES 25        // количество строк на одном экране
 
-// Структура динамического буфера для хранения приостановленных данных
+
+static struct termios orig_termios;  // для сохранения исходных настроек терминала
+
+// --- Обёртки системных вызовов ---
+ssize_t xread(int fd, void *buf, size_t count) {
+    ssize_t r;
+    do { r = read(fd, buf, count); } while (r < 0 && errno == EINTR);
+    return r;
+}
+
+ssize_t xwrite(int fd, const void *buf, size_t count) {
+    size_t done = 0;
+    while (done < count) {
+        ssize_t w = write(fd, (const char*)buf + done, count - done);
+        if (w < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        done += w;
+    }
+    return done;
+}
+
+int xselect(int nfds, fd_set *readfds) {
+    int r;
+    do { r = select(nfds, readfds, NULL, NULL, NULL); } while (r < 0 && errno == EINTR);
+    return r;
+}
+
 typedef struct {
     char *data;
     size_t size;
@@ -83,39 +113,32 @@ void parse_url(const char *url, char **host, char **port, char **path) {
     }
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s URL\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    // Включаем raw-режим для немедленного считывания нажатий
-    enable_raw_mode();
-
-    char *host, *port, *path;
-    parse_url(argv[1], &host, &port, &path);
-
-    // Разрешение адреса через DNS
+// --- Сетевые операции ---
+int connect_to_host(const char *host, const char *port) {
     struct addrinfo hints = {0}, *res;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo(host, port, &hints, &res) != 0) {
-        perror("getaddrinfo");
-        exit(EXIT_FAILURE);
+    if (getaddrinfo(host, port, &hints, &res)) {
+        perror("getaddrinfo"); exit(EXIT_FAILURE);
     }
-
-    // Создание и подключение TCP-сокета
     int sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sock < 0) { perror("socket"); exit(EXIT_FAILURE); }
     if (connect(sock, res->ai_addr, res->ai_addrlen) < 0) { perror("connect"); exit(EXIT_FAILURE); }
     freeaddrinfo(res);
+    return sock;
+}
 
+void send_http_request(int sock, const char *host, const char *path) {
     // Формирование и отправка HTTP GET-запроса
     char req[1024];
-    snprintf(req, sizeof(req), "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", path, host);
-    free(host); free(port); free(path);
-    write(sock, req, strlen(req));
+    snprintf(req, sizeof(req),
+             "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n",
+             path, host);
+    if (xwrite(sock, req, strlen(req)) < 0) { perror("write"); exit(EXIT_FAILURE); }
+}
 
+// --- Цикл пейджера ---
+void pager_loop(int sock) {
     Buffer buf;
     buffer_init(&buf);
 
@@ -128,38 +151,30 @@ int main(int argc, char *argv[]) {
         FD_ZERO(&rd);
         if (!eof) FD_SET(sock, &rd);
         FD_SET(STDIN_FILENO, &rd);
-        int maxfd = (sock > STDIN_FILENO ? sock : STDIN_FILENO) + 1;
-        if (select(maxfd, &rd, NULL, NULL, NULL) < 0) {
-            perror("select");
-            break;
-        }
+        int maxfd = sock > STDIN_FILENO ? sock : STDIN_FILENO;
 
-        // Читаем из сетевого сокета
+        xselect(maxfd + 1, &rd);
+
+        // Чтение из сокета
         if (!eof && FD_ISSET(sock, &rd)) {
             char tmp[4096];
-            ssize_t r = read(sock, tmp, sizeof(tmp));
+            ssize_t r = xread(sock, tmp, sizeof(tmp));
             if (r <= 0) {
                 eof = 1;
                 close(sock);
             } else {
-                ssize_t i = 0;
-                while (i < r) {
+                for (ssize_t i = 0; i < r; i++) {
                     if (!paused) {
-                        char c = tmp[i++];
-                        write(STDOUT_FILENO, &c, 1);
-                        if (c == '\n') {
-                            lines++;
-                            if (lines >= SCREEN_LINES) {
-                                paused = 1;
-                                lines = 0;
-                                write(STDOUT_FILENO, "Press space to scroll down", 26);
-                                fflush(stdout);
-                                break;
-                            }
+                        xwrite(STDOUT_FILENO, &tmp[i], 1);
+                        if (tmp[i] == '\n' && ++lines >= SCREEN_LINES) {
+                            paused = 1;
+                            lines = 0;
+                            xwrite(STDOUT_FILENO, "Нажмите пробел ", 33);
+                            fflush(stdout);
+                            break;
                         }
                     } else {
-                        buffer_append(&buf, tmp + i, (size_t)(r - i));
-                        break;
+                        buffer_append(&buf, tmp + i, 1);
                     }
                 }
             }
@@ -168,29 +183,50 @@ int main(int argc, char *argv[]) {
         // Обработка нажатия пробела
         if (paused && FD_ISSET(STDIN_FILENO, &rd)) {
             char c;
-            if (read(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
+            if (xread(STDIN_FILENO, &c, 1) > 0 && c == ' ') {
                 paused = 0;
-                write(STDOUT_FILENO, "\n", 1);
+                xwrite(STDOUT_FILENO, "\n", 1);
                 int plines = 0;
                 while (buf.pos < buf.len && plines < SCREEN_LINES) {
                     char d = buf.data[buf.pos++];
-                    write(STDOUT_FILENO, &d, 1);
+                    xwrite(STDOUT_FILENO, &d, 1);
                     if (d == '\n') plines++;
                 }
                 if (buf.pos == buf.len) buf.len = buf.pos = 0;
                 if (plines >= SCREEN_LINES && buf.pos < buf.len) {
                     paused = 1;
-                    write(STDOUT_FILENO, "Press space to scroll down", 26);
+                    xwrite(STDOUT_FILENO, "Нажмите пробел для продолжения", 33);
                 }
                 fflush(stdout);
             }
         }
 
-        // Если соединение закрыто и буфер пуст — выходим
+        // Выход из цикла после EOF
         if (eof && buf.pos == buf.len) break;
     }
 
     buffer_free(&buf);
-    return 0;
 }
 
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Использование: %s URL\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    enable_raw_mode();  // переводим терминал в raw-режим
+
+    char *host, *port, *path;
+    parse_url(argv[1], &host, &port, &path);
+
+    int sock = connect_to_host(host, port);
+    send_http_request(sock, host, path);
+
+    free(host);
+    free(port);
+    free(path);
+
+    pager_loop(sock);
+
+    return EXIT_SUCCESS;
+}
