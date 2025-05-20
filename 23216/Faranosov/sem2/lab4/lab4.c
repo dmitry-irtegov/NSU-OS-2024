@@ -9,8 +9,7 @@ void* thread_funk() {
 	
 
 	for (long long  i = 0;; i++) {
-		pthread_testcancel();
-		printf("%lld\n", i);
+		write(1, "thread\n", 8)
 	}
 	
 	pthread_exit(NULL);
