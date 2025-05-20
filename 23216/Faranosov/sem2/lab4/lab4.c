@@ -39,7 +39,7 @@ int main() {
 
 	int arg = 0;
 
-	checkRes = pthread_create(&thread, &attr, thread_funk, arg);
+	checkRes = pthread_create(&thread, &attr, thread_funk, (void*)arg);
 	if (checkRes != 0) {
 		handler("create", checkRes);
 	}
