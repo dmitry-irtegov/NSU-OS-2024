@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -g
-LDFLAGS = -lsocket -lnsl
+LDFLAGS = #-lsocket -lnsl
 OBJECTS = proxy.o network.o cache.o
 TARGET = proxy
 

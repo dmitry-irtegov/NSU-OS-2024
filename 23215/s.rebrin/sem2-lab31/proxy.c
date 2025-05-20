@@ -215,7 +215,6 @@ int main() {
 			cur = cur->next;
 		}
 
-
 		int activity = select(max_fd + 1, &read_fds, &write_fds, NULL, &tv);
 		logs();
 		if (activity < 0) {
@@ -263,9 +262,10 @@ int main() {
 					cur->headers_len = 0;
 					cur->writing_to_client = 0;
 					cur->writing_to_client_total = 0;
+					cur->caching = 1;
 					//Find cache
 					cache* pot_cache = find_cache(buffer);
-					if(pot_cache){
+					if (pot_cache) {
 						printf("---------Used prepared cache\n");
 						cur->cur_cache = pot_cache;
 						cur->cur_data = pot_cache->dat;
@@ -318,7 +318,7 @@ int main() {
 				}
 			}
 			else {
-				if (FD_ISSET(cur->cli_fd, &write_fds) && FD_ISSET(cur->inet_fd, &read_fds) && !cur->writing_to_client && (cur->tot <= cur->len + cur->headers_len || !cur->len) &&
+				if (cur->inet_fd && FD_ISSET(cur->cli_fd, &write_fds) && FD_ISSET(cur->inet_fd, &read_fds) && !cur->writing_to_client && (cur->tot <= cur->len + cur->headers_len || cur->len == -1) &&
 					(bytes_read = read(cur->inet_fd, cur->buffer, BUFFER_SIZE - 1)) > 0) {
 
 					//Headers paring
@@ -332,6 +332,15 @@ int main() {
 								if (!cur->len) cur->len = len == -1 ? cur->len : len;
 								if (cur->cur_cache->live_time == -1) cur->cur_cache->live_time = live == -1 ? cur->cur_cache->live_time : 60;
 								if (cur->cur_cache->status_code == -1) cur->cur_cache->status_code = status == -1 ? cur->cur_cache->status_code : status;
+								if ((status != -1 && status / 100 != 2) || len == -1) {
+									cur->caching = 0;
+									remove_from_cache(cur->cur_cache);
+									cur->cur_cache = NULL;
+									printf("Stop caching ");
+									if (len == -1) printf(" no len ");
+									if (status / 100 != 2) printf(" bad status - %d ", status);
+									printf("\n");
+								}
 							}
 
 							if (!cur->headers_len) {
@@ -353,16 +362,29 @@ int main() {
 					printf("\tI get %d: %d bytes from %d, and send %d bytes\n", bytes_read, cur->tot + bytes_read, cur->len + cur->headers_len, cur->writing_to_client);
 					if (cur->writing_to_client >= bytes_read) cur->writing_to_client = 0;
 					cur->tot += bytes_read;
-					{
-						if (cur->tot > cur->len + cur->headers_len) cur->cur_cache->working = 0;
+					if (cur->cur_cache && cur->cur_cache->working) {
+						add_to_data(cur->cur_cache, cur->buffer, bytes_read);
+					}
+					if (cur->len != -1 && cur->tot >= cur->len + cur->headers_len) {
+						if (cur->cur_cache) cur->cur_cache->working = 0;
+						close(cur->inet_fd);
+						cur->inet_fd = 0;
+						cur->writing = 0;
 						printf("Done cache\n");
 					}
-					add_to_data(cur->cur_cache, cur->buffer, bytes_read);
 					cur->last_activity = time(NULL);
 				}
+				else if (!bytes_read){
 
-				if (bytes_read < 0)
+					if (cur->cur_cache) cur->cur_cache->working = 0;
+					close(cur->inet_fd);
+					cur->inet_fd = 0;
+					cur->writing = 0;
+					printf("Done cache\n");
+				}
+				if (bytes_read < 0) {
 					error("Err: reading from socket");
+				}
 			}
 
 			cur = cur->next;

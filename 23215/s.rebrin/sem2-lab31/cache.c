@@ -71,7 +71,7 @@ void fr_data(data* d) {
 cache* find_cache(char* buf) {
     cache* cur = cache_head;
     while (cur) {
-        if (cur->status_code/100 == 2 && !strcmp(buf, cur->request)) return cur;
+        if (!strcmp(buf, cur->request)) return cur;
         cur = cur->next;
     }
     return NULL;

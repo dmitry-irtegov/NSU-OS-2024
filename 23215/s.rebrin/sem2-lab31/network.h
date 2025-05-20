@@ -39,6 +39,7 @@ typedef struct client {
     data* cur_data;
     time_t last_activity;
     int using_cache;
+    int caching;
     int headers_len;
     int collect_headers;
     char* headers_collectors;
