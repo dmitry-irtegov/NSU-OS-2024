@@ -7,9 +7,13 @@
 
 void* thread_funk() {
 	
-
+	int res = 0;
 	for (long long  i = 0;; i++) {
-		write(1, "thread\n", 8);
+		res = write(1, "thread\n", 8);
+		if (res < 0) {
+			perror("write error");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	pthread_exit(NULL);
