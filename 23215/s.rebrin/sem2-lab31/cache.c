@@ -49,6 +49,7 @@ cache* add_to_cache(char* req) {
     cache* t;
     if (!cache_head) {
         cache_head = new_cache;
+        printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAaa\n");
     }
     else {
         t = cache_head;
@@ -71,7 +72,7 @@ void fr_data(data* d) {
 cache* find_cache(char* buf) {
     cache* cur = cache_head;
     while (cur) {
-        if (!strcmp(buf, cur->request)) return cur;
+        if (!cur->working && !strcmp(buf, cur->request)) return cur;
         cur = cur->next;
     }
     return NULL;
