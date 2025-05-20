@@ -66,8 +66,8 @@ void enable_raw_mode() {
     atexit(disable_raw_mode);
     raw = orig_termios;
     raw.c_lflag &= ~(ICANON | ECHO);
-    raw.c_cc[VMIN] = 0;   // минимум байт для read = 0
-    raw.c_cc[VTIME] = 1;  // таймаут 0.1 с
+    raw.c_cc[VMIN] = 1;   
+    raw.c_cc[VTIME] = 0;  
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
@@ -169,8 +169,9 @@ void pager_loop(int sock) {
                         if (tmp[i] == '\n' && ++lines >= SCREEN_LINES) {
                             paused = 1;
                             lines = 0;
-                            xwrite(STDOUT_FILENO, "Нажмите пробел ", 33);
-                            fflush(stdout);
+                            const char *prompt1 = "Нажмите пробел ";
+			    xwrite(STDOUT_FILENO, prompt1, strlen(prompt1));
+			    fflush(stdout);
                             break;
                         }
                     } else {
@@ -195,7 +196,8 @@ void pager_loop(int sock) {
                 if (buf.pos == buf.len) buf.len = buf.pos = 0;
                 if (plines >= SCREEN_LINES && buf.pos < buf.len) {
                     paused = 1;
-                    xwrite(STDOUT_FILENO, "Нажмите пробел для продолжения", 33);
+		    const char *prompt2 = "Нажмите пробел для продолжения";
+    		    xwrite(STDOUT_FILENO, prompt2, strlen(prompt2));
                 }
                 fflush(stdout);
             }
