@@ -3,18 +3,21 @@
 #include "stdio.h"
 #include "string.h"
 
-void* thread_funk() {
+void* thread_funk(void *args) {
+	int isMain = (int)args;
 	for (int i = 0; i < 10; i++) {
+		if (isMain) printf("Main: ");
 		printf("%d\n", i);
 	}
-	pthread_exit(NULL);
+	if (!isMain) pthread_exit(NULL);
+	return NULL;
 }
 
 void handler(char str[], int num) {
 	char buf[256];
 	strerror_r(num, buf, 256);
 	fprintf(stderr, "%s error: %s", str, buf);
-	exit(EXIT_FAILURE);
+	exit(1);
 }
 
 int main() {
@@ -27,8 +30,10 @@ int main() {
 	if (checkRes != 0) {
 		handler("attr_init", checkRes);
 	}
+	
+	int arg = 0;
 
-	checkRes = pthread_create(&thread, &attr, thread_funk, NULL);
+	checkRes = pthread_create(&thread, &attr, thread_funk, (void*)arg);
 	if (checkRes != 0) {
 		handler("create", checkRes);
 	}
@@ -44,6 +49,8 @@ int main() {
 		handler("join", checkRes);
 	}
 
-	thread_funk();
+
+	thread_funk((void*)1);
+
 	exit(EXIT_SUCCESS);
 }
