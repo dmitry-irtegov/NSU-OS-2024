@@ -6,8 +6,10 @@
 
 
 void* thread_funk() {
+	
 
 	for (long long  i = 0;; i++) {
+		pthread_testcancel();
 		printf("%lld\n", i);
 	}
 	
@@ -57,6 +59,7 @@ int main() {
 		handler("cancel", checkRes);
 	}
 
+
 	
-	exit(EXIT_SUCCESS);
+	pthread_exit(NULL);
 }
