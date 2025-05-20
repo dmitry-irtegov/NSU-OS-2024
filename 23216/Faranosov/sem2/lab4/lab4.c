@@ -9,7 +9,7 @@ void* thread_funk() {
 	
 
 	for (long long  i = 0;; i++) {
-		write(1, "thread\n", 8)
+		write(1, "thread\n", 8);
 	}
 	
 	pthread_exit(NULL);
