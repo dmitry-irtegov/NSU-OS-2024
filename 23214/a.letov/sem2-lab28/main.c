@@ -60,6 +60,10 @@ int ringbuf_get(int *start, int *end, char *c) {
 }
 
 int main(int argc, char *argv[]) {
+    if (strncmp(argv[1], "http://", 7) != 0 || argc != 2) {
+        fprintf(stderr, "BAD URL\n");
+        exit(5);
+    }
     char host[256], path[1024], request[2048], buffer[4096];
     struct addrinfo hints, *res;
     int sockfd;
@@ -92,6 +96,7 @@ int main(int argc, char *argv[]) {
     int bytes_received;
     char c;
     int data_done = 0;
+    int header_parsed_check = 0;
     while (1) {
         FD_ZERO(&readfds);
         FD_SET(sockfd, &readfds);
@@ -102,12 +107,23 @@ int main(int argc, char *argv[]) {
         }
         if (FD_ISSET(sockfd, &readfds)) {
             bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-            if (bytes_received <= 0) {
-                data_done = 1;
-            } else {
+            if (!header_parsed_check) {
+                char *content = strstr(buffer, "\r\n\r\n");
                 buffer[bytes_received] = '\0';
-                for (int i = 0; i < bytes_received; ++i) {
-                    ringbuf_put(&buf_start, &buf_end, buffer[i]);
+                content += 4;
+                int len = strlen(content);
+                for (int i = 0; i < len; ++i) {
+                    ringbuf_put(&buf_start, &buf_end, content[i]);
+                }
+                header_parsed_check = 1;
+            } else {
+                if (bytes_received <= 0) {
+                    data_done = 1;
+                } else {
+                    buffer[bytes_received] = '\0';
+                    for (int i = 0; i < bytes_received; ++i) {
+                        ringbuf_put(&buf_start, &buf_end, buffer[i]);
+                    }
                 }
             }
         }
