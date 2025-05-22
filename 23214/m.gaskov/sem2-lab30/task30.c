@@ -279,7 +279,7 @@ int open_ipv4_socket(char *hostname, char *port) {
 
 int build_http_get_request(char *out_buf, int buf_size, const char *hostname, const char *uri) {
     int len = snprintf(out_buf, buf_size,
-                       "GET %s HTTP/1.1\r\n"
+                       "GET %s HTTP/1.0\r\n"
                        "Host: %s\r\n"
                        "Connection: close\r\n"
                        "\r\n",
@@ -307,21 +307,27 @@ int send_all(int sock, char *buf, int len) {
 
 int read_response_header(int sock, char *buffer, int buf_size) {
     int received = 0;
+    char last4[4] = {0, 0, 0, 0};
     while (received + 1 < buf_size) {
-        int n = recv(sock, buffer + received, 1, 0);
+        char c;
+        int n = recv(sock, &c, 1, 0);
         if (n <= 0) {
             perror("recv");
             return -1;
         }
-        received += n;
+        buffer[received++] = c;
         buffer[received] = '\0';
-        if (strstr(buffer, "\r\n\r\n") != NULL) {
+        last4[0] = last4[1];
+        last4[1] = last4[2];
+        last4[2] = last4[3];
+        last4[3] = c;
+        if (last4[0] == '\r' && last4[1] == '\n' && last4[2] == '\r' && last4[3] == '\n') {
             return received;
         }
     }
-    printf("%s\n", buffer);
     return -1;
 }
+
 
 int send_http_get_and_read_header(int sock, char *hostname, char *uri) {
     char req[1000], resp[1000];
@@ -418,13 +424,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    printf("Protocol: %s\n", protocol);
-    if (user) {
-        printf("User: %s\n", user);
-    }
-    printf("Hostname: %s\n", hostname);
-    printf("Port: %s\n", port);
-
     if (strcasecmp(protocol, "http") != 0) {
         fprintf(stderr, "Only 'http' protocol is supported\n");
         return EXIT_FAILURE;
@@ -445,8 +444,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Failed to send GET request or read header\n");
         return EXIT_FAILURE;
     }
-    
-    printf("URI: %s\nGET REQUEST BODY:\n", uri);
     
     rb = rb_create(BUFFER_SIZE);
     
