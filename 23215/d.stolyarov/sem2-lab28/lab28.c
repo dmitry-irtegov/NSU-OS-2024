@@ -20,8 +20,8 @@ void addStrToAr(ar* dest, char* src){
     int srclen = strlen(src);
     while(dest->limitSize - dest->curSize <= srclen){
         dest->limitSize *= 2;
-        dest->buf = (char*) realloc(dest->buf, sizeof(char) * dest->limitSize);
     }
+    dest->buf = (char*) realloc(dest->buf, sizeof(char) * dest->limitSize);
     strcat(dest->buf, src);
     dest->curSize += srclen;
 }
@@ -145,8 +145,13 @@ int main(int argc, char *argv[]){
         }
 
         if(connection_active && FD_ISSET(sock, &readFds)){
-            char buf[999999] = {0};
-            int ret = read(sock, buf, 999999);
+            if(response_buffer.curSize == response_buffer.limitSize - 1){
+                response_buffer.limitSize *= 2;
+                response_buffer.buf = (char*) realloc(response_buffer.buf, sizeof(char) * response_buffer.limitSize);
+            }
+            int ret = read(sock, response_buffer.buf + response_buffer.curSize, response_buffer.limitSize - response_buffer.curSize - 1);
+            response_buffer.curSize += ret;
+            
             if(ret == -1){
                 close(sock);
                 tcsetattr(0, TCSANOW, &start_tty);
@@ -158,8 +163,6 @@ int main(int argc, char *argv[]){
                 connection_active = 0;
             }
             else{
-                addStrToAr(&response_buffer, buf);
-
                 if(linesPrinted >= SCREEN_HEIGHT && !last_waiting){
                     fprintf(stderr, "Press any key to scroll down");
                     last_waiting = 1;
@@ -180,14 +183,22 @@ int main(int argc, char *argv[]){
                     printf("\r                                               \r");
                     last_waiting = 0;
                 }
-                char str[99999] = {0};
                 int i = 0;
-                for(; response_buffer.buf[response_buffer.symsPrinted + i] != 0 
-                    && response_buffer.buf[response_buffer.symsPrinted + i] != '\n'; i++){
-                    str[i] = response_buffer.buf[response_buffer.symsPrinted + i];
+                char flag = 0;
+                while(response_buffer.buf[response_buffer.symsPrinted + i] != 0 
+                    && response_buffer.buf[response_buffer.symsPrinted + i] != '\n'){
+                    i++;
                 }
-                response_buffer.symsPrinted += i + 1;
-                printf("%s\r\n", str);
+                if(response_buffer.buf[response_buffer.symsPrinted + i] == '\n'){
+                    flag = 1;
+                }
+                response_buffer.buf[response_buffer.symsPrinted + i] = 0;
+                printf("%s", response_buffer.buf + response_buffer.symsPrinted);
+                response_buffer.symsPrinted += i;
+                if(flag){
+                    printf("\r\n");
+                    response_buffer.symsPrinted++;
+                }
             }
             if(response_buffer.buf[response_buffer.symsPrinted] != 0 && !last_waiting){
                 fprintf(stderr, "Press any key to scroll down");
