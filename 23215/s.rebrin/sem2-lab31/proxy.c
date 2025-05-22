@@ -70,7 +70,8 @@ void signal_handler(int sig) {
 		client* next = cur->next;
 		close(cur->cli_fd);
 		if (cur->inet_fd > 0) close(cur->inet_fd);
-		free(cur->host);
+		if (cur->host) free(cur->host); 
+		if (cur->headers_collectors) free(cur->headers_collectors);
 		free(cur);
 		cur = next;
 	}
@@ -91,7 +92,8 @@ void error(const char* msg) {
 		client* next = cur->next;
 		close(cur->cli_fd);
 		if (cur->inet_fd > 0) close(cur->inet_fd);
-		free(cur->host);
+		if (cur->host) free(cur->host);
+		if (cur->headers_collectors) free(cur->headers_collectors);
 		free(cur);
 		cur = next;
 	}
@@ -157,6 +159,7 @@ client* clear_connection(client* cur) {
 	while (*p && *p != cur) p = &(*p)->next;
 	if (*p) *p = next;
 	free(cur->host);
+	free(cur->headers_collectors);
 	free(cur);
 	return next;
 }
