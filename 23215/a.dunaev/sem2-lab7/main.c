@@ -57,7 +57,6 @@ void *copy_file_thread(void *arg) {
 void *copy_dir_thread(void *arg);
 
 void spawn_copy_dir(const char *src, const char *dst) {
-    pthread_t tid;
     copy_args_t *args = malloc(sizeof(copy_args_t));
     if (!args) {
         perror("malloc");
@@ -66,12 +65,8 @@ void spawn_copy_dir(const char *src, const char *dst) {
     strncpy(args->src, src, PATH_MAX);
     strncpy(args->dst, dst, PATH_MAX);
 
-    if (pthread_create(&tid, NULL, copy_dir_thread, args) != 0) {
-        perror("pthread_create");
-        free(args);
-        return;
-    }
-    pthread_detach(tid);
+    // Instead of detaching, let the parent join
+    copy_dir_thread(args);
 }
 
 void *copy_dir_thread(void *arg) {
