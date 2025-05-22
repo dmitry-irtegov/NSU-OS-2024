@@ -8,9 +8,23 @@
 #include <netdb.h>
 #include <termios.h>
 #include <sys/select.h>
+#include <signal.h>
 
 #define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
+
+struct termios orig_term; // глобальная переменная для хранения исходных настроек терминала
+
+void restore_terminal_mode(struct termios *orig_term) {
+    tcsetattr(STDIN_FILENO, TCSANOW, orig_term);
+}
+
+// Обработчик сигналов (Ctrl+C, kill и т.д.)
+void handle_signal(int signum) {
+    restore_terminal_mode(&orig_term);
+    write(STDOUT_FILENO, "\nTerminal settings restored. Exiting.\n", 38);
+    exit(0);
+}
 
 void set_terminal_mode(struct termios *orig_term) {
     struct termios raw = *orig_term;
@@ -18,10 +32,6 @@ void set_terminal_mode(struct termios *orig_term) {
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-}
-
-void restore_terminal_mode(struct termios *orig_term) {
-    tcsetattr(STDIN_FILENO, TCSANOW, orig_term);
 }
 
 int connect_to_host(const char *host, const char *port) {
@@ -60,8 +70,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Устанавливаем обработчики сигналов
+    signal(SIGINT, handle_signal);   // Ctrl+C
+    signal(SIGTERM, handle_signal);  // kill <pid>
+    signal(SIGHUP, handle_signal);   // закрытие терминала
+    signal(SIGQUIT, handle_signal);  // Ctrl+\
+
     char host[256], path[1024];
     path[0] = '/'; path[1] = '\0';
+
     if (sscanf(argv[1], "http://%255[^/]%1023s", host, path + 1) < 1) {
         fprintf(stderr, "Invalid URL format\n");
         return 1;
@@ -75,7 +92,7 @@ int main(int argc, char *argv[]) {
              path[1] ? path + 1 : "", host);
     write(sock, request, strlen(request));
 
-    struct termios orig_term;
+    // Сохраняем исходные настройки терминала
     tcgetattr(STDIN_FILENO, &orig_term);
     set_terminal_mode(&orig_term);
 
@@ -108,8 +125,7 @@ int main(int argc, char *argv[]) {
             int n = read(sock, buf, BUF_SIZE);
             if (n <= 0) break;
 
-            int i;
-            for (i = 0; i < n; ++i) {
+            for (int i = 0; i < n; ++i) {
                 write(STDOUT_FILENO, &buf[i], 1);
                 if (buf[i] == '\n') {
                     lines++;
