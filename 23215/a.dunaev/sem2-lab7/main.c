@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,6 @@ typedef struct {
 
 void *copy_file_thread(void *arg) {
     copy_args_t *args = (copy_args_t *)arg;
-
     int in_fd = -1, out_fd = -1;
     char buf[BUF_SIZE];
     ssize_t bytes;
@@ -56,16 +56,18 @@ void *copy_file_thread(void *arg) {
 
 void *copy_dir_thread(void *arg);
 
-void spawn_copy_dir(const char *src, const char *dst) {
+void copy_subdir(const char *src, const char *dst) {
     copy_args_t *args = malloc(sizeof(copy_args_t));
     if (!args) {
         perror("malloc");
         return;
     }
-    strncpy(args->src, src, PATH_MAX);
-    strncpy(args->dst, dst, PATH_MAX);
+    strncpy(args->src, src, PATH_MAX - 1);
+    strncpy(args->dst, dst, PATH_MAX - 1);
+    args->src[PATH_MAX - 1] = '\0';
+    args->dst[PATH_MAX - 1] = '\0';
 
-    // Instead of detaching, let the parent join
+    // Run thread synchronously (NOT detached)
     copy_dir_thread(args);
 }
 
@@ -92,8 +94,11 @@ void *copy_dir_thread(void *arg) {
             continue;
 
         char src_path[PATH_MAX], dst_path[PATH_MAX];
-        snprintf(src_path, PATH_MAX, "%s/%s", args->src, entry->d_name);
-        snprintf(dst_path, PATH_MAX, "%s/%s", args->dst, entry->d_name);
+        if (snprintf(src_path, sizeof(src_path), "%s/%s", args->src, entry->d_name) >= PATH_MAX ||
+            snprintf(dst_path, sizeof(dst_path), "%s/%s", args->dst, entry->d_name) >= PATH_MAX) {
+            fprintf(stderr, "Path too long: %s/%s\n", args->src, entry->d_name);
+            continue;
+        }
 
         if (stat(src_path, &st) == -1) {
             perror("stat");
@@ -101,15 +106,17 @@ void *copy_dir_thread(void *arg) {
         }
 
         if (S_ISDIR(st.st_mode)) {
-            spawn_copy_dir(src_path, dst_path);
+            copy_subdir(src_path, dst_path);  // RECURSIVELY call in same thread
         } else if (S_ISREG(st.st_mode)) {
             copy_args_t *fargs = malloc(sizeof(copy_args_t));
             if (!fargs) {
                 perror("malloc");
                 continue;
             }
-            strncpy(fargs->src, src_path, PATH_MAX);
-            strncpy(fargs->dst, dst_path, PATH_MAX);
+            strncpy(fargs->src, src_path, PATH_MAX - 1);
+            strncpy(fargs->dst, dst_path, PATH_MAX - 1);
+            fargs->src[PATH_MAX - 1] = '\0';
+            fargs->dst[PATH_MAX - 1] = '\0';
 
             if (pthread_create(&threads[thread_count++], NULL, copy_file_thread, fargs) != 0) {
                 perror("pthread_create");
@@ -147,8 +154,10 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    strncpy(args->src, argv[1], PATH_MAX);
-    strncpy(args->dst, argv[2], PATH_MAX);
+    strncpy(args->src, argv[1], PATH_MAX - 1);
+    strncpy(args->dst, argv[2], PATH_MAX - 1);
+    args->src[PATH_MAX - 1] = '\0';
+    args->dst[PATH_MAX - 1] = '\0';
 
     pthread_t main_thread;
     if (pthread_create(&main_thread, NULL, copy_dir_thread, args) != 0) {
