@@ -35,7 +35,6 @@ void mymsqdrop(queue *q) {
 
     pthread_mutex_lock(&q->mutex);
     q->dropped = 1;
-    // Оповещаем все ждущие потоки
     pthread_cond_broadcast(&q->not_full);
     pthread_cond_broadcast(&q->not_empty);
     pthread_mutex_unlock(&q->mutex);
