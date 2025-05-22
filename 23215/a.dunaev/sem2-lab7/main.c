@@ -20,22 +20,20 @@ typedef struct {
 void *copy_file_thread(void *arg) {
     copy_args_t *args = (copy_args_t *)arg;
 
-    int in_fd, out_fd;
+    int in_fd = -1, out_fd = -1;
     char buf[BUF_SIZE];
     ssize_t bytes;
 
-    while ((in_fd = open(args->src, O_RDONLY)) == -1 && errno == EMFILE) {
+    while ((in_fd = open(args->src, O_RDONLY)) == -1 && errno == EMFILE)
         sleep(1);
-    }
     if (in_fd == -1) {
         perror("open source");
         free(args);
         return NULL;
     }
 
-    while ((out_fd = open(args->dst, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1 && errno == EMFILE) {
+    while ((out_fd = open(args->dst, O_WRONLY | O_CREAT | O_TRUNC, 0644)) == -1 && errno == EMFILE)
         sleep(1);
-    }
     if (out_fd == -1) {
         perror("open destination");
         close(in_fd);
@@ -68,7 +66,11 @@ void spawn_copy_dir(const char *src, const char *dst) {
     strncpy(args->src, src, PATH_MAX);
     strncpy(args->dst, dst, PATH_MAX);
 
-    pthread_create(&tid, NULL, copy_dir_thread, args);
+    if (pthread_create(&tid, NULL, copy_dir_thread, args) != 0) {
+        perror("pthread_create");
+        free(args);
+        return;
+    }
     pthread_detach(tid);
 }
 
@@ -82,26 +84,15 @@ void *copy_dir_thread(void *arg) {
 
     mkdir(args->dst, 0755);
 
-    long name_max = pathconf(args->src, _PC_NAME_MAX);
-    size_t buf_size = sizeof(struct dirent) + name_max + 1;
-    struct dirent *entry_buf = malloc(buf_size);
-    if (!entry_buf) {
-        perror("malloc dirent");
-        free(args);
-        return NULL;
-    }
-
-    while ((dir = opendir(args->src)) == NULL && errno == EMFILE) {
+    while ((dir = opendir(args->src)) == NULL && errno == EMFILE)
         sleep(1);
-    }
     if (!dir) {
         perror("opendir");
-        free(entry_buf);
         free(args);
         return NULL;
     }
 
-    while (readdir_r(dir, entry_buf, &entry) == 0 && entry != NULL) {
+    while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
 
@@ -124,15 +115,19 @@ void *copy_dir_thread(void *arg) {
             }
             strncpy(fargs->src, src_path, PATH_MAX);
             strncpy(fargs->dst, dst_path, PATH_MAX);
-            pthread_create(&threads[thread_count++], NULL, copy_file_thread, fargs);
+
+            if (pthread_create(&threads[thread_count++], NULL, copy_file_thread, fargs) != 0) {
+                perror("pthread_create");
+                free(fargs);
+            }
         }
     }
 
-    for (int i = 0; i < thread_count; ++i)
+    for (int i = 0; i < thread_count; ++i) {
         pthread_join(threads[i], NULL);
+    }
 
     closedir(dir);
-    free(entry_buf);
     free(args);
     return NULL;
 }
@@ -161,8 +156,12 @@ int main(int argc, char *argv[]) {
     strncpy(args->dst, argv[2], PATH_MAX);
 
     pthread_t main_thread;
-    pthread_create(&main_thread, NULL, copy_dir_thread, args);
-    pthread_join(main_thread, NULL);
+    if (pthread_create(&main_thread, NULL, copy_dir_thread, args) != 0) {
+        perror("pthread_create");
+        free(args);
+        return EXIT_FAILURE;
+    }
 
+    pthread_join(main_thread, NULL);
     return EXIT_SUCCESS;
 }
