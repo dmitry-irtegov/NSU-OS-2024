@@ -22,6 +22,7 @@ void* producer(void* arg) {
     int msg_num = 0;
     do {
         sprintf(buff, "message %d from producer %lu", msg_num++, (unsigned long) arg);
+        printf("producer %lu sent message %d\n", (unsigned long) arg, msg_num - 1);
         putted = mymsgput(&q, buff);
     } while (putted > 0);
     return NULL;
