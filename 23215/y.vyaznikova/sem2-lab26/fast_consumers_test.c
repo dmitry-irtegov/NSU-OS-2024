@@ -21,7 +21,7 @@ void* producer(void* arg) {
     char buff[100];
     int msg_num = 0;
     do {
-        sprintf(buff, "producer %lu produced %d", (unsigned long) arg, msg_num++);
+        sprintf(buff, "message %d from producer %lu", msg_num++, (unsigned long) arg);
         putted = mymsgput(&q, buff);
         usleep(500000);
     } while (putted > 0);
