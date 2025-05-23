@@ -58,11 +58,11 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
         return NULL;
     }
 
-    const char *inbuf_const = input; 
+    const char *inbuf = input;
     char *outbuf = output;
     char *outbuf_start = output;
 
-    if (iconv(cd, (char **)&inbuf_const, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1) {
+    if (iconv(cd, (char **)&inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1) {
         perror("iconv");
         free(outbuf_start);
         iconv_close(cd);
@@ -72,6 +72,23 @@ char *convert_encoding(const char *input, const char *from_charset, const char *
     *outbuf = '\0';
     iconv_close(cd);
     return outbuf_start;
+}
+
+char *extract_charset(const char *headers) {
+    const char *p = strcasestr(headers, "Content-Type:");
+    if (!p) return NULL;
+
+    const char *charset = strcasestr(p, "charset=");
+    if (!charset) return NULL;
+
+    charset += strlen("charset=");
+    static char encoding[100];
+    int i = 0;
+    while (*charset && *charset != '\r' && *charset != '\n' && *charset != ';' && i < 99) {
+        encoding[i++] = *charset++;
+    }
+    encoding[i] = '\0';
+    return encoding;
 }
 
 void parse_url(const char *url, char *host, char *path) {
@@ -136,6 +153,10 @@ int main(int argc, char *argv[]) {
     enable_raw_mode();
 
     char buffer[BUFFER_SIZE];
+    char header_buffer[8192] = {0};
+    int header_len = 0;
+    int headers_parsed = 0;
+    char current_encoding[100] = "WINDOWS-1251";
     int line_count = 0;
 
     while (1) {
@@ -156,9 +177,32 @@ int main(int argc, char *argv[]) {
             if (bytes <= 0) break;
             buffer[bytes] = '\0';
 
-            char *line = strtok(buffer, "\n");
+            char *line = NULL;
+
+            if (!headers_parsed) {
+                strcat(header_buffer, buffer);
+                char *body = strstr(header_buffer, "\r\n\r\n");
+                if (body) {
+                    headers_parsed = 1;
+                    body += 4;
+
+                    char *charset = extract_charset(header_buffer);
+                    if (charset) {
+                        strncpy(current_encoding, charset, sizeof(current_encoding) - 1);
+                        current_encoding[sizeof(current_encoding) - 1] = '\0';
+                        printf("[Detected encoding: %s]\n\n", current_encoding);
+                    }
+
+                    line = strtok(body, "\n");
+                } else {
+                    continue;
+                }
+            } else {
+                line = strtok(buffer, "\n");
+            }
+
             while (line) {
-                char *utf8_line = convert_encoding(line, "WINDOWS-1251", "UTF-8");
+                char *utf8_line = convert_encoding(line, current_encoding, "UTF-8");
                 if (utf8_line) {
                     printf("%s\n", utf8_line);
                     free(utf8_line);
