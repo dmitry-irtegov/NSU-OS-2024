@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -13,19 +12,26 @@
 #define BUF_SIZE 4096
 #define LINES_PER_PAGE 25
 
-struct termios orig_term; // глобальная переменная для хранения исходных настроек терминала
+// Глобальная переменная для восстановления терминала при сигнале
+struct termios orig_term;
 
-void restore_terminal_mode(struct termios *orig_term) {
-    tcsetattr(STDIN_FILENO, TCSANOW, orig_term);
-}
-
-// Обработчик сигналов (Ctrl+C, kill и т.д.)
+// Обработчик сигнала
 void handle_signal(int signum) {
     restore_terminal_mode(&orig_term);
-    write(STDOUT_FILENO, "\nTerminal settings restored. Exiting.\n", 38);
-    exit(0);
+    printf("\n[!] Caught signal %d (%s). Exiting gracefully...\n", signum, strsignal(signum));
+    exit(1);
 }
 
+// Установка всех обработчиков сигналов
+void setup_signal_handlers() {
+    for (int i = 1; i <= 64; ++i) {
+        if (i == SIGKILL || i == SIGSTOP || i == SIGCONT)
+            continue; // Эти нельзя перехватить
+        signal(i, handle_signal);
+    }
+}
+
+// Установка "сырого" режима терминала
 void set_terminal_mode(struct termios *orig_term) {
     struct termios raw = *orig_term;
     raw.c_lflag &= ~(ICANON | ECHO);
@@ -34,6 +40,12 @@ void set_terminal_mode(struct termios *orig_term) {
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 }
 
+// Восстановление терминала
+void restore_terminal_mode(struct termios *orig_term) {
+    tcsetattr(STDIN_FILENO, TCSANOW, orig_term);
+}
+
+// Подключение по TCP к хосту
 int connect_to_host(const char *host, const char *port) {
     struct addrinfo hints;
     struct addrinfo *res;
@@ -70,15 +82,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Устанавливаем обработчики сигналов
-    signal(SIGINT, handle_signal);   // Ctrl+C
-    signal(SIGTERM, handle_signal);  // kill <pid>
-    signal(SIGHUP, handle_signal);   // закрытие терминала
-    signal(SIGQUIT, handle_signal);  // Ctrl+\
+    setup_signal_handlers();  // <-- Устанавливаем обработку сигналов
 
     char host[256], path[1024];
     path[0] = '/'; path[1] = '\0';
-
     if (sscanf(argv[1], "http://%255[^/]%1023s", host, path + 1) < 1) {
         fprintf(stderr, "Invalid URL format\n");
         return 1;
@@ -92,9 +99,8 @@ int main(int argc, char *argv[]) {
              path[1] ? path + 1 : "", host);
     write(sock, request, strlen(request));
 
-    // Сохраняем исходные настройки терминала
-    tcgetattr(STDIN_FILENO, &orig_term);
-    set_terminal_mode(&orig_term);
+    tcgetattr(STDIN_FILENO, &orig_term);  // Сохраняем текущие настройки терминала
+    set_terminal_mode(&orig_term);        // Переводим в "сырой" режим
 
     char buf[BUF_SIZE];
     int lines = 0;
