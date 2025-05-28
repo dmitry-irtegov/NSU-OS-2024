@@ -38,23 +38,6 @@ void mymsqdrop(queue *q) {
     pthread_mutex_lock(&q->mutex);
     q->dropped = 1;
     pthread_mutex_unlock(&q->mutex);
-
-    int empty_value, full_value;
-    int max_attempts = 100;
-
-    while (max_attempts--) {
-        sem_getvalue(&q->empty, &empty_value);
-        sem_getvalue(&q->full, &full_value);
-
-        if (empty_value > 0 && full_value > 0) {
-            break;
-        }
-
-        if (empty_value <= 0) sem_post(&q->empty);
-        if (full_value <= 0) sem_post(&q->full);
-
-        nanosleep(&(struct timespec){0, 1000000}, NULL);
-    }
 }
 
 int mymsgput(queue *q, char *msg) {
