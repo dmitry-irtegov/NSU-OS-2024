@@ -30,7 +30,7 @@ int mymsgput(Queue* queue, char* msg) {
         pthread_mutex_unlock(&queue->lock);
         return 0;
     }
-    if (queue->free_cells_count == 0) {
+    while (queue->free_cells_count <= 0) {
         pthread_cond_wait(&queue->new_cell_cond, &queue->lock);
         if (queue->is_dropped) {
             pthread_mutex_unlock(&queue->lock);
@@ -60,7 +60,7 @@ int mymsgget(Queue* queue, char* buf, size_t bufsize) {
         pthread_mutex_unlock(&queue->lock);
         return 0;
     }
-    if (queue->msg_count <= 0) {
+    while (queue->msg_count <= 0) {
         pthread_cond_wait(&queue->new_msg_cond, &queue->lock);
         if (queue->is_dropped) {
             pthread_mutex_unlock(&queue->lock);
