@@ -43,7 +43,7 @@ void* calculate(void* arg) {
 
 
     *(cur_data->sum) = local_sum;
-    pthread_exit(0);
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
