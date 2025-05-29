@@ -51,8 +51,3 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# some musom
-core
-core.*
-.nfs*
-.DS_Store
