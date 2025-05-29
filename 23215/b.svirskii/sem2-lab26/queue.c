@@ -87,8 +87,8 @@ int mymsgget(Queue* queue, char* buf, size_t bufsize) {
 void mymsgdrop(Queue* queue) {
     pthread_mutex_lock(&queue->lock);
     queue->is_dropped = 1;
-    pthread_mutex_unlock(&queue->lock);
     pthread_cond_broadcast(&queue->new_cell_cond);
     pthread_cond_broadcast(&queue->new_msg_cond);
+    pthread_mutex_unlock(&queue->lock);
     printf("queueu was dropped\n");
 }
