@@ -6,14 +6,14 @@
 #include <stdlib.h>
 
 sem_t sem_A, sem_B, sem_module, sem_C; 
-volatile int running = 1;
+volatile int running = 1, module = 1, widget = 1;
 
 void signal_handler(int signum) {
     running = 0;
 }
 
 void* produce_A(void* arg) {
-    while(running) {
+    while(running || module) {
         sleep(1);
         sem_post(&sem_A);
         printf("Деталь A готова\n");
@@ -23,7 +23,7 @@ void* produce_A(void* arg) {
 }
 
 void* produce_B(void* arg) {
-    while(running) {
+    while(running || module) {
         sleep(2);
         sem_post(&sem_B);
         printf("Деталь B готова\n");
@@ -33,18 +33,19 @@ void* produce_B(void* arg) {
 }
 
 void* produce_module(void* arg) {
-    while(running) {
+    while(running || widget) {
         sem_wait(&sem_A);
         sem_wait(&sem_B);
         sem_post(&sem_module);
         printf("Модуль собран из A и B\n");
     }
+    module = 0;
     printf("Производство модулей остановлено\n");
     return NULL;
 }
 
 void* produce_C(void* arg) {
-    while(running) {
+    while(running || widget) {
         sleep(3);
         sem_post(&sem_C);
         printf("Деталь C готова\n");
@@ -55,10 +56,11 @@ void* produce_C(void* arg) {
 
 void* produce_widget(void* arg) {
     while(running) {
-        sem_wait(&sem_module);
         sem_wait(&sem_C);
+        sem_wait(&sem_module);
         printf("Винтик (widget) собран из модуля и детали C\n");
     }
+    widget = 0;
     printf("Производство (widget) остановлено\n");
     return NULL;
 }
