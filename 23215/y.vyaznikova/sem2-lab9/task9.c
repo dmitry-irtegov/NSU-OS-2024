@@ -15,14 +15,11 @@ typedef struct {
 
 int num_threads;
 int should_exit = 0;
-int was_interrupted = 0;
 pthread_mutex_t exit_mutex;
 
-void sigint_handler(int signum) {
-    (void)signum;
+void sigint_handler(void) {
     pthread_mutex_lock(&exit_mutex);
     should_exit = 1;
-    was_interrupted = 1;
     pthread_mutex_unlock(&exit_mutex);
 }
 
@@ -66,7 +63,7 @@ int main(int argc, char **argv) {
     }
 
     struct sigaction sa;
-    sa.sa_handler = sigint_handler;
+    sa.sa_handler = (void (*)(int))sigint_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     if (sigaction(SIGINT, &sa, NULL) == -1) {
@@ -113,7 +110,7 @@ int main(int argc, char **argv) {
     }
 
     pi *= 4.0;
-    if (was_interrupted) {
+    if (should_exit) {
         printf("\nCalculated pi = %.16f (using %lld iterations)\n", pi, total_iterations);
     } else {
         printf("Calculated pi = %.16f (using %lld iterations)\n", pi, total_iterations);
