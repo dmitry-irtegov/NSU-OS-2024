@@ -10,6 +10,13 @@
 #include <termios.h>
 
 #define PORT 80
+#define BUFFERSIZE BUFSIZ
+
+typedef struct dynamic_array_t {
+    char *buffer;
+    size_t size;
+    size_t capacity;
+} dynamic_array;
 
 void parse_url(char *url, char *host, char *path) {
     if (strncmp(url, "http://", 7) != 0) {
@@ -34,6 +41,51 @@ void parse_url(char *url, char *host, char *path) {
     } else {
         strcpy(path, "/");
     }
+}
+
+char stopped = 0;
+int lines = 0;
+char all_printed = 0;
+size_t read_pos = 0;
+char no_more_data = 0;
+
+char curr_line[BUFSIZ];
+size_t index_in_curr_line = 0;
+
+void print_page(dynamic_array *dn_array) {
+    while (read_pos < dn_array->size) {
+        curr_line[index_in_curr_line] = dn_array->buffer[read_pos];
+        index_in_curr_line++;
+
+        if (read_pos == dn_array->size - 1 && no_more_data) {
+            all_printed = 1;
+            break;
+        }
+
+        if (dn_array->buffer[read_pos] == '\n') {
+            curr_line[index_in_curr_line - 1] = '\0';
+            index_in_curr_line = 0;
+
+            if (lines == 0) {
+                printf("\r%-40s\n", curr_line);
+            } else {
+                printf("%s\n", curr_line);
+            }
+
+            lines++;
+        }
+
+        read_pos++;
+
+        if (lines == 25) {
+            lines = 0;
+            stopped = 1;
+            printf("----- Press space to scroll down -----");
+            break;
+        }
+    }
+
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -81,12 +133,6 @@ int main(int argc, char *argv[]) {
     }
 
     fd_set read_fds;
-    char buffer[BUFSIZ];
-    char stopped = 0;
-    char has_more = 0;
-    char *line = NULL;
-    int lines = 0;
-    int not_first = 0;
 
     struct termios orig_term, new_term;
     tcgetattr(0, &orig_term);
@@ -95,7 +141,16 @@ int main(int argc, char *argv[]) {
     new_term.c_cc[VMIN] = 1;
     tcsetattr(0, TCSANOW, &new_term);
 
+    dynamic_array dn_array;
+    dn_array.buffer = (char *)malloc(BUFFERSIZE);
+    dn_array.size = 0;
+    dn_array.capacity = BUFFERSIZE;
+
     while (1) {
+
+        if (no_more_data && all_printed) {
+            break;
+        }
 
         FD_ZERO(&read_fds);
         FD_SET(sockfd, &read_fds);
@@ -108,49 +163,29 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        if (!stopped && FD_ISSET(sockfd, &read_fds)) {
+        if (FD_ISSET(sockfd, &read_fds)) {
 
-            if (!has_more) {
-                ssize_t bytes_received = recv(sockfd, buffer, BUFSIZ - 1, 0);
-                if (bytes_received < 0) {
-                    perror("recv");
-                    close(sockfd);
-                    tcsetattr(0, TCSANOW, &orig_term);
-                    exit(EXIT_FAILURE);
-                } else if (bytes_received == 0) {
-                    break;
-                }
-                buffer[bytes_received] = '\0';
-                line = strtok(buffer, "\n");
-            } else {
-                line = strtok(NULL, "\n");
+            ssize_t bytes_received = recv(sockfd, dn_array.buffer + dn_array.size, dn_array.capacity - dn_array.size, 0);
+
+            if (bytes_received < 0) {
+                perror("recv");
+                close(sockfd);
+                tcsetattr(0, TCSANOW, &orig_term);
+                exit(EXIT_FAILURE);
+            } else if (bytes_received == 0) {
+                no_more_data = 1;
             }
 
-            while (line != NULL) {
-                if (lines == 0 && not_first) {
-                    printf("\r%-40s\n", line);
-                } else {
-                    printf("%s\n", line);
-                }
-                lines++;
+            dn_array.size += bytes_received;
 
-                if (lines == 25) {
-                    lines = 0;
-                    stopped = 1;
-                    has_more = 1;
-                    not_first = 1;
-                    printf("----- Press space to scroll down -----");
-                    break;
-                }
-
-                line = strtok(NULL, "\n");
+            if (dn_array.capacity == dn_array.size) {
+                dn_array.capacity *= 2;
+                dn_array.buffer = (char *)realloc(dn_array.buffer, dn_array.capacity);
             }
+        }
 
-            fflush(stdout);
-            
-            if (line == NULL) {
-                has_more = 0;
-            }
+        if (!stopped) {
+            print_page(&dn_array);
         }
 
         if (stopped && FD_ISSET(0, &read_fds)) {
