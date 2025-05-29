@@ -4,12 +4,10 @@
 #include <pthread.h>
 
 void* thread_func(void* param) {
-    //printf("text\n");
-    //sleep(1);
-    //printf("text2\n");
-    //sleep(10);
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-    for(;;) {}
+    printf("text\n");
+    sleep(1);
+    printf("text2\n");
+    sleep(10);
     return NULL;
 }
 
