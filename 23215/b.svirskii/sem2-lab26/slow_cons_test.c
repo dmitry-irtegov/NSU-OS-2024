@@ -19,6 +19,7 @@ void* producer(void* arg) {
     do {
         sprintf(buff, "producer %lu produced %d", (unsigned long) arg, msg_num++);
         putted = mymsgput(&queue, buff);
+        printf("%s\n", buff);
     } while (putted > 0);
     return NULL;
 }
