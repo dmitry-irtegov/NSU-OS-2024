@@ -178,7 +178,7 @@ int main(int argc, char *argv[]){
         }
 
         if(linesPrinted < SCREEN_HEIGHT){
-            for(; linesPrinted < SCREEN_HEIGHT && response_buffer.buf[response_buffer.symsPrinted] != 0; linesPrinted++){
+            while(linesPrinted < SCREEN_HEIGHT && response_buffer.buf[response_buffer.symsPrinted] != 0){
                 if(last_waiting){
                     printf("\r                                               \r");
                     last_waiting = 0;
@@ -198,6 +198,7 @@ int main(int argc, char *argv[]){
                 if(flag){
                     printf("\r\n");
                     response_buffer.symsPrinted++;
+		    linesPrinted++;
                 }
             }
             if(response_buffer.buf[response_buffer.symsPrinted] != 0 && !last_waiting){
