@@ -9,7 +9,7 @@ sem_t a, b, c, m;
 
 void* thread_a() {
     while (1) {
-        sleep(10);
+        sleep(1);
         sem_post(&a);
         printf("Part A was created\n");
     }
@@ -17,7 +17,7 @@ void* thread_a() {
 }
 void* thread_b() {
     while (1) {
-        sleep(20);
+        sleep(2);
         sem_post(&b);
         printf("Part B was created\n");
     }
@@ -25,7 +25,7 @@ void* thread_b() {
 }
 void* thread_c() {
     while (1) {
-        sleep(30);
+        sleep(3);
         sem_post(&c);
         printf("Part C was created\n");
     }
