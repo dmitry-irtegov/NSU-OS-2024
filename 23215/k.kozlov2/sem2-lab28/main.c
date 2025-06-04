@@ -10,7 +10,6 @@
 #include <termios.h>
 
 #define PORT 80
-#define BUFFERSIZE BUFSIZ
 
 typedef struct dynamic_array_t {
     char *buffer;
@@ -18,7 +17,7 @@ typedef struct dynamic_array_t {
     size_t capacity;
 } dynamic_array;
 
-void parse_url(char *url, char *host, char *path) {
+void parse_url(char *url, char **host, char **path) {
     if (strncmp(url, "http://", 7) != 0) {
         fprintf(stderr, "bad url\n");
         exit(EXIT_FAILURE);
@@ -31,15 +30,18 @@ void parse_url(char *url, char *host, char *path) {
         exit(EXIT_FAILURE);
     }
 
-    strcpy(host, url);
-
     char *sl = strchr(url, '/');
 
     if (sl) {
-        host[sl - url] = 0;
-        strcpy(path, sl);
+        *sl = '\0';
+        *host = strdup(url);
+        *sl = '/';
+        *path = strdup(sl);
     } else {
-        strcpy(path, "/");
+        *host = strdup(url);
+        *path = (char *)malloc(2);
+        (*path)[0] = '/';
+        (*path)[1] = '\0';
     }
 }
 
@@ -48,31 +50,49 @@ int lines = 0;
 char all_printed = 0;
 size_t read_pos = 0;
 char no_more_data = 0;
+char first = 1;
 
-char curr_line[BUFSIZ];
+char curr_line[BUFSIZ] = {0};
 size_t index_in_curr_line = 0;
 
 void print_page(dynamic_array *dn_array) {
     while (read_pos < dn_array->size) {
-        curr_line[index_in_curr_line] = dn_array->buffer[read_pos];
-        index_in_curr_line++;
 
-        if (read_pos == dn_array->size - 1 && no_more_data) {
-            all_printed = 1;
-            break;
+        if (index_in_curr_line < BUFSIZ - 1) {
+            curr_line[index_in_curr_line] = dn_array->buffer[read_pos];
+            index_in_curr_line++;
+        } else {
+            curr_line[index_in_curr_line] = '\0';
+            index_in_curr_line = 0;
+
+            if (lines == 0 && first) {
+                printf("\r                                        ");
+                printf("\r%s", curr_line);
+                first = 0;
+            } else {
+                printf("%s", curr_line);
+            }
+
+            curr_line[index_in_curr_line] = '\0';
+
+            continue;
         }
 
         if (dn_array->buffer[read_pos] == '\n') {
             curr_line[index_in_curr_line - 1] = '\0';
             index_in_curr_line = 0;
 
-            if (lines == 0) {
-                printf("\r%-40s\n", curr_line);
+            if (lines == 0 && first) {
+                printf("\r                                        ");
+                printf("\r%s\n", curr_line);
             } else {
                 printf("%s\n", curr_line);
             }
 
+            curr_line[index_in_curr_line] = '\0';
+
             lines++;
+            first = 1;
         }
 
         read_pos++;
@@ -83,6 +103,19 @@ void print_page(dynamic_array *dn_array) {
             printf("----- Press space to scroll down -----");
             break;
         }
+    }
+
+    if (read_pos == dn_array->size && no_more_data) {
+        if (curr_line[0]) {
+            curr_line[index_in_curr_line] = '\0';
+            if (lines == 0 && first) {
+                printf("\r                                        ");
+                printf("\r%s\n", curr_line);
+            } else {
+                printf("%s\n", curr_line);
+            }
+        }
+        all_printed = 1;
     }
 
     fflush(stdout);
@@ -96,20 +129,24 @@ int main(int argc, char *argv[]) {
     }
 
     char *url = argv[1];
-    char path[1024];
-    char host[1024];
+    char *path = NULL;
+    char *host = NULL;
 
-    parse_url(url, host, path);
+    parse_url(url, &host, &path);
 
     struct hostent *serv = gethostbyname(host);
     if (serv == NULL) {
         herror("gethostbyname");
+        free(path);
+        free(host);
         exit(EXIT_FAILURE);
     }
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         perror("socket");
+        free(path);
+        free(host);
         exit(EXIT_FAILURE);
     }
 
@@ -121,6 +158,8 @@ int main(int argc, char *argv[]) {
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("connect");
         close(sockfd);
+        free(path);
+        free(host);
         exit(EXIT_FAILURE);
     }
 
@@ -129,6 +168,8 @@ int main(int argc, char *argv[]) {
     if (send(sockfd, request, strlen(request), 0) < 0) {
         perror("send");
         close(sockfd);
+        free(path);
+        free(host);
         exit(EXIT_FAILURE);
     }
 
@@ -142,9 +183,9 @@ int main(int argc, char *argv[]) {
     tcsetattr(0, TCSANOW, &new_term);
 
     dynamic_array dn_array;
-    dn_array.buffer = (char *)malloc(BUFFERSIZE);
+    dn_array.buffer = (char *)malloc(BUFSIZ);
     dn_array.size = 0;
-    dn_array.capacity = BUFFERSIZE;
+    dn_array.capacity = BUFSIZ;
 
     while (1) {
 
@@ -160,10 +201,12 @@ int main(int argc, char *argv[]) {
             perror("select");
             close(sockfd);
             tcsetattr(0, TCSANOW, &orig_term);
+            free(path);
+            free(host);
             exit(EXIT_FAILURE);
         }
 
-        if (FD_ISSET(sockfd, &read_fds)) {
+        if (!no_more_data && FD_ISSET(sockfd, &read_fds)) {
 
             ssize_t bytes_received = recv(sockfd, dn_array.buffer + dn_array.size, dn_array.capacity - dn_array.size, 0);
 
@@ -171,6 +214,8 @@ int main(int argc, char *argv[]) {
                 perror("recv");
                 close(sockfd);
                 tcsetattr(0, TCSANOW, &orig_term);
+                free(path);
+                free(host);
                 exit(EXIT_FAILURE);
             } else if (bytes_received == 0) {
                 no_more_data = 1;
@@ -184,18 +229,20 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (!stopped) {
-            print_page(&dn_array);
-        }
-
         if (stopped && FD_ISSET(0, &read_fds)) {
             if (getchar() == ' ') {
                 stopped = 0;
             }
         }
+
+        if (!(stopped || all_printed)) {
+            print_page(&dn_array);
+        }
     }
 
     close(sockfd);
     tcsetattr(0, TCSANOW, &orig_term);
+    free(path);
+    free(host);
     exit(EXIT_SUCCESS);
 }
