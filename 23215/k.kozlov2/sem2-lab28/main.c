@@ -87,6 +87,15 @@ void print_page(dynamic_array *dn_array) {
             continue;
         }
 
+        if (dn_array->buffer[read_pos] == '\t') {
+            curr_line[index_in_curr_line - 1] = ' ';
+            curr_line[index_in_curr_line] = ' ';
+            index_in_curr_line++;
+            curr_line[index_in_curr_line] = ' ';
+            index_in_curr_line++;
+            curr_line[index_in_curr_line] = ' ';
+        }
+
         if (dn_array->buffer[read_pos] == '\n') {
             curr_line[index_in_curr_line - 1] = '\0';
 
