@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #define EXAMPLE "http://example.com"
 #define SCREEN_HEIGHT 25 //в количестве строк
+#define BUF 666
 typedef struct ar{
     char * buf;
     int symsPrinted;
@@ -16,31 +17,26 @@ typedef struct ar{
     int curSize;
 }ar;
 
-void addStrToAr(ar* dest, char* src){
-    int srclen = strlen(src);
-    while(dest->limitSize - dest->curSize <= srclen){
-        dest->limitSize *= 2;
-    }
-    dest->buf = (char*) realloc(dest->buf, sizeof(char) * dest->limitSize);
-    strcat(dest->buf, src);
-    dest->curSize += srclen;
-}
 int main(int argc, char *argv[]){
     
     if(argc < 2){
-        perror("Missing arguements");
+        perror("Missing arguement");
         exit(1);
+    }
+    if(strlen(argv[1]) > 500){
+        perror("Too long url");
+        exit(2);
     }
     //argv[1] = EXAMPLE;
     
     //парсинг url
-    char hostname[999] = {0};
-    char path[777] = {0};
-    char portStr[666] = {0};
+    char hostname[BUF] = {0};
+    char path[BUF] = {0};
+    char portStr[BUF] = {0};
     int port = 80;
     if(sscanf(argv[1], "http://%s", hostname) != 1){
         perror("Wrong url");
-        exit(2);
+        exit(3);
     }
     for(int i = 0; hostname[i] != 0; i++){
         if(hostname[i] == ':'){
@@ -66,11 +62,11 @@ int main(int argc, char *argv[]){
     struct hostent *host = gethostbyname(hostname);
     if(host == NULL){
         perror("Host not found");
-        exit(3);
+        exit(4);
     }
     if(*(host->h_addr_list) == 0){
         perror("No addresses found");
-        exit(4);
+        exit(5);
     }
     struct in_addr in;
     memcpy(&in.s_addr, *host->h_addr_list, sizeof (in.s_addr));
@@ -85,12 +81,12 @@ int main(int argc, char *argv[]){
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock == -1){
         perror("Failed creating socket");
-        exit(5);
+        exit(6);
     }
     if(connect(sock, (struct sockaddr *) &ad, sizeof(struct sockaddr_in)) == -1){
         perror("Failed connecting socket");
         close(sock);
-        exit(6);
+        exit(7);
     }
     printf("connected!\n");
 
@@ -101,7 +97,7 @@ int main(int argc, char *argv[]){
     if(write(sock, request, 1000) == -1){
         perror("Failed writing request");
         close(sock);
-        exit(7);
+        exit(8);
     }
     printf("request sent!\n");
 
@@ -141,7 +137,7 @@ int main(int argc, char *argv[]){
             tcsetattr(0, TCSANOW, &start_tty);
             free(response_buffer.buf);
             perror("Select failed");
-            exit(8);
+            exit(9);
         }
 
         if(connection_active && FD_ISSET(sock, &readFds)){
@@ -157,7 +153,7 @@ int main(int argc, char *argv[]){
                 tcsetattr(0, TCSANOW, &start_tty);
                 free(response_buffer.buf);
                 perror("Socket read error");
-                exit(9);
+                exit(10);
             }
             else if(ret == 0){
                 connection_active = 0;
@@ -213,4 +209,4 @@ int main(int argc, char *argv[]){
     tcsetattr(0, TCSANOW, &start_tty);
     free(response_buffer.buf);
     exit(0);
-}
+}  
