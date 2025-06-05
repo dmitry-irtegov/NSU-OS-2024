@@ -4,16 +4,13 @@
 #include <signal.h>
 #include <errno.h>
 #include <string.h>
+#include <semaphore.h>
 
 #define ITERATIONS_PER_FLAG_CHECK 1000000
 
 int num_threads = 0;
-volatile sig_atomic_t flag = 0;
-pthread_mutex_t barrier_mutex;
-pthread_cond_t barrier_cv;
-int barrier_threads_arrived;
-int barrier_current_generation;
-int total_threads_for_manual_barrier;
+sem_t stop_signal_semaphore;
+int stopped = 0;
 
 typedef struct {
     int thread_id;
@@ -41,32 +38,8 @@ void *calculate_partial_sum(void *arg) {
         local_iterations_done++;
 
         if (local_iterations_done % ITERATIONS_PER_FLAG_CHECK == 0) {
-            pthread_mutex_lock(&barrier_mutex);
-            int gen = barrier_current_generation;
-            barrier_threads_arrived++;
-            if (barrier_threads_arrived == total_threads_for_manual_barrier) {
-                barrier_threads_arrived = 0;
-                barrier_current_generation++;
-                pthread_cond_broadcast(&barrier_cv);
-            } else {
-                while (gen == barrier_current_generation) {
-                    int wait_rc = pthread_cond_wait(&barrier_cv, &barrier_mutex);
-                    if (wait_rc == EINTR) {
-                        continue;
-                    }
-                    if (wait_rc != 0) {
-                        fprintf(stderr, "Thread %d: pthread_cond_wait failed with non-EINTR error %d: %s. Exiting.\n",
-                                data->thread_id, wait_rc, strerror(wait_rc));
-                        pthread_mutex_unlock(&barrier_mutex);
-                        data->partial_sum = local_pi;
-                        data->iterations_done = local_iterations_done;
-                        return arg; 
-                    }
-                }
-            }
-            pthread_mutex_unlock(&barrier_mutex);
-
-            if (flag) {
+            if (sem_trywait(&stop_signal_semaphore) == 0) {
+                sem_post(&stop_signal_semaphore);
                 break;
             }
         }
@@ -80,7 +53,12 @@ void *calculate_partial_sum(void *arg) {
 
 void sigint_handler(int sig) {
     (void)sig;
-    flag = 1;
+    if (stopped == 0) {
+        stopped = 1;
+
+        if (sem_post(&stop_signal_semaphore) == -1) {
+        }
+    }
 }
 
 int main(int argc, char **argv) {
@@ -88,8 +66,7 @@ int main(int argc, char **argv) {
     long long total_iterations = 0;
     pthread_t *thread_handles;
     thread_data_t *thread_args_array;
-    int barrier_initialized = 0;
-
+    
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <number_of_threads>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -111,25 +88,12 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    total_threads_for_manual_barrier = num_threads;
-    barrier_threads_arrived = 0;
-    barrier_current_generation = 0;
-
-    if (pthread_mutex_init(&barrier_mutex, NULL) != 0) {
-        perror("Error initializing mutex");
+    if (sem_init(&stop_signal_semaphore, 0, 0) == -1) {
+        perror("Failed to initialize semaphore");
         free(thread_handles);
         free(thread_args_array);
         exit(EXIT_FAILURE);
     }
-
-    if (pthread_cond_init(&barrier_cv, NULL) != 0) {
-        perror("Error initializing condition variable");
-        pthread_mutex_destroy(&barrier_mutex); 
-        free(thread_handles);
-        free(thread_args_array);
-        exit(EXIT_FAILURE);
-    }
-    barrier_initialized = 1;
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR) {
         perror("Failed to set SIGINT handler");
@@ -138,7 +102,6 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-
     for (int i = 0; i < num_threads; i++) {
         thread_args_array[i].thread_id = i;
         thread_args_array[i].partial_sum = 0.0;
@@ -146,15 +109,14 @@ int main(int argc, char **argv) {
         int create_code = pthread_create(&thread_handles[i], NULL, calculate_partial_sum, (void *)&thread_args_array[i]);
         if (create_code != 0) {
             fprintf(stderr, "pthread_create error for thread %d: %s\n", i, strerror(create_code));
-            flag = 1;
+            if (stopped == 0) {
+                stopped = 1;
+                sem_post(&stop_signal_semaphore);
+            }
             for (int k = 0; k < i; k++) {
                 pthread_join(thread_handles[k], NULL);
             }
-            if (barrier_initialized) {
-                pthread_mutex_destroy(&barrier_mutex);
-                pthread_cond_destroy(&barrier_cv);
-                barrier_initialized = 0;
-            }
+
             free(thread_handles);
             free(thread_args_array);
             exit(EXIT_FAILURE);
@@ -180,6 +142,7 @@ int main(int argc, char **argv) {
     }
     total_pi *= 4.0;
     printf("Calculated pi = %.16f (using %lld iterations)\n", total_pi, total_iterations);
+    sem_destroy(&stop_signal_semaphore);
     free(thread_handles);
     free(thread_args_array);
 
