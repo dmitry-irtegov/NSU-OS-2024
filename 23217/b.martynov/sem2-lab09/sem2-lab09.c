@@ -23,12 +23,15 @@ void* childFunc(void* arg) {
     int a = (int)arg;
 
     double tmp = 0.0;
-    for (long long i = a; ; i+=cnt) {
+    long long i = a;
+    while (1) {
         tmp += 1.0/(i*4.0 + 1.0);
         tmp -= 1.0/(i*4.0 + 3.0);
         if (flag && (i > ITERS_CHECK)) {
             break;
         }
+
+        i += cnt;
     }
 
     parts[a] = tmp;
