@@ -56,25 +56,27 @@ char *curr_line = NULL;
 size_t index_in_curr_line = 0;
 size_t columns = 0;
 
+void print_line() {
+    if (lines == 0) {
+        printf("\r                                        ");
+        printf("\r%s\n", curr_line);
+    } else {
+        printf("%s\n", curr_line);
+    }
+}
+
 void print_page(dynamic_array *dn_array) {
     while (read_pos < dn_array->size) {
 
-        if (index_in_curr_line < columns - 3) {
+        if (index_in_curr_line < columns) {
             curr_line[index_in_curr_line] = dn_array->buffer[read_pos];
             index_in_curr_line++;
+            read_pos++;
         } else {
             curr_line[index_in_curr_line] = '\0';
-
-            if (lines == 0) {
-                printf("\r                                        ");
-                printf("\r%s\n", curr_line);
-            } else {
-                printf("%s\n", curr_line);
-            }
-
+            print_line();
             index_in_curr_line = 0;
             curr_line[index_in_curr_line] = '\0';
-
             lines++;
 
             if (lines == 25) {
@@ -87,32 +89,37 @@ void print_page(dynamic_array *dn_array) {
             continue;
         }
 
-        if (dn_array->buffer[read_pos] == '\t') {
+        if (dn_array->buffer[read_pos - 1] == '\t') {
             curr_line[index_in_curr_line - 1] = ' ';
-            curr_line[index_in_curr_line] = ' ';
-            index_in_curr_line++;
-            curr_line[index_in_curr_line] = ' ';
-            index_in_curr_line++;
-            curr_line[index_in_curr_line] = ' ';
-        }
 
-        if (dn_array->buffer[read_pos] == '\n') {
-            curr_line[index_in_curr_line - 1] = '\0';
+            int i;
+            
+            for (i = 0; i < 3; i++) {
+                if (index_in_curr_line == columns) {
+                    curr_line[index_in_curr_line] = '\0';
+                    print_line();
+                    index_in_curr_line = 0;
+                    curr_line[index_in_curr_line] = '\0';
+                    lines++;
+                    break;
+                }
 
-            if (lines == 0) {
-                printf("\r                                        ");
-                printf("\r%s\n", curr_line);
-            } else {
-                printf("%s\n", curr_line);
+                curr_line[index_in_curr_line] = ' ';
+                index_in_curr_line++;
             }
 
+            for (int j = 0; j < 3 - i; j++) {
+                curr_line[index_in_curr_line] = ' ';
+                index_in_curr_line++;
+            }
+        }
+        else if (dn_array->buffer[read_pos - 1] == '\n') {
+            curr_line[index_in_curr_line - 1] = '\0';
+            print_line();
             index_in_curr_line = 0;
             curr_line[index_in_curr_line] = '\0';
-
             lines++;
         }
-
-        read_pos++;
 
         if (lines == 25) {
             lines = 0;
@@ -125,12 +132,7 @@ void print_page(dynamic_array *dn_array) {
     if (read_pos == dn_array->size && no_more_data) {
         if (curr_line[0]) {
             curr_line[index_in_curr_line] = '\0';
-            if (lines == 0) {
-                printf("\r                                        ");
-                printf("\r%s\n", curr_line);
-            } else {
-                printf("%s\n", curr_line);
-            }
+            print_line();
         }
         all_printed = 1;
     }
@@ -207,7 +209,7 @@ int main(int argc, char *argv[]) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     columns = w.ws_col;
-    curr_line = (char *)malloc(columns);
+    curr_line = (char *)malloc(columns + 1);
 
     while (1) {
 
