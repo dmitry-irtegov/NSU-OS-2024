@@ -4,6 +4,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -50,49 +51,56 @@ int lines = 0;
 char all_printed = 0;
 size_t read_pos = 0;
 char no_more_data = 0;
-char first = 1;
 
-char curr_line[BUFSIZ] = {0};
+char *curr_line = NULL;
 size_t index_in_curr_line = 0;
+size_t columns = 0;
 
 void print_page(dynamic_array *dn_array) {
     while (read_pos < dn_array->size) {
 
-        if (index_in_curr_line < BUFSIZ - 1) {
+        if (index_in_curr_line < columns - 3) {
             curr_line[index_in_curr_line] = dn_array->buffer[read_pos];
             index_in_curr_line++;
         } else {
             curr_line[index_in_curr_line] = '\0';
-            index_in_curr_line = 0;
 
-            if (lines == 0 && first) {
-                printf("\r                                        ");
-                printf("\r%s", curr_line);
-                first = 0;
-            } else {
-                printf("%s", curr_line);
-            }
-
-            curr_line[index_in_curr_line] = '\0';
-
-            continue;
-        }
-
-        if (dn_array->buffer[read_pos] == '\n') {
-            curr_line[index_in_curr_line - 1] = '\0';
-            index_in_curr_line = 0;
-
-            if (lines == 0 && first) {
+            if (lines == 0) {
                 printf("\r                                        ");
                 printf("\r%s\n", curr_line);
             } else {
                 printf("%s\n", curr_line);
             }
 
+            index_in_curr_line = 0;
             curr_line[index_in_curr_line] = '\0';
 
             lines++;
-            first = 1;
+
+            if (lines == 25) {
+                lines = 0;
+                stopped = 1;
+                printf("----- Press space to scroll down -----");
+                break;
+            }
+
+            continue;
+        }
+
+        if (dn_array->buffer[read_pos] == '\n') {
+            curr_line[index_in_curr_line - 1] = '\0';
+
+            if (lines == 0) {
+                printf("\r                                        ");
+                printf("\r%s\n", curr_line);
+            } else {
+                printf("%s\n", curr_line);
+            }
+
+            index_in_curr_line = 0;
+            curr_line[index_in_curr_line] = '\0';
+
+            lines++;
         }
 
         read_pos++;
@@ -108,7 +116,7 @@ void print_page(dynamic_array *dn_array) {
     if (read_pos == dn_array->size && no_more_data) {
         if (curr_line[0]) {
             curr_line[index_in_curr_line] = '\0';
-            if (lines == 0 && first) {
+            if (lines == 0) {
                 printf("\r                                        ");
                 printf("\r%s\n", curr_line);
             } else {
@@ -186,6 +194,11 @@ int main(int argc, char *argv[]) {
     dn_array.buffer = (char *)malloc(BUFSIZ);
     dn_array.size = 0;
     dn_array.capacity = BUFSIZ;
+
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    columns = w.ws_col;
+    curr_line = (char *)malloc(columns);
 
     while (1) {
 
