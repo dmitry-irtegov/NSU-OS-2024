@@ -10,7 +10,7 @@
 
 int num_threads = 0;
 sem_t stop_signal_semaphore;
-int stopped = 0;
+volatile sig_atomic_t stopped = 0;
 
 typedef struct {
     int thread_id;
@@ -51,13 +51,10 @@ void *calculate_partial_sum(void *arg) {
     return arg;
 }
 
-void sigint_handler(int sig) {
-    (void)sig;
+void sigint_handler(void) {
     if (stopped == 0) {
         stopped = 1;
-
-        if (sem_post(&stop_signal_semaphore) == -1) {
-        }
+        sem_post(&stop_signal_semaphore);
     }
 }
 
