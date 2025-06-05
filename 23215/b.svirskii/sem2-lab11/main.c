@@ -5,26 +5,25 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#ifdef NDEBUG
+#define my_assert(expr) (void)(expr);
+#else
+#define my_assert assert
+#endif
 
-void my_assert(int expr) {
-    assert(expr);
-}
-
-pthread_mutex_t  parent[2], child[2];
+pthread_mutex_t parent[2], child[2];
 
 void* routine(void* arg) {
     my_assert(pthread_mutex_lock(&parent[1]) == 0);
     for (int i = 0; i < 10; i++) {
         my_assert(pthread_mutex_lock(&child[i % 2]) == 0);
         printf("Hello from %s thread!\n", (char*) arg);
-        pthread_mutex_unlock(&child[i % 2]);
-        my_assert(pthread_mutex_lock(&parent[i % 2]) == 0);
-        pthread_mutex_unlock(&parent[(i + 1) % 2]);
+        my_assert(pthread_mutex_unlock(&child[i % 2]) == 0);
+        if (i != 9) {        
+            my_assert(pthread_mutex_lock(&parent[i % 2]) == 0);
+        }
+        my_assert(pthread_mutex_unlock(&parent[(i + 1) % 2]) == 0);
     }
-
-    pthread_mutex_unlock(&parent[0]);
-    pthread_mutex_unlock(&parent[1]);
-    
     return NULL;
 }
 
@@ -47,19 +46,18 @@ int main() {
     pthread_create(&th, NULL, routine, "child");
     
     while(pthread_mutex_trylock(&parent[1]) != EBUSY) {
-        pthread_mutex_unlock(&parent[1]);
+        my_assert(pthread_mutex_unlock(&parent[1]) == 0);
     }
 
     for (int i = 0; i < 10; i++) {
         my_assert(pthread_mutex_lock(&parent[i % 2]) == 0);
         printf("Hello from parent thread!\n");
-        pthread_mutex_unlock(&parent[i % 2]);
-        my_assert(pthread_mutex_lock(&child[(i + 1) % 2]) == 0);
-        pthread_mutex_unlock(&child[i % 2]);
+        my_assert(pthread_mutex_unlock(&parent[i % 2]) == 0);
+        if (i != 9) {
+            my_assert(pthread_mutex_lock(&child[(i + 1) % 2]) == 0);
+        }
+        my_assert(pthread_mutex_unlock(&child[i % 2]) == 0);
     }
-
-    pthread_mutex_unlock(&child[0]);
-    pthread_mutex_unlock(&child[1]);
 
     pthread_join(th, NULL);
  
