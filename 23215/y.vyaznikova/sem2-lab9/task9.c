@@ -32,7 +32,7 @@ void *calculate_partial_sum(void *arg) {
     long long current_term_idx = data->thread_id;
     long long local_iterations_done = 0;
 
-    for (;; current_term_idx += num_threads) {
+    while(1) {
         local_pi += 1.0 / (current_term_idx * 4.0 + 1.0);
         local_pi -= 1.0 / (current_term_idx * 4.0 + 3.0);
         local_iterations_done++;
@@ -43,6 +43,7 @@ void *calculate_partial_sum(void *arg) {
                 break;
             }
         }
+        current_term_idx += num_threads;
     }
 
     data->iterations_done = local_iterations_done;
@@ -51,7 +52,8 @@ void *calculate_partial_sum(void *arg) {
     return arg;
 }
 
-void sigint_handler(void) {
+void sigint_handler(int sig) {
+    (void)sig;
     if (stopped == 0) {
         stopped = 1;
         sem_post(&stop_signal_semaphore);
