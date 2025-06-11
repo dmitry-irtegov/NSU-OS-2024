@@ -1,2 +1,0 @@
-my: sem2-lab04.c
-	cc sem2-lab04.c -mt -o sem2-lab04.out
